@@ -1,0 +1,23 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+
+# Node.js
+node_modules/
+
+# Python
+__pycache__/
+
+# Project
+.kiro/
+.backup/
+.temp/
+.kubeconfig
+.env.local
+config.local.json
+*.rendered.yaml
+test*.py
+test*.mjs

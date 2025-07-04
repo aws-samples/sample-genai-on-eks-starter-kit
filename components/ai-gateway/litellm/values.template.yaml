@@ -1,0 +1,97 @@
+redis:
+  enabled: true
+
+serviceAccount:
+  create: true
+
+masterkey: {{{LITELLM_API_KEY}}}
+envVars:
+  # SERVER_ROOT_PATH: /litellm # Same as Ingress path
+  # UI_BASE_PATH: /litellm/ui # Move UI path but still need to build Docker image https://docs.litellm.ai/docs/proxy/deploy#1-custom-server-root-path-proxy-base-url
+  # DOCS_URL: /docs/ # Move docs path but not working yet since LiteLLM hardcodes Swagger resource paths https://github.com/BerriAI/litellm/blob/main/litellm/proxy/proxy_server.py#L794-L796
+  UI_USERNAME: {{{LITELLM_UI_USERNAME}}}
+  UI_PASSWORD: {{{LITELLM_UI_PASSWORD}}}
+  LANGFUSE_HOST: http://langfuse-web.langfuse:3000
+  LANGFUSE_PUBLIC_KEY: {{{LANGFUSE_PUBLIC_KEY}}}
+  LANGFUSE_SECRET_KEY: {{{LANGFUSE_SECRET_KEY}}}
+  PHOENIX_API_KEY: {{{PHOENIX_API_KEY}}}
+  PHOENIX_COLLECTOR_ENDPOINT: http://phoenix-svc.phoenix:4317/v1/traces
+  PHOENIX_COLLECTOR_HTTP_ENDPOINT: http://phoenix-svc.phoenix:6006/v1/traces
+
+ingress:
+  enabled: true
+  className: internet-facing-alb
+  annotations:
+    alb.ingress.kubernetes.io/group.name: default
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+  hosts:
+    - host: litellm.{{{DOMAIN}}}
+      paths:
+        - path: /
+          pathType: Prefix
+
+proxy_config:
+  general_settings:
+    master_key: os.environ/PROXY_MASTER_KEY
+    store_model_in_db: true
+    store_prompts_in_spend_logs: true
+  litellm_settings:
+    {{#with integration.o11y.config}}
+    {{#if callbacks}}    
+    callbacks: {{{callbacks}}}
+    {{/if}}
+    {{#if success_callback}}    
+    success_callback: {{{success_callback}}}
+    {{/if}}
+    {{#if failure_callback}}
+    failure_callback: {{{failure_callback}}}
+    {{/if}}
+    {{/with}}
+    redact_user_api_key_info: true
+    turn_off_message_logging: false
+  model_list:
+    # Bedrock LLM Models
+    {{#each integration.bedrock.llm}}
+    - model_name: bedrock/{{{name}}}
+      litellm_params:
+        model: bedrock/{{{model}}}
+    {{/each}}
+    # Bedrock Embedding Models
+    {{#each integration.bedrock.embedding}}
+    - model_name: bedrock/{{{name}}}
+      litellm_params:
+        model: bedrock/{{{model}}}
+    {{/each}}
+    {{#each integration.llm-model.vllm}}
+    - model_name: vllm/{{@key}}
+      litellm_params:
+        model: openai/{{@key}}
+        api_key: fake-key
+        api_base: http://{{@key}}.vllm:8000/v1
+    {{/each}}
+    # SGlang Models
+    {{#each integration.llm-model.sglang}}
+    - model_name: sglang/{{@key}}
+      litellm_params:
+        model: openai/{{@key}}
+        api_key: fake-key
+        api_base: http://{{@key}}.sglang:30000/v1
+    {{/each}}
+    # Ollama Models
+    {{#each integration.llm-model.ollama}}
+    - model_name: ollama/{{@key}}
+      litellm_params:
+        model: ollama/{{@key}}
+        api_key: fake-key
+        api_base: http://ollama.ollama:11434
+        drop_params: true
+    {{/each}}
+    # TEI Models
+    {{#each integration.embedding-model.tei}}
+    - model_name: tei/{{@key}}
+      litellm_params:
+        model: openai/{{@key}}
+        api_key: fake-key
+        api_base: http://{{@key}}.tei:80/v1
+    {{/each}}

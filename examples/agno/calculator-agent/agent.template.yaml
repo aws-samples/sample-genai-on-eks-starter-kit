@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calculator-agent
+  namespace: agno
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calculator-agent
+  template:
+    metadata:
+      labels:
+        app: calculator-agent
+    spec:
+      serviceAccountName: calculator-agent
+      automountServiceAccountToken: false    
+      # nodeSelector:
+      #   kubernetes.io/arch: arm64
+      containers:
+        - name: agent
+          image: {{{IMAGE}}}
+          env:
+            - name: USE_BEDROCK
+              value: "{{{USE_BEDROCK}}}"
+            {{#if USE_BEDROCK}}
+            - name: BEDROCK_MODEL
+              value: {{{BEDROCK_MODEL}}}
+            {{else}}
+            - name: LITELLM_BASE_URL
+              value: {{{LITELLM_BASE_URL}}}
+            - name: LITELLM_API_KEY
+              value: {{{LITELLM_API_KEY}}}    
+            - name: LITELLM_MODEL_NAME
+              value: {{{LITELLM_MODEL_NAME}}}
+            {{/if}}
+            - name: USE_MCP_TOOLS
+              value: "{{{USE_MCP_TOOLS}}}"
+            {{#if LANGFUSE_HOST}}
+            - name: LANGFUSE_HOST
+              value: {{{LANGFUSE_HOST}}}
+            - name: LANGFUSE_PUBLIC_KEY
+              value: {{{LANGFUSE_PUBLIC_KEY}}}
+            - name: LANGFUSE_SECRET_KEY
+              value: {{{LANGFUSE_SECRET_KEY}}}
+            {{/if}}
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 0.5 
+              memory: 1G
+            limits:
+              memory: 1G
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calculator-agent
+  namespace: agno
+spec:
+  selector:
+    app: calculator-agent
+  ports:
+    - name: http
+      port: 80
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calculator-agent
+  namespace: agno
+automountServiceAccountToken: false

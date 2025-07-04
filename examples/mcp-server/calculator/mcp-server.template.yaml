@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calculator
+  namespace: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calculator
+  template:
+    metadata:
+      labels:
+        app: calculator
+    spec:
+      # nodeSelector:
+      #   kubernetes.io/arch: arm64
+      containers:
+        - name: server
+          image: {{{IMAGE}}}
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 0.5 
+              memory: 1G
+            limits:
+              memory: 1G
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: calculator
+  namespace: mcp-server
+spec:
+  selector:
+    app: calculator
+  ports:
+    - name: http
+      port: 8000
+

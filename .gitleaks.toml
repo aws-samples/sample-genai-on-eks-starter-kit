@@ -1,0 +1,7 @@
+[allowlist]
+description = "Ignore specific test/dummy keys"
+regexes = [
+  '''LITELLM_API_KEY''',
+  '''LANGFUSE_PUBLIC_KEY''',
+  '''LANGFUSE_SECRET_KEY'''
+]

@@ -1,0 +1,82 @@
+{
+  "demo": {
+    "components": [
+      { "category": "llm-model", "component": "vllm" },
+      { "category": "o11y", "component": "langfuse" },
+      { "category": "gui-app", "component": "openwebui" },
+      { "category": "vector-database", "component": "qdrant" },
+      { "category": "embedding-model", "component": "tei" },
+      { "category": "ai-gateway", "component": "litellm" }
+    ],
+    "examples": [
+      { "category": "mcp-server", "example": "calculator" },
+      { "category": "strands-agents", "example": "calculator-agent" }
+    ]
+  },
+  "llm-model": {
+    "vllm": {
+      "models": [
+        { "name": "qwen3-30b-fp8", "deploy": true },
+        { "name": "qwen3-32b-fp8", "deploy": true },
+        { "name": "deepseek-r1-8b", "deploy": false },
+        { "name": "gemma3-27b-gptq", "deploy": false },
+        { "name": "llama-4-scout-17b-16e-instruct-fp8", "deploy": false },
+        { "name": "magistral-24b-fp8", "deploy": false }
+      ]
+    },
+    "sglang": {
+      "models": [
+        { "name": "qwen3-30b-fp8", "deploy": true },
+        { "name": "qwen3-32b-fp8", "deploy": true }
+      ]
+    },
+    "ollama": { "models": ["qwen3:32b", "qwen3:30b", "gemma3:27b", "deepseek-r1:8b", "nomic-embed-text:v1.5"] }
+  },
+  "embedding-model": {
+    "tei": {
+      "models": [
+        { "name": "qwen3-embedding-06b-bf16-cpu", "deploy": false },
+        { "name": "qwen3-embedding-06b-bf16", "deploy": false },
+        { "name": "qwen3-embedding-4b-bf16-cpu", "deploy": true },
+        { "name": "qwen3-embedding-4b-bf16", "deploy": false },
+        { "name": "qwen3-embedding-8b-bf16-cpu", "deploy": false },
+        { "name": "qwen3-embedding-8b-bf16", "deploy": false }
+      ]
+    }
+  },
+  "bedrock": {
+    "llm": {
+      "models": [
+        { "name": "amazon-nova-premier", "model": "us.amazon.nova-premier-v1:0" },
+        { "name": "claude-4-opus", "model": "us.anthropic.claude-opus-4-20250514-v1:0" },
+        { "name": "claude-4-sonnet", "model": "us.anthropic.claude-sonnet-4-20250514-v1:0" },
+        { "name": "claude-3.7-sonnet", "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0" },
+        { "name": "llama4-maverick", "model": "us.meta.llama4-maverick-17b-instruct-v1:0" },
+        { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0" }
+      ]
+    },
+    "embedding": { "models": [] }
+  },
+  "examples": {
+    "agno": {
+      "calculator-agent": {
+        "env": {
+          "USE_BEDROCK": false,
+          "BEDROCK_MODEL": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-fp8",
+          "USE_MCP_TOOLS": true
+        }
+      }
+    },
+    "strands-agents": {
+      "calculator-agent": {
+        "env": {
+          "USE_BEDROCK": true,
+          "BEDROCK_MODEL": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-fp8",
+          "USE_MCP_TOOLS": true
+        }
+      }
+    }
+  }
+}

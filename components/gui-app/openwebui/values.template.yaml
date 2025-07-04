@@ -1,0 +1,23 @@
+nameOverride: openwebui
+ingress:
+  enabled: true
+  annotations:
+    alb.ingress.kubernetes.io/group.name: default
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+  host: openwebui.{{{DOMAIN}}}
+
+# openaiBaseApiUrl: https://litellm.{{{DOMAIN}}}/v1
+openaiBaseApiUrl: http://litellm.litellm:4000/v1
+extraEnvVars:
+  - name: OPENAI_API_KEY
+    value: {{{LITELLM_API_KEY}}}
+
+ollama:
+  enabled: false
+pipelines:
+  enabled: false
+
+persistence:
+  enabled: true
+  size: 100Gi

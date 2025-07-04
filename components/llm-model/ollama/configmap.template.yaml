@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ollama-init-script
+  namespace: ollama
+data:
+  init-ollama.sh: |
+    #!/bin/bash
+
+    while ! /bin/ollama ps > /dev/null 2>&1; do
+      sleep 5
+    done
+
+    models=({{{models}}})
+
+    for model in "${models[@]}"; do
+      echo "Pulling model: $model"
+      /bin/ollama pull "$model"
+    done

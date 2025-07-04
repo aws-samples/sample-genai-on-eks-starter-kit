@@ -1,0 +1,47 @@
+langfuse:
+  salt:
+    value: salt
+  nextauth:
+    secret:
+      value: secret
+  ingress:
+    enabled: true
+    annotations:
+      alb.ingress.kubernetes.io/group.name: default
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    hosts:
+      - host: langfuse.{{{DOMAIN}}}
+        paths:
+          - path: /
+            pathType: Prefix
+  additionalEnv:
+    - name: LANGFUSE_INIT_ORG_ID
+      value: my-org
+    - name: LANGFUSE_INIT_PROJECT_ID
+      value: my-project
+    - name: LANGFUSE_INIT_PROJECT_PUBLIC_KEY
+      value: {{{LANGFUSE_PUBLIC_KEY}}}
+    - name: LANGFUSE_INIT_PROJECT_SECRET_KEY
+      value: {{{LANGFUSE_SECRET_KEY}}}
+    - name: LANGFUSE_INIT_USER_EMAIL
+      value: {{{LANGFUSE_USERNAME}}}
+    - name: LANGFUSE_INIT_USER_PASSWORD
+      value: {{{LANGFUSE_PASSWORD}}}
+
+postgresql:
+  auth:
+    username: admin
+    password: password123
+
+clickhouse:
+  auth:
+    password: password123
+
+redis:
+  auth:
+    password: password123
+
+s3:
+  auth:
+    rootPassword: password123

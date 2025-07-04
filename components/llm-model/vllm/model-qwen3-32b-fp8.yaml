@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-32b-fp8
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-32b-fp8
+  template:
+    metadata:
+      labels:
+        app: qwen3-32b-fp8
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        eks.amazonaws.com/instance-family: g6e
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai@sha256:0b51ec38fb965b44f6aa75d8d847c5f21bc062b7140e1d83444b39b67fc4a2ea
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - Qwen/Qwen3-32B-FP8
+            - --served-model-name=qwen3-32b-fp8
+            - --trust-remote-code
+            # - --gpu-memory-utilization=0.90
+            - --gpu-memory-utilization=0.95
+            - --max-model-len=32768 # 32K
+            # - --max-model-len=16384 # 16K
+            - --enable-auto-tool-choice
+            - --disable-log-requests
+            # Qwen3 specific
+            - --tool-call-parser=hermes
+            - --reasoning-parser=qwen3
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 3.6 #90%
+              memory: 28.8G #90%
+              nvidia.com/gpu: 1
+            limits:
+              cpu: 3.6 #90%
+              memory: 28.8G #90%
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen3-32b-fp8
+  namespace: vllm
+spec:
+  selector:
+    app: qwen3-32b-fp8
+  ports:
+    - name: http
+      port: 8000

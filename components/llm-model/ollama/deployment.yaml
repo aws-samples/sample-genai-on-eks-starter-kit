@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama
+  namespace: ollama
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        eks.amazonaws.com/instance-family: g6e
+      containers:
+        - name: ollama
+          image: ollama/ollama@sha256:8778ab50911bf22dd398c9ab733fd16ab2ac86b333cba21f0def72e61aa2baf7
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/scripts/init-ollama.sh"]
+          ports:
+            - name: http
+              containerPort: 11434
+          resources:
+            requests:
+              cpu: 3.6 #90%
+              memory: 28.8G #90%
+              nvidia.com/gpu: 1
+            limits:
+              cpu: 3.6 #90%
+              memory: 28.8G #90%
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: ollama-init-script
+              mountPath: /scripts
+            - name: ollama-cache
+              mountPath: /root/.ollama
+      volumes:
+        - name: ollama-init-script
+          configMap:
+            name: ollama-init-script
+            defaultMode: 0755
+        - name: ollama-cache
+          persistentVolumeClaim:
+            claimName: ollama-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule

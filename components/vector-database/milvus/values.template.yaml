@@ -1,0 +1,14 @@
+# https://github.com/milvus-io/milvus/issues/40267
+# Ingress expodes service port, not 9091 web UI port
+# ingress:
+#   enabled: true
+#   annotations:
+#     external-dns.alpha.kubernetes.io/ingress-hostname-source: annotation-only
+#     nginx.ingress.kubernetes.io/auth-type: basic
+#     nginx.ingress.kubernetes.io/auth-secret: basic-auth
+#     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
+#   ingressClassName: nginx
+#   rules:
+#     - host: milvus.{{{DOMAIN}}}
+#       path: /
+#       pathType: Prefix

@@ -1,0 +1,9 @@
+agno==1.7.0
+boto3==1.39.1
+openai==1.93.0
+mcp==1.9.4
+fastapi[standard]==0.115.13
+pydantic==2.11.7
+langfuse==3.0.5
+openlit==1.34.23
+SQLAlchemy==2.0.41

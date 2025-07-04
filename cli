@@ -1,0 +1,414 @@
+#!/usr/bin/env node
+
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
+import { Command } from "commander";
+import inquirer from "inquirer";
+import _ from "lodash";
+import utils from "./utils.mjs";
+
+const __filename = fileURLToPath(import.meta.url);
+const DIR = path.dirname(__filename);
+const envPath = path.join(DIR, ".env");
+dotenv.config({ path: envPath });
+const envLocalPath = path.join(DIR, ".env.local");
+dotenv.config({ path: envLocalPath, override: true });
+const configPath = path.join(DIR, "config.json");
+let config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+const configLocalPath = path.join(DIR, "config.local.json");
+if (fs.existsSync(configLocalPath)) {
+  const configLocal = JSON.parse(fs.readFileSync(configLocalPath, "utf8"));
+  config = _.merge(config, configLocal);
+}
+process.env.KUBECONFIG = path.join(DIR, ".kubeconfig");
+const TERRAFORM_DIR = path.join(DIR, "terraform");
+const COMPONENTS_DIR = path.join(DIR, "components");
+const EXAMPLES_DIR = path.join(DIR, "examples");
+utils.init({ BASE_DIR: DIR, config, configLocalPath, COMPONENTS_DIR });
+
+const componentCategories = [
+  { dir: "ai-gateway", name: "AI Gateway", components: [{ dir: "litellm", name: "LiteLLM" }] },
+  {
+    dir: "llm-model",
+    name: "LLM Model",
+    components: [
+      { dir: "vllm", name: "vLLM" },
+      { dir: "sglang", name: "SGLang" },
+      { dir: "ollama", name: "Ollama" },
+    ],
+  },
+  {
+    dir: "embedding-model",
+    name: "Embedding Model",
+    components: [{ dir: "tei", name: "Text Embedding Inference (TEI)" }],
+  },
+  {
+    dir: "o11y",
+    name: "Observability",
+    components: [
+      { dir: "langfuse", name: "Langfuse" },
+      { dir: "phoenix", name: "Phoenix" },
+    ],
+  },
+  { dir: "gui-app", name: "GUI App", components: [{ dir: "openwebui", name: "Open WebUI" }] },
+  {
+    dir: "vector-database",
+    name: "Vector Database",
+    components: [
+      { dir: "qdrant", name: "Qdrant" },
+      { dir: "milvus", name: "Milvus" },
+    ],
+  },
+  { dir: "workflow-automation", name: "Workflow Automation", components: [{ dir: "n8n", name: "n8n" }] },
+];
+
+const exampleCategories = [
+  { dir: "mcp-server", name: "MCP Server", examples: [{ dir: "calculator", name: "Calculator" }] },
+  {
+    dir: "strands-agents",
+    name: "Strands Agents",
+    examples: [{ dir: "calculator-agent", name: "Calculator Agent" }],
+  },
+  {
+    dir: "agno",
+    name: "Agno",
+    examples: [{ dir: "calculator-agent", name: "Calculator Agent" }],
+  },
+];
+
+const program = new Command();
+program.name("cli").description("CLI for GenAI on EKS Starter Kit").addHelpCommand(false).version("1.0.0");
+
+program
+  .command("configure")
+  .description("Configure environment variables")
+  .addHelpCommand(false)
+  .action(async () => {
+    try {
+      const envContent = fs.readFileSync(envPath, "utf8");
+      const envConfig = dotenv.parse(envContent);
+      let envLocalConfig = {};
+      if (fs.existsSync(envLocalPath)) {
+        const envLocalContent = fs.readFileSync(envLocalPath, "utf8");
+        envLocalConfig = dotenv.parse(envLocalContent);
+      }
+      const questions = Object.keys(envConfig).map((key) => ({
+        type: "input",
+        name: key,
+        message: `Enter value for ${key}:`,
+        default: envLocalConfig[key] || envConfig[key] || "",
+      }));
+      const answers = await inquirer.prompt(questions);
+      const envLocalContent =
+        Object.keys(envConfig)
+          .map((key) => `${key}=${answers[key]}`)
+          .join("\n") + "\n";
+      fs.writeFileSync(envLocalPath, envLocalContent);
+    } catch (error) {
+      console.error("Error during configuration:", error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("demo-setup")
+  .description("Setup demo environment (infra and demo components)")
+  .addHelpCommand(false)
+  .action(async () => {
+    try {
+      await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
+      const installItems = async (items, ITEMS_DIR, itemKey) => {
+        const itemPaths = items.map((item) => {
+          return path.join(ITEMS_DIR, item.category, item[itemKey], "index.mjs");
+        });
+        for (const itemPath of itemPaths) {
+          const itemModule = await import(itemPath);
+          await itemModule.init(DIR, config, utils);
+          await itemModule.install();
+        }
+      };
+      await installItems(config.demo.components, COMPONENTS_DIR, "component");
+      await installItems(config.demo.examples, EXAMPLES_DIR, "example");
+    } catch (error) {
+      console.error("Error setting up demo environment:", error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("interactive-setup")
+  .description("Setup environment with interactively selected components")
+  .addHelpCommand(false)
+  .action(async () => {
+    try {
+      const selectItems = async (itemCategories, ITEMS_DIR, itemsKey, itemKey) => {
+        const items = {};
+        const itemDetails = {};
+        for (const category of itemCategories) {
+          const categoryDir = category.dir;
+          items[categoryDir] = [];
+          for (const item of category[itemsKey]) {
+            const itemDir = item.dir;
+            const itemName = item.name;
+            const itemPath = path.join(ITEMS_DIR, categoryDir, itemDir);
+            const indexPath = path.join(itemPath, "index.mjs");
+            const demoItems = config.demo[itemsKey];
+            console.log(item);
+            items[categoryDir].push({
+              name: itemName,
+              value: `${categoryDir}/${itemDir}`,
+              short: itemDir,
+              checked: demoItems.some((item) => item.category === categoryDir && item[itemKey] === itemDir),
+            });
+            itemDetails[`${categoryDir}/${itemDir}`] = {
+              path: indexPath,
+              name: itemName,
+            };
+          }
+        }
+
+        const questions = [];
+        for (const category of itemCategories) {
+          if (items[category.dir].length > 0) {
+            questions.push({
+              type: "checkbox",
+              name: category.dir,
+              message: `Select ${category.name} ${itemsKey} to install:`,
+              choices: items[category.dir],
+            });
+          }
+        }
+
+        const answers = await inquirer.prompt(questions);
+        const selectedItems = [];
+        for (const category of itemCategories) {
+          if (answers[category.dir]) {
+            selectedItems.push(...answers[category.dir]);
+          }
+        }
+
+        return { selectedItems, itemDetails };
+      };
+      const { selectedItems: selectedComponents, itemDetails: componentDetails } = await selectItems(
+        componentCategories,
+        COMPONENTS_DIR,
+        "components",
+        "component",
+      );
+      const { selectedItems: selectedExamples, itemDetails: exampleDetails } = await selectItems(
+        exampleCategories,
+        EXAMPLES_DIR,
+        "examples",
+        "example",
+      );
+
+      if (selectedComponents.length === 0) {
+        console.log("No components selected. Exiting.");
+        return;
+      }
+      await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
+      for (const component of selectedComponents) {
+        const componentDetail = componentDetails[component];
+        const componentModule = await import(componentDetail.path);
+        await componentModule.init(DIR, config, utils);
+        await componentModule.install();
+      }
+      for (const example of selectedExamples) {
+        const exampleDetail = exampleDetails[example];
+        const exampleModule = await import(exampleDetail.path);
+        await exampleModule.init(DIR, config, utils);
+        await exampleModule.install();
+      }
+      console.log("Interactive setup completed successfully");
+    } catch (error) {
+      console.error("Error during interactive setup:", error);
+      process.exit(1);
+    }
+  });
+
+async function addItemsCommands(itemCategories, ITEMS_DIR, itemsKey, itemKey) {
+  for (const category of itemCategories) {
+    const categoryDir = category.dir;
+    const categoryName = category.name;
+    const categoryCommand = program
+      .command(categoryDir)
+      .description(`Manage ${categoryName} ${itemsKey}`)
+      .addHelpCommand(false);
+    for (const item of category[itemsKey]) {
+      const itemDir = item.dir;
+      const itemPath = path.join(ITEMS_DIR, categoryDir, itemDir);
+      const indexPath = path.join(itemPath, "index.mjs");
+      const itemModule = await import(indexPath);
+      const itemName = itemModule.name || item.name;
+      const { init, install, uninstall } = itemModule;
+      await init(DIR, config, utils);
+      const itemCommand = categoryCommand
+        .command(itemDir)
+        .description(`Manage ${itemName} ${itemKey}`)
+        .addHelpCommand(false);
+      itemCommand
+        .command("install")
+        .description(`Install the ${itemName} ${itemKey}`)
+        .addHelpCommand(false)
+        .action(async () => {
+          try {
+            await utils.setK8sContext();
+            await install();
+          } catch (error) {
+            console.error(`Error installing ${itemName}:`, error);
+            process.exit(1);
+          }
+        });
+      itemCommand
+        .command("uninstall")
+        .description(`Uninstall the ${itemName} ${itemKey}`)
+        .addHelpCommand(false)
+        .action(async () => {
+          try {
+            await utils.setK8sContext();
+            await uninstall();
+          } catch (error) {
+            console.error(`Error uninstalling ${itemName}:`, error);
+            process.exit(1);
+          }
+        });
+      if ((categoryDir === "llm-model" && itemDir !== "ollama") || categoryDir === "embedding-model") {
+        const { models } = config[categoryDir][itemDir];
+        itemCommand
+          .command("configure-models")
+          .description(`Configure models for the ${itemName} ${itemKey}`)
+          .addHelpCommand(false)
+          .action(async () => {
+            try {
+              await utils.model.configureModels(models, categoryDir, itemDir);
+            } catch (error) {
+              console.error(`Error configuring models for ${itemName}:`, error);
+              process.exit(1);
+            }
+          });
+        itemCommand
+          .command("update-models")
+          .description(`Add/remove models for the ${itemName} ${itemKey}`)
+          .addHelpCommand(false)
+          .action(async () => {
+            try {
+              await utils.model.updateModels(models, categoryDir, itemDir);
+            } catch (error) {
+              console.error(`Error adding/removing models for ${itemName}:`, error);
+              process.exit(1);
+            }
+          });
+        itemCommand
+          .command("add-models")
+          .description(`Add models for the ${itemName} ${itemKey}`)
+          .addHelpCommand(false)
+          .action(async () => {
+            try {
+              await utils.model.addModels(models, categoryDir, itemDir);
+            } catch (error) {
+              console.error(`Error adding models for ${itemName}:`, error);
+              process.exit(1);
+            }
+          });
+        itemCommand
+          .command("remove-all-models")
+          .description(`Remove all models for the ${itemName} ${itemKey}`)
+          .addHelpCommand(false)
+          .action(async () => {
+            try {
+              await utils.model.removeAllModels(models, categoryDir, itemDir);
+            } catch (error) {
+              console.error(`Error removing all models for ${itemName}:`, error);
+              process.exit(1);
+            }
+          });
+      }
+    }
+  }
+}
+await addItemsCommands(componentCategories, COMPONENTS_DIR, "components", "component");
+await addItemsCommands(exampleCategories, EXAMPLES_DIR, "examples", "example");
+
+async function addTerraformCommands() {
+  const terraformCommand = program
+    .command("terraform")
+    .description("Manage the infrastructure by using Terraform")
+    .addHelpCommand(false);
+  const commands = [
+    { name: "set-workspace", description: "Create and select Terraform workspace", action: "setWorkspace" },
+    { name: "plan", description: "Run terraform plan on the selected workspace", action: "plan" },
+    { name: "apply", description: "Run terraform apply on the selected workspace", action: "apply" },
+    { name: "destroy", description: "Run terraform destroy on the selected workspace", action: "destroy" },
+    { name: "output", description: "Run terraform output on the selected workspace", action: "output" },
+  ];
+  for (const command of commands) {
+    terraformCommand
+      .command(command.name)
+      .description(command.description)
+      .addHelpCommand(false)
+      .action(async () => {
+        try {
+          await utils.setK8sContext();
+          await utils.terraform[command.action](TERRAFORM_DIR);
+        } catch (error) {
+          console.error(`Error running terraform ${command.name}:`, error);
+          process.exit(1);
+        }
+      });
+  }
+}
+await addTerraformCommands();
+
+program
+  .command("cleanup-everything")
+  .description("Cleanup all components and infrastructure")
+  .addHelpCommand(false)
+  .action(async () => {
+    try {
+      await utils.setK8sContext();
+      const uninstallCategories = async (categories, COMPONENTS_DIR) => {
+        for (const category of categories) {
+          const categoryDir = category.dir;
+          const categoryName = category.name;
+          const CATEGORY_DIR = path.join(COMPONENTS_DIR, categoryDir);
+          const exampleDirs = fs
+            .readdirSync(CATEGORY_DIR, { withFileTypes: true })
+            .filter((item) => item.isDirectory())
+            .map((item) => item.name);
+          for (const exampleDir of exampleDirs) {
+            const examplePath = path.join(CATEGORY_DIR, exampleDir);
+            const indexPath = path.join(examplePath, "index.mjs");
+            if (fs.existsSync(indexPath)) {
+              try {
+                const exampleModule = await import(indexPath);
+                const exampleName = exampleModule.name;
+                console.log(`Uninstalling example: ${categoryName} - ${exampleName}`);
+                await exampleModule.init(DIR, config, utils);
+                await exampleModule.uninstall();
+              } catch (error) {}
+            }
+          }
+        }
+      };
+      await uninstallCategories(exampleCategories, EXAMPLES_DIR);
+      await uninstallCategories(componentCategories, COMPONENTS_DIR);
+      await utils.terraform.destroy(TERRAFORM_DIR);
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+      process.exit(1);
+    }
+  });
+
+async function main() {
+  program.addHelpCommand(false);
+  program.parse(process.argv);
+  if (process.argv.length <= 2) {
+    program.help();
+  }
+}
+main().catch((error) => {
+  console.error("Error in CLI execution:", error);
+  process.exit(1);
+});

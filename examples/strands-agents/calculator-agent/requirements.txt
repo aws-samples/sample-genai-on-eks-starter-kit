@@ -1,0 +1,8 @@
+strands-agents==0.1.8
+strands-agents[otel]==0.1.8
+strands-agents-tools==0.1.6
+mcp==1.9.4
+fastapi[standard]==0.115.13
+pydantic==2.11.7
+litellm==1.73.0
+langfuse==3.0.5

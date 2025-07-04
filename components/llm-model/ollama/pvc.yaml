@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ollama-cache
+  namespace: ollama
+spec:
+  storageClassName: efs
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi # Dummy

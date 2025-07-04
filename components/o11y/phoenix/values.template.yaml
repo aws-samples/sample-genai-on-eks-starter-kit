@@ -1,0 +1,6 @@
+ingress:
+  annotations:
+    alb.ingress.kubernetes.io/group.name: default
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+  host: phoenix.{{{DOMAIN}}}
