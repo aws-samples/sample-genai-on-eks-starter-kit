@@ -1,8 +1,8 @@
 # GenAI on EKS Starter Kit
 
-A starter kit for deploying and managing GenAI components on Amazon EKS (Elastic Kubernetes Service). This project provides a collection of tools, configurations, and components to help you quickly set up a GenAI project on Kubernetes.
+A starter kit for deploying and managing GenAI components and examples on Amazon EKS (Elastic Kubernetes Service). This project provides a collection of tools, configurations, components and examples to help you quickly set up a GenAI project on Kubernetes.
 
-The starter kit includes the configurable components from several categories:
+The starter kit includes the configurable components and examples from several categories:
 
 - AI Gateway - [LiteLLM](https://www.litellm.ai)
 - LLM Model - [vLLM](https://docs.vllm.ai), [SGLang](https://docs.sglang.ai), [Ollama](https://ollama.com/)
@@ -54,7 +54,7 @@ There are two methods to setup your environment:
 
 ### Method 1: Quick Demo Setup
 
-To quickly set up a demo environment with infrastructure and essential components:
+To quickly set up a demo environment with infrastructure and essential components and examples:
 
 ```bash
 ./cli demo-setup
@@ -62,10 +62,10 @@ To quickly set up a demo environment with infrastructure and essential component
 
 This command will:
 
-1. Set up the required infrastructure using Terraform
-2. Deploy the demo components specified in the config.json file
+1. Set up the required infrastructure using Terraform (check [Infrastructure Setup](INFRA_SETUP.md) for more information)
+2. Deploy the demo components and examples specified in the config.json file
 
-These components will be deployed:
+These components and examples will be deployed:
 
 - LiteLLM for AI gateway
 - vLLM for deploying and serving LLM models, with 2 models deployed:
@@ -92,35 +92,33 @@ For a more customized setup, you can use the interactive setup command:
 
 This command will:
 
-1. Present you with a list of available components organized by category
-2. Allow you to select which components you want to install
+1. Present you with a list of available components and examples organized by category
+2. Allow you to select which components and examples you want to install
 3. Set up the required infrastructure using Terraform
-4. Install all the selected components
+4. Install all the selected components and examples
 
-## Install/Uninstall Components
+## Install/Uninstall Components & Examples
 
-You can install or uninstall individual components using the CLI:
+You can install or uninstall individual components/examples using the CLI:
 
-### Install a Component
+### Install a Component/Example
 
 ```bash
-./cli <category> <component> install
+./cli <category> <component/example> install
 
 # Examples:
 # ./cli ai-gateway litellm install
-# ./cli vector-database milvus install
-# ./cli o11y phoenix install
+# ./cli strands-agents calculator-agent install
 ```
 
-### Uninstall a Component
+### Uninstall a Component/Example
 
 ```bash
-./cli <category> <component> uninstall
+./cli <category> <component/example> uninstall
 
 # Examples:
 # ./cli ai-gateway litellm uninstall
-# ./cli vector-database milvus uninstall
-# ./cli o11y phoenix uninstall
+# ./cli strands-agents calculator-agent uninstall
 ```
 
 ## LLM/Embedding Model - Model Management
@@ -185,17 +183,17 @@ This will prompt you to select which models should be deployed for the component
 
 There are two methods to clean up your environment:
 
-### Method 1: Uninstall Components Individually and Destroy Infrastructure
+### Method 1: Uninstall Components/Examples Individually and Destroy Infrastructure
 
 This method gives you more control over the cleanup process:
 
-1. Uninstall each component:
+1. Uninstall each component/example:
 
 ```bash
 # Examples:
+# ./cli strands-agents calculator-agent uninstall
 # ./cli ai-gateway litellm uninstall
-# ./cli llm-model vllm uninstall
-# ... uninstall other components as needed
+# ... uninstall other components/examples as needed
 ```
 
 2. Destroy the infrastructure:
@@ -206,7 +204,7 @@ This method gives you more control over the cleanup process:
 
 ### Method 2: Cleanup Everything at Once
 
-This method provides a one-command solution to clean up all components and infrastructure:
+This method provides a one-command solution to clean up all examples, components and infrastructure:
 
 ```bash
 ./cli cleanup-everything
@@ -214,10 +212,14 @@ This method provides a one-command solution to clean up all components and infra
 
 This command will:
 
-1. Attempt to uninstall all deployed components
+1. Attempt to uninstall all deployed examples and components
 2. Destroy the infrastructure using Terraform
 
 ## FAQs
+
+- **How can I use this starter kit without having a Route 53 hosted zone?**
+
+In-progress for having this option. By default, the single shared ALB is used to expose all public facing services via HTTPS using the different sub-domain names.
 
 - **How can I change the EC2 GPU instance families and purchasing options?**
 
@@ -251,6 +253,8 @@ For self-hosted models, they will be dynamically detected from the running model
 It is **not** intended for production use. The code provided here is for educational purposes and should not be used in a live environment without proper testing, validation, and modifications.
 
 Use at your own risk. The authors are not responsible for any issues, damages, or losses that may result from using this code in production.
+
+Check [Security Considerations](SECURITY.md) for more information on the security scans.
 
 ## Contributing
 
