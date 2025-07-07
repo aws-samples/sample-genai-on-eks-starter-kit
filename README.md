@@ -5,12 +5,14 @@ A starter kit for deploying and managing GenAI components and examples on Amazon
 The starter kit includes the configurable components and examples from several categories:
 
 - AI Gateway - [LiteLLM](https://www.litellm.ai)
-- LLM Model - [vLLM](https://docs.vllm.ai), [SGLang](https://docs.sglang.ai), [Ollama](https://ollama.com/)
+- LLM Model - [vLLM](https://docs.vllm.ai), [SGLang](https://docs.sglang.ai), [Ollama](https://ollama.com)
 - Embedding Model - [Text Embedding Inference (TEI)](https://huggingface.co/docs/text-embeddings-inference)
 - Observability (o11y) - [Langfuse](https://langfuse.com), [Phoenix](https://phoenix.arize.com)
-- GUI App - [Open WebUI](https://docs.openwebui.com/)
+- GUI App - [Open WebUI](https://docs.openwebui.com)
 - Vector Database - [Milvus](https://milvus.io), [Qdrant](https://qdrant.tech)
 - Workflow Automation - [n8n](https://docs.n8n.io)
+- MCP Server - [FastMCP 2.0](https://gofastmcp.com)
+- AI Agent Framework - [Strands Agents ](https://strandsagents.com), [Agno](https://docs.agno.com)
 
 ## Prerequisites
 
@@ -62,20 +64,10 @@ To quickly set up a demo environment with infrastructure and essential component
 
 This command will:
 
-1. Set up the required infrastructure using Terraform (check [Infrastructure Setup](INFRA_SETUP.md) for more information)
-2. Deploy the demo components and examples specified in the config.json file
+1. Set up the required infrastructure using Terraform (check [Infrastructure Setup](docs/INFRA_SETUP.md) for more information)
+2. Deploy the demo components and examples specified in the config.json file in the right order
 
-These components and examples will be deployed:
-
-- LiteLLM for AI gateway
-- vLLM for deploying and serving LLM models, with 2 models deployed:
-  - [Qwen/Qwen3-30B-A3B-FP8](https://huggingface.co/Qwen/Qwen3-30B-A3B-FP8) - 8-bit quantization (BF16) on single g6e EC2 instance, fast model ~75 token/sec with tools and thinking support
-  - [Qwen3-32B-FP8](https://huggingface.co/Qwen/Qwen3-32B-FP8) - 8-bit quantization (BF16) on single g6e EC2 instance, slow model ~15 token/sec with tools and thinking support
-- Langfuse for observability
-- Open WebUI fore GUI App
-- Qdrant for vector database
-- Text Embedding Inference (TEI) deploying and serving Embedding models, with 1 model deployed:
-  - [Qwen3-Embedding-4B](https://huggingface.co/Qwen/Qwen3-Embedding-4B) - 16-bit quantization (BF16) on single r7i EC2 instance.
+Check [Demo Walkthrough](docs/DEMO_WALKTHROUGH.md) on how to setup and use the demo
 
 ### Method 2: Interactive Setup
 
@@ -97,7 +89,9 @@ This command will:
 3. Set up the required infrastructure using Terraform
 4. Install all the selected components and examples
 
-## Install/Uninstall Components & Examples
+Note. Unlike the quick demo setup, the selected components and examples may not be deployed in the required order. Some components/examples might need to be refreshed by running the CLI install command again.
+
+## Components & Examples Management
 
 You can install or uninstall individual components/examples using the CLI:
 
@@ -121,7 +115,7 @@ You can install or uninstall individual components/examples using the CLI:
 # ./cli strands-agents calculator-agent uninstall
 ```
 
-## LLM/Embedding Model - Model Management
+## LLM/Embedding Model Management
 
 The CLI provides commands to manage LLM/Embedding models for the hosting components:
 
@@ -176,8 +170,6 @@ Remove all models for a specific component:
 # ./cli llm-model vllm remove-all-models
 # ./cli embedding-model tei remove-all-models
 ```
-
-This will prompt you to select which models should be deployed for the component.
 
 ## Cleanup
 
@@ -254,7 +246,7 @@ It is **not** intended for production use. The code provided here is for educati
 
 Use at your own risk. The authors are not responsible for any issues, damages, or losses that may result from using this code in production.
 
-Check [Security Considerations](SECURITY.md) for more information on the security scans.
+Check [Security Considerations](docs/SECURITY.md) for more information on the security scans.
 
 ## Contributing
 
