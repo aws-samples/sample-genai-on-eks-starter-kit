@@ -61,11 +61,11 @@ spec:
           resources:
             requests:
               cpu: 28.8 #90%
-              memory: 115.2G #90%
+              memory: 115Gi #90%
               aws.amazon.com/neuroncore: 2
             limits:
               cpu: 28.8 #90%
-              memory: 115.2G #90%
+              memory: 115Gi #90%
               aws.amazon.com/neuroncore: 2
           volumeMounts:
             - name: huggingface-cache

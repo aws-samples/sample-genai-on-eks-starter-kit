@@ -55,11 +55,11 @@ spec:
           resources:
             requests:
               cpu: 45.6 #95%
-              memory: 364.8G #95%
+              memory: 365Gi #95%
               nvidia.com/gpu: 4
             limits:
               cpu: 45.6 #95%
-              memory: 364.8G #95%
+              memory: 365Gi #95%
               nvidia.com/gpu: 4
           volumeMounts:
             - name: huggingface-cache

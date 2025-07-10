@@ -6,10 +6,6 @@ variable "name" {
   type    = string
   default = "genai-on-eks"
 }
-variable "repo_name" {
-  type    = string
-  default = "calculator-agent"
-}
 terraform {
   required_providers {
     aws = {
@@ -21,8 +17,13 @@ terraform {
 provider "aws" {
   region = var.region
 }
+locals {
+  app       = "calculator-agent"
+  namespace = "strands-agents"
+  full_name = "${var.name}-${local.namespace}-${local.app}"
+}
 resource "aws_ecr_repository" "this" {
-  name                 = "${var.name}-${var.repo_name}"
+  name                 = local.full_name
   image_tag_mutability = "MUTABLE"
   force_delete         = true
   
@@ -42,7 +43,7 @@ module "pod_identity" {
   source = "terraform-aws-modules/eks-pod-identity/aws"
   version = "1.12.0"
 
-  name                 = "${var.name}-${var.region}-calculator-agent"
+  name                 = local.full_name
   use_name_prefix      = false
   attach_custom_policy = true
   policy_statements = [
@@ -56,9 +57,9 @@ module "pod_identity" {
     }
   ]
   associations = {
-    litellm = {
-      service_account = "calculator-agent"
-      namespace       = "strands-agents"
+    app = {
+      service_account = local.app
+      namespace       = local.namespace
       cluster_name    = var.name
     }
   }

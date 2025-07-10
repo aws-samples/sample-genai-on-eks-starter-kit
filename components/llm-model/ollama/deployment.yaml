@@ -40,11 +40,11 @@ spec:
           resources:
             requests:
               cpu: 3.6 #90%
-              memory: 28.8G #90%
+              memory: 29Gi #90%
               nvidia.com/gpu: 1
             limits:
               cpu: 3.6 #90%
-              memory: 28.8G #90%
+              memory: 29Gi #90%
               nvidia.com/gpu: 1
           volumeMounts:
             - name: ollama-init-script

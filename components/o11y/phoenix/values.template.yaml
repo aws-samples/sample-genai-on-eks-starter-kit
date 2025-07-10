@@ -4,3 +4,19 @@ ingress:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
   host: phoenix.{{{DOMAIN}}}
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 2Gi
+  limits:
+    memory: 2Gi
+
+postgresql:
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi

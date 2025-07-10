@@ -6,10 +6,6 @@ variable "name" {
   type    = string
   default = "genai-on-eks"
 }
-variable "repo_name" {
-  type    = string
-  default = "calculator-mcp-server"
-}
 terraform {
   required_providers {
     aws = {
@@ -21,8 +17,13 @@ terraform {
 provider "aws" {
   region = var.region
 }
+locals {
+  app       = "calculator"
+  namespace = "mcp-server"
+  full_name = "${var.name}-${local.namespace}-${local.app}"
+}
 resource "aws_ecr_repository" "this" {
-  name                 = "${var.name}-${var.repo_name}"
+  name                 = local.full_name
   image_tag_mutability = "MUTABLE"
   force_delete         = true
   

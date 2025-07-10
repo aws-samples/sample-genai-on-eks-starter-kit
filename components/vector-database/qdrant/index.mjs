@@ -19,7 +19,7 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN", "QDRANT_PASSWORD"];
+  const requiredEnvVars = ["DOMAIN", "QDRANT_USERNAME", "QDRANT_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await $`helm repo add qdrant https://qdrant.to/helm`;
@@ -35,7 +35,8 @@ export async function install() {
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install qdrant qdrant/qdrant --namespace qdrant --create-namespace -f ${valuesRenderedPath}`;
 
-  const authContent = await $`htpasswd -nb admin ${process.env.QDRANT_PASSWORD}`;
+  const { QDRANT_USERNAME, QDRANT_PASSWORD } = process.env;
+  const authContent = await $`htpasswd -nb ${QDRANT_USERNAME} ${QDRANT_PASSWORD}`;
   const secretTemplatePath = path.join(DIR, "secret.template.yaml");
   const secretRenderedPath = path.join(DIR, "secret.rendered.yaml");
   const secretTemplateString = fs.readFileSync(secretTemplatePath, "utf8");

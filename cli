@@ -58,6 +58,7 @@ const componentCategories = [
     name: "Vector Database",
     components: [
       { dir: "qdrant", name: "Qdrant" },
+      { dir: "chroma", name: "Chroma" },
       { dir: "milvus", name: "Milvus" },
     ],
   },

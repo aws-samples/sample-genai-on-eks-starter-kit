@@ -57,7 +57,7 @@ module "pod_identity" {
     }
   ]
   associations = {
-    litellm = {
+    app = {
       service_account = local.app
       namespace       = local.namespace
       cluster_name    = var.name

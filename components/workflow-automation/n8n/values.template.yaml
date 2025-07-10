@@ -8,3 +8,11 @@ ingress:
     - host: n8n.{{{DOMAIN}}}
       paths: ["/"]
   tls: []
+
+main:
+  resources:
+    requests:
+      cpu: 1 
+      memory: 2Gi
+    limits:
+      memory: 2Gi
