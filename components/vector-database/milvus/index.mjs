@@ -19,7 +19,7 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN", "MILVUS_USERNAME", "MILVUS_PASSWORD"];
+  const requiredEnvVars = ["MILVUS_USERNAME", "MILVUS_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");

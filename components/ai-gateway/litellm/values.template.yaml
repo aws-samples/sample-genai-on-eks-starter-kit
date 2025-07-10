@@ -43,16 +43,19 @@ envVars:
 
 ingress:
   enabled: true
-  className: internet-facing-alb
+  className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
   annotations:
-    alb.ingress.kubernetes.io/group.name: default
     alb.ingress.kubernetes.io/target-type: ip
+    {{#if DOMAIN}}
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    {{/if}}
   hosts:
-    - host: litellm.{{{DOMAIN}}}
-      paths:
+    - paths:
         - path: /
           pathType: Prefix
+      {{#if DOMAIN}}
+      host: litellm.{{{DOMAIN}}}
+      {{/if}}
 
 proxy_config:
   general_settings:

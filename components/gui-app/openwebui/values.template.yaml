@@ -2,10 +2,13 @@ nameOverride: openwebui
 ingress:
   enabled: true
   annotations:
-    alb.ingress.kubernetes.io/group.name: default
     alb.ingress.kubernetes.io/target-type: ip
+  {{#if DOMAIN}}
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
   host: openwebui.{{{DOMAIN}}}
+  {{else}}
+  host:
+  {{/if}}
 
 # openaiBaseApiUrl: https://litellm.{{{DOMAIN}}}/v1
 openaiBaseApiUrl: http://litellm.litellm:4000/v1

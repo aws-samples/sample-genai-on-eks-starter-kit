@@ -7,11 +7,13 @@ ingress:
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
   ingressClassName: nginx
   hosts:
-    - host: qdrant.{{{DOMAIN}}}
-      paths:
+    - paths:
         - path: /
           pathType: Prefix
           servicePort: 6333
+      {{#if DOMAIN}}    
+      host: qdrant.{{{DOMAIN}}}
+      {{/if}}
 
 resources:
   requests:

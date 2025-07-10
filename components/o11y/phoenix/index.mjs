@@ -19,8 +19,8 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN"];
-  utils.checkRequiredEnvVars(requiredEnvVars);
+  // const requiredEnvVars = [];
+  // utils.checkRequiredEnvVars(requiredEnvVars);
 
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
