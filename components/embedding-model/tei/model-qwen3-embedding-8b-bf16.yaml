@@ -22,7 +22,7 @@ spec:
       containers:
         - name: tei
           image: ghcr.io/huggingface/text-embeddings-inference@sha256:b5abbab48a1fd8f395f510fd202839b619ece148ecaf80d10994a6c193054180
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

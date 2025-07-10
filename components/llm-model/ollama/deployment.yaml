@@ -22,7 +22,7 @@ spec:
       containers:
         - name: ollama
           image: ollama/ollama@sha256:8778ab50911bf22dd398c9ab733fd16ab2ac86b333cba21f0def72e61aa2baf7
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

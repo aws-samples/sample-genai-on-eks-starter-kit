@@ -209,15 +209,13 @@ This command will:
 
 ## FAQs
 
+- **How the config files work?**
+
+`.env` and `config.json` will be loaded first. Then, the configs will be merged/overriden with the values from `.env.local` and `config.local.json` if exist.
+
 - **How can I use this starter kit without having a Route 53 hosted zone?**
 
 In-progress for having this option. By default, the single shared ALB is used to expose all public facing services via HTTPS using the different sub-domain names.
-
-- **How can I change the EC2 GPU instance families and purchasing options?**
-
-The default instance families are g6e, g6 and g5g and the default purchasing options are spot and on-demand. You can change the values on `terraform/0-common.tf` and then run `./cli terraform apply again`.
-
-Note that the model deployment manifests use `nodeSelector` like `eks.amazonaws.com/instance-family: g6e` to lock the specific tested instance family which you will need to adjust accordingly.
 
 - **How can I configure and update the LiteLLM proxy model list?**
 
@@ -237,7 +235,19 @@ For Bedrock models, the model list hardcoded on config.json.
 }
 ```
 
+- **How can I change the EC2 GPU instance families and purchasing options?**
+
+The default instance families are g6e, g6 and g5g and the default purchasing options are spot and on-demand. You can change the values on `terraform/0-common.tf` and then run `./cli terraform apply again`.
+
+Note that the model deployment manifests use `nodeSelector` like `eks.amazonaws.com/instance-family: g6e` to lock the specific tested instance family which you will need to adjust accordingly.
+
 For self-hosted models, they will be dynamically detected from the running model pods.
+
+- **How can I use LLM models with AWS Neuron and EC2 Inferentia 2?**
+
+The supported models will have the `-neuron` suffix. To enable the support, on `config.json` (or `config.local.json`), change `enableNeuron` to `true` and then install the component again (e.g `./cli llm-model vllm install`) which will take ~20-30 mins to build the vLLM Neuron container image and push it to ECR.
+
+When a supported LLM model is deployed for the first time, Neorun just-in-time (JIT) compilation will compile the model which will take ~20-30 mins. The compiled model then will be cached on EFS file system for the subsequent deployments.
 
 ## Disclaimer
 

@@ -22,7 +22,7 @@ spec:
       containers:
         - name: vllm
           image: vllm/vllm-openai@sha256:0b51ec38fb965b44f6aa75d8d847c5f21bc062b7140e1d83444b39b67fc4a2ea
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -37,10 +37,11 @@ spec:
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
             - --max-model-len=32768 # 32K
-            - --enable-auto-tool-choice
             - --disable-log-requests
             # Mistral specific
+            - --enable-auto-tool-choice
             - --tool-call-parser=mistral
+            - --chat-template=examples/tool_chat_template_mistral.jinja
             - --tokenizer-mode=mistral
             - --load-format=mistral
             - --config-format=mistral

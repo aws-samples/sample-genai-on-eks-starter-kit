@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs";
 import inquirer from "inquirer";
 import * as prettier from "prettier";
+import handlebars from "handlebars";
 import { $, cd } from "zx";
 
 let BASE_DIR;
@@ -62,7 +63,27 @@ const model = (function () {
   const updateModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
+    const { enableNeuron } = config[categoryDir][componentDir];
+    let IMAGE;
+    if (enableNeuron) {
+      const ecrRepoUrl = await terraform.output(MODELS_DIR, { outputName: "ecr_repository_url" });
+      IMAGE = `${ecrRepoUrl}:latest`;
+    }
     for (const model of models) {
+      if (model.neuron) {
+        const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
+        const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
+        const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
+        const modelTemplate = handlebars.compile(modelTemplateString);
+        const modelVars = { IMAGE };
+        fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
+        if (model.deploy) {
+          await $`kubectl apply -f ${modelRenderedPath}`;
+        } else {
+          await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
+        }
+        continue;
+      }
       if (model.deploy) {
         await $`kubectl apply -f ${path.join(MODELS_DIR, `model-${model.name}.yaml`)}`;
       } else {
@@ -74,8 +95,24 @@ const model = (function () {
   const addModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
+    const { enableNeuron } = config[categoryDir][componentDir];
+    let IMAGE;
+    if (enableNeuron) {
+      const ecrRepoUrl = await terraform.output(MODELS_DIR, { outputName: "ecr_repository_url" });
+      IMAGE = `${ecrRepoUrl}:latest`;
+    }
     for (const model of models) {
       if (!model.deploy) {
+        continue;
+      }
+      if (model.neuron && componentDir === "vllm") {
+        const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
+        const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
+        const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
+        const modelTemplate = handlebars.compile(modelTemplateString);
+        const modelVars = { IMAGE };
+        fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
+        await $`kubectl apply -f ${modelRenderedPath}`;
         continue;
       }
       await $`kubectl apply -f ${path.join(MODELS_DIR, `model-${model.name}.yaml`)}`;
@@ -85,7 +122,23 @@ const model = (function () {
   const removeAllModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
+    const { enableNeuron } = config[categoryDir][componentDir];
+    let IMAGE;
+    if (enableNeuron) {
+      const ecrRepoUrl = await terraform.output(MODELS_DIR, { outputName: "ecr_repository_url" });
+      IMAGE = `${ecrRepoUrl}:latest`;
+    }
     for (const model of models) {
+      if (model.neuron && componentDir === "vllm") {
+        const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
+        const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
+        const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
+        const modelTemplate = handlebars.compile(modelTemplateString);
+        const modelVars = { IMAGE };
+        fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
+        await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
+        continue;
+      }
       await $`kubectl delete -f ${path.join(MODELS_DIR, `model-${model.name}.yaml`)} --ignore-not-found`;
     }
   };

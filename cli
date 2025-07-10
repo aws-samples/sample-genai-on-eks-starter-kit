@@ -155,7 +155,6 @@ program
             const itemPath = path.join(ITEMS_DIR, categoryDir, itemDir);
             const indexPath = path.join(itemPath, "index.mjs");
             const demoItems = config.demo[itemsKey];
-            console.log(item);
             items[categoryDir].push({
               name: itemName,
               value: `${categoryDir}/${itemDir}`,

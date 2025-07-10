@@ -1,27 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qwen3-30b-fp8
+  name: mistral-7b-neuron
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qwen3-30b-fp8
+      app: mistral-7b-neuron
   template:
     metadata:
       labels:
-        app: qwen3-30b-fp8
+        app: mistral-7b-neuron
     spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
-        eks.amazonaws.com/instance-family: g6e
+        eks.amazonaws.com/instance-family: inf2
+        # node.kubernetes.io/instance-type: inf2.8xlarge
+        # karpenter.sh/capacity-type: on-demand
       containers:
         - name: vllm
-          image: vllm/vllm-openai@sha256:0b51ec38fb965b44f6aa75d8d847c5f21bc062b7140e1d83444b39b67fc4a2ea
+          image: {{{IMAGE}}}
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -32,53 +34,69 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - Qwen/Qwen3-30B-A3B-FP8
-            - --served-model-name=qwen3-30b-fp8
+            - mistralai/Mistral-7B-Instruct-v0.3
+            - --served-model-name=mistral-7b-neuron
             - --trust-remote-code
-            - --gpu-memory-utilization=0.90
-            - --max-model-len=32768 # 32K
+            # - --gpu-memory-utilization=0.90
+            # - --max-model-len=32768 # 32K
             - --disable-log-requests
-            # Qwen3 specific
+            # Mistral specific
             - --enable-auto-tool-choice
-            - --tool-call-parser=hermes
-            - --reasoning-parser=qwen3
+            - --tool-call-parser=mistral
+            - --chat-template=examples/tool_chat_template_mistral.jinja
+            - --tokenizer-mode=mistral
+            - --load-format=mistral
+            - --config-format=mistral
+            # Neuron specific
+            - --tensor-parallel-size=2
+            - --gpu-memory-utilization=0.95
+            - --max-num-seqs=3
+            - --max-model-len=8192
           env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
+            - name: NEURON_COMPILED_ARTIFACTS
+              value: /root/.cache/neuron/mistralai/Mistral-7B-Instruct-v0.3
           ports:
             - name: http
               containerPort: 8000
           resources:
             requests:
-              cpu: 3.6 #90%
-              memory: 28.8G #90%
-              nvidia.com/gpu: 1
+              cpu: 28.8 #90%
+              memory: 115.2G #90%
+              aws.amazon.com/neuroncore: 2
             limits:
-              memory: 28.8G #90%
-              nvidia.com/gpu: 1
+              cpu: 28.8 #90%
+              memory: 115.2G #90%
+              aws.amazon.com/neuroncore: 2
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
+            - name: neuron-cache
+              mountPath: /root/.cache/neuron
       volumes:
         - name: huggingface-cache
           persistentVolumeClaim:
             claimName: huggingface-cache
+        - name: neuron-cache
+          persistentVolumeClaim:
+            claimName: neuron-cache
       tolerations:
-        - key: nvidia.com/gpu
+        - key: aws.amazon.com/neuron
           operator: Exists
           effect: NoSchedule
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: qwen3-30b-fp8
+  name: mistral-7b-neuron
   namespace: vllm
 spec:
   selector:
-    app: qwen3-30b-fp8
+    app: mistral-7b-neuron
   ports:
     - name: http
       port: 8000
