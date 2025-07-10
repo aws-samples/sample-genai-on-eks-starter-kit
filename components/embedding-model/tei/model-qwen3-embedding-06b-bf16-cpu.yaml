@@ -49,11 +49,11 @@ spec:
               containerPort: 80
           resources:
             requests:
-              cpu: 1.7 #85%
-              memory: 6.8G #85%
+              cpu: 1.6 #80%
+              memory: 6Gi #80%
             limits:
-              cpu: 1.7 #85%
-              memory: 6.8G #85%
+              cpu: 1.6 #80%
+              memory: 6Gi #80%
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface

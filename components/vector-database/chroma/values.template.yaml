@@ -1,0 +1,13 @@
+chromadb:
+  auth:
+    enabled: false
+  data:
+    storageClass: ebs
+    volumeSize: 10Gi
+
+resources:
+  requests:
+    cpu: 1 
+    memory: 2Gi
+  limits:
+    memory: 2Gi

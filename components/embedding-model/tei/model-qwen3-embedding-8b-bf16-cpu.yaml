@@ -50,10 +50,10 @@ spec:
           resources:
             requests:
               cpu: 7.2 #90%
-              memory: 57.6G #90%
+              memory: 58Gi #90%
             limits:
               cpu: 7.2 #90%
-              memory: 57.6G #90%
+              memory: 58Gi #90%
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface

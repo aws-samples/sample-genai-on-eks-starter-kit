@@ -28,20 +28,67 @@ langfuse:
       value: {{{LANGFUSE_USERNAME}}}
     - name: LANGFUSE_INIT_USER_PASSWORD
       value: {{{LANGFUSE_PASSWORD}}}
+  resources:
+    requests:
+      cpu: 1 
+      memory: 2Gi
+    limits:
+      memory: 2Gi
 
 postgresql:
   auth:
     username: admin
     password: password123
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
 
 clickhouse:
   auth:
     password: password123
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 1    
+      memory: 3Gi
+      ephemeral-storage: 50Mi
+    limits:
+      memory: 3Gi
+      ephemeral-storage: 2Gi
+  zookeeper:
+    replicaCount: 1
+    resources: 
+      requests:
+        cpu: 250m    
+        memory: 384Mi
+        ephemeral-storage: 50Mi
+      limits:
+        memory: 384Mi
+        ephemeral-storage: 2Gi 
 
 redis:
   auth:
     password: password123
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
 
 s3:
   auth:
     rootPassword: password123
+  resources:
+    requests:
+      cpu: 250m    
+      memory: 256Mi
+      ephemeral-storage: 50Mi
+    limits:
+      memory: 256Mi
+      ephemeral-storage: 2Gi

@@ -1,4 +1,4 @@
-# https://github.com/milvus-io/milvus/issues/40267
+# https://github.com/Milvus-io/Milvus/issues/40267
 # Ingress expodes service port, not 9091 web UI port
 # ingress:
 #   enabled: true
@@ -9,6 +9,70 @@
 #     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
 #   ingressClassName: nginx
 #   rules:
-#     - host: milvus.{{{DOMAIN}}}
+#     - host: Milvus.{{{DOMAIN}}}
 #       path: /
 #       pathType: Prefix
+
+cluster:
+  enabled: false
+
+etcd:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 200m    
+      memory: 256Mi
+    limits:
+      memory: 256Mi
+
+minio:
+  mode: standalone
+  resources:
+    requests:
+      cpu: 250m    
+      memory: 256Mi
+      ephemeral-storage: 50Mi
+    limits:
+      memory: 256Mi
+      ephemeral-storage: 2Gi
+
+pulsarv3:
+  components:
+    autorecovery: false
+  zookeeper:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 200m    
+        memory: 256Mi
+      limits:
+        memory: 256Mi
+  broker:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 500m    
+        memory: 2Gi
+      limits:
+        memory: 2Gi
+    configData:
+      autoSkipNonRecoverableData: "true"
+      managedLedgerDefaultEnsembleSize: "1"
+      managedLedgerDefaultWriteQuorum: "1"
+      managedLedgerDefaultAckQuorum: "1"
+  proxy:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 500m    
+        memory: 1Gi
+      limits:
+        memory: 1Gi
+  bookkeeper:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 500m    
+        memory: 2Gi
+      limits:
+        memory: 2Gi

@@ -1,5 +1,28 @@
+resources:
+  requests:
+    cpu: 1 
+    memory: 2Gi
+  limits:
+    memory: 2Gi
+
 redis:
   enabled: true
+  master:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
+
+postgresql:
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
 
 serviceAccount:
   create: true

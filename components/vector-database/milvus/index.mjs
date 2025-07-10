@@ -19,7 +19,7 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN", "MILVUS_PASSWORD"];
+  const requiredEnvVars = ["DOMAIN", "MILVUS_USERNAME", "MILVUS_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
@@ -32,7 +32,8 @@ export async function install() {
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install milvus milvus/milvus --namespace milvus --create-namespace -f ${valuesRenderedPath}`;
 
-  const authContent = await $`htpasswd -nb admin ${process.env.MILVUS_PASSWORD}`;
+  const { MILVUS_USERNAME, MILVUS_PASSWORD } = process.env;
+  const authContent = await $`htpasswd -nb ${MILVUS_USERNAME} ${MILVUS_PASSWORD}`;
   const secretTemplatePath = path.join(DIR, "secret.template.yaml");
   const secretRenderedPath = path.join(DIR, "secret.rendered.yaml");
   const secretTemplateString = fs.readFileSync(secretTemplatePath, "utf8");

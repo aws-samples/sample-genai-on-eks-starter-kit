@@ -230,19 +230,53 @@ module "eks_blueprints_addons_core" {
           value = var.region
         }]
         interval = "5s"
+        resources = {
+          requests = {
+            cpu    = "50m"
+            memory = "64Mi"
+          }
+          limits = {
+            memory = "64Mi"
+          }
+        }
       })
     }
-    metrics-server = { most_recent = true }
+    metrics-server = {
+      most_recent = true
+      configuration_values = jsonencode({
+        resources = {
+          requests = {
+            cpu    = "100m"
+            memory = "256Mi"
+          }
+          limits = {
+            memory = "256Mi"
+          }
+        }
+      })
+    }
   }
 
   enable_ingress_nginx = true
   ingress_nginx = {
     chart_version = "4.12.3"
-    set = [
-      {
-        name  = "controller.service.type"
-        value = "ClusterIP"
-      }
+    values = [
+      yamlencode({
+        controller = {
+          service = {
+            type = "ClusterIP"
+          }
+          resources = {
+            requests = {
+              cpu    = "100m"
+              memory = "256Mi"
+            }
+            limits = {
+              memory = "256Mi"
+            }
+          }
+        }
+      })
     ]
   }
 
