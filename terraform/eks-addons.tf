@@ -50,7 +50,6 @@ metadata:
   name: gpu
 spec:
   limits:
-    cpu: 100
     nvidia.com/gpu: 10
   disruption:
     budgets:
@@ -89,6 +88,56 @@ spec:
       terminationGracePeriod: 24h0m0s
       taints:
         - key: nvidia.com/gpu
+          value: "true"
+          effect: NoSchedule
+  YAML
+
+  depends_on = [module.eks]
+}
+
+resource "kubectl_manifest" "karpenter_nodepool_neuron" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: neuron
+spec:
+  limits:
+    aws.amazon.com/neuroncore: 50
+  disruption:
+    budgets:
+      - nodes: 100%
+        reasons:
+          - Empty
+      - nodes: 0%
+        reasons:
+          - Underutilized
+          - Drifted
+    consolidateAfter: 30s
+    consolidationPolicy: WhenEmptyOrUnderutilized
+  template:
+    spec:
+      expireAfter: 336h
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: default
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["spot", "on-demand"]
+        - key: eks.amazonaws.com/instance-family
+          operator: In
+          values: ["inf2", "trn1", "trn2"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+      terminationGracePeriod: 24h0m0s
+      taints:
+        - key: aws.amazon.com/neuron
           value: "true"
           effect: NoSchedule
   YAML

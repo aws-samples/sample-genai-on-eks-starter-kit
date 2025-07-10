@@ -22,7 +22,7 @@ spec:
       containers:
         - name: sglang
           image: docker.io/lmsysorg/sglang@sha256:f90fe13c637d603ae5ab3f18645296f4dbf458f74f801aa5491618e2bca07ec0
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

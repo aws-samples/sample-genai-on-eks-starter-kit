@@ -15,13 +15,17 @@
   },
   "llm-model": {
     "vllm": {
+      "enableNeuron": false,
       "models": [
         { "name": "qwen3-30b-fp8", "deploy": true },
         { "name": "qwen3-32b-fp8", "deploy": true },
-        { "name": "deepseek-r1-8b", "deploy": false },
+        { "name": "deepseek-r1-qwen3-8b", "deploy": false },
         { "name": "gemma3-27b-gptq", "deploy": false },
         { "name": "llama-4-scout-17b-16e-instruct-fp8", "deploy": false },
-        { "name": "magistral-24b-fp8", "deploy": false }
+        { "name": "magistral-24b-fp8", "deploy": false },
+        { "name": "deepseek-r1-llama-8b-neuron", "deploy": false, "neuron": true },
+        { "name": "llama-3-1-8b-neuron", "deploy": false, "neuron": true },
+        { "name": "mistral-7b-neuron", "deploy": false, "neuron": true }
       ]
     },
     "sglang": {
@@ -63,7 +67,7 @@
         "env": {
           "USE_BEDROCK": false,
           "BEDROCK_MODEL": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-fp8",
+          "LITELLM_MODEL_NAME": "vllm/mistral-7b-neuron",
           "USE_MCP_TOOLS": true
         }
       }
@@ -71,9 +75,9 @@
     "strands-agents": {
       "calculator-agent": {
         "env": {
-          "USE_BEDROCK": true,
+          "USE_BEDROCK": false,
           "BEDROCK_MODEL": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-fp8",
+          "LITELLM_MODEL_NAME": "vllm/mistral-7b-neuron",
           "USE_MCP_TOOLS": true
         }
       }

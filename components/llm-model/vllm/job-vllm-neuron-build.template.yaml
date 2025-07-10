@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vllm-neuron-build
+  namespace: vllm
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      # nodeSelector:
+      #   eks.amazonaws.com/instance-family: inf2
+      serviceAccountName: vllm-neuron-build
+      containers:
+        - name: kaniko
+          image: gcr.io/kaniko-project/executor:latest
+          args:
+            # TODO: Switch back to AWS Neuron repo when the PR is merged.
+            # https://github.com/aws-neuron/upstreaming-to-vllm/pull/25
+            - "--context=git://github.com/aonz/upstreaming-to-vllm.git"
+            - "--dockerfile=docker/Dockerfile.neuron"
+            - "--destination={{{IMAGE}}}"
+            # - "--verbosity=debug"
+          env:
+            - name: AWS_REGION
+              value: us-west-2
+          resources:
+            requests:
+              cpu: 28.8 #90%
+              memory: 115.2G #90%
+              aws.amazon.com/neuron: 1
+            limits:
+              cpu: 28.8 #90%
+              memory: 115.2G #90%
+              aws.amazon.com/neuron: 1
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vllm-neuron-build
+  namespace: vllm
+automountServiceAccountToken: false
