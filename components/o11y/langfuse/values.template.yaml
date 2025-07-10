@@ -7,14 +7,18 @@ langfuse:
   ingress:
     enabled: true
     annotations:
-      alb.ingress.kubernetes.io/group.name: default
       alb.ingress.kubernetes.io/target-type: ip
+      {{#if DOMAIN}}
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      {{/if}}
     hosts:
-      - host: langfuse.{{{DOMAIN}}}
-        paths:
+      - paths:
           - path: /
             pathType: Prefix
+        {{#if DOMAIN}}
+        host: langfuse.{{{DOMAIN}}}
+        {{/if}}
+
   additionalEnv:
     - name: LANGFUSE_INIT_ORG_ID
       value: my-org

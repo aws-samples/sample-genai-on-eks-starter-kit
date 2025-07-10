@@ -1,15 +1,24 @@
 ingress:
   enabled: true
   annotations:
-    alb.ingress.kubernetes.io/group.name: default
     alb.ingress.kubernetes.io/target-type: ip
+  {{#if DOMAIN}}
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
   hosts:
     - host: n8n.{{{DOMAIN}}}
+  {{else}}
+  hosts:
+    - host:
+  {{/if}}      
       paths: ["/"]
   tls: []
 
 main:
+  {{#unless DOMAIN}}
+  extraEnv:
+    N8N_SECURE_COOKIE:
+      value: "false"
+  {{/unless}}
   resources:
     requests:
       cpu: 1 

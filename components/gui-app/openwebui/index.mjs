@@ -21,7 +21,7 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN", "LITELLM_API_KEY"];
+  const requiredEnvVars = ["LITELLM_API_KEY"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await $`helm repo add open-webui https://open-webui.github.io/helm-charts`;

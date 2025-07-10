@@ -21,7 +21,7 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN", "HF_TOKEN"];
+  const requiredEnvVars = ["HF_TOKEN"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await $`kubectl apply -f ${path.join(DIR, "namespace.yaml")}`;

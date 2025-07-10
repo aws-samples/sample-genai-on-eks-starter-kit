@@ -148,7 +148,7 @@ const model = (function () {
 // Terraform
 const terraform = (function () {
   const setupWorkspace = async function (TERRAFORM_DIR) {
-    const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME", "DOMAIN"];
+    const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME"];
     checkRequiredEnvVars(requiredEnvVars);
     const { REGION, EKS_CLUSTER_NAME, DOMAIN } = process.env;
     try {

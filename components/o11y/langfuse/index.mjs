@@ -21,13 +21,7 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = [
-    "DOMAIN",
-    "LANGFUSE_USERNAME",
-    "LANGFUSE_PASSWORD",
-    "LANGFUSE_PUBLIC_KEY",
-    "LANGFUSE_SECRET_KEY",
-  ];
+  const requiredEnvVars = ["LANGFUSE_USERNAME", "LANGFUSE_PASSWORD", "LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await $`helm repo add langfuse https://langfuse.github.io/langfuse-k8s`;

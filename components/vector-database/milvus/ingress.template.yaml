@@ -11,8 +11,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: milvus.{{{DOMAIN}}}
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
@@ -21,21 +20,24 @@ spec:
                 name: milvus
                 port:
                   number: 9091
+      {{#if DOMAIN}}
+      host: milvus.{{{DOMAIN}}}
+      {{/if}}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   annotations:
-    alb.ingress.kubernetes.io/group.name: default
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
     alb.ingress.kubernetes.io/target-type: ip
+    {{#if DOMAIN}}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    {{/if}}
   name: milvus-alb
   namespace: ingress-nginx
 spec:
-  ingressClassName: internet-facing-alb
+  ingressClassName: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
   rules:
-    - host: milvus.{{{DOMAIN}}}
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
@@ -44,3 +46,6 @@ spec:
                 name: ingress-nginx-controller
                 port:
                   number: 80
+      {{#if DOMAIN}}
+      host: milvus.{{{DOMAIN}}}
+      {{/if}}      

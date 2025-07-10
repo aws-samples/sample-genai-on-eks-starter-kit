@@ -19,7 +19,7 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN", "QDRANT_USERNAME", "QDRANT_PASSWORD"];
+  const requiredEnvVars = ["QDRANT_USERNAME", "QDRANT_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await $`helm repo add qdrant https://qdrant.to/helm`;

@@ -21,8 +21,8 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["DOMAIN"];
-  utils.checkRequiredEnvVars(requiredEnvVars);
+  // const requiredEnvVars = [];
+  // utils.checkRequiredEnvVars(requiredEnvVars);
 
   await $`kubectl apply -f ${path.join(DIR, "namespace.yaml")}`;
   await $`kubectl apply -f ${path.join(DIR, "pvc.yaml")}`;

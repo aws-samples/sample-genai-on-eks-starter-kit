@@ -47,7 +47,7 @@ This will prompt you to enter values for environment variables. Then, it will sa
 
 - REGION - AWS region to be used to provision the infrastructure
 - EKS_CLUSTER_NAME - Name of the EKS cluster
-- DOMAIN - Domain name (already configured with a Route 53 hosted zone)
+- DOMAIN - Recommend to use a domain name already configured with a Route 53 hosted zone, check [FAQs](#faqs) more details
 - HF_TOKEN - Hugging Face [user access token](https://huggingface.co/docs/hub/en/security-tokens)
 
 ## Environment Setup
@@ -215,7 +215,9 @@ This command will:
 
 - **How can I use this starter kit without having a Route 53 hosted zone?**
 
-In-progress for having this option. By default, the single shared ALB is used to expose all public facing services via HTTPS using the different sub-domain names.
+With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. litellm.<DOMAIN> and openwebui.<DOMAIN>.
+
+Alternatively, when the `DOMAIN` filed on `.env` (or `.env.local`) is empty, mulitple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
 
 - **How can I configure and update the LiteLLM proxy model list?**
 
