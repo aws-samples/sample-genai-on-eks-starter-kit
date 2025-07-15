@@ -215,7 +215,7 @@ This command will:
 
 - **How can I use this starter kit without having a Route 53 hosted zone?**
 
-With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. litellm.<DOMAIN> and openwebui.<DOMAIN>.
+With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. `litellm.<DOMAIN>` and `openwebui.<DOMAIN>`.
 
 Alternatively, when the `DOMAIN` filed on `.env` (or `.env.local`) is empty, mulitple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
 

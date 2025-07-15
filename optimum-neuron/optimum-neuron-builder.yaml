@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: optimum-neuron-builder
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: optimum-neuron-builder
+  template:
+    metadata:
+      labels:
+        app: optimum-neuron-builder
+    spec:
+      nodeSelector:
+        eks.amazonaws.com/instance-family: inf2
+        node.kubernetes.io/instance-type: inf2.8xlarge
+        karpenter.sh/capacity-type: on-demand
+      containers:
+        - name: optimum-neuron-builder
+          image: public.ecr.aws/amazonlinux/amazonlinux:2023
+          command: ["sleep", "604800"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+            - name: NEURON_COMPILED_ARTIFACTS
+              value: /root/.cache/neuron/meta-llama/Llama-3.1-8B-Instruct-optimum-neuron
+            - name: VLLM_LOGGING_LEVEL
+              value: DEBUG         
+          resources:
+            requests:
+              cpu: 28.8 #90%
+              memory: 115Gi #90%
+              aws.amazon.com/neuroncore: 2
+            limits:
+              cpu: 28.8 #90%
+              # memory: 115Gi #90%
+              aws.amazon.com/neuroncore: 2
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            - name: neuron-cache
+              mountPath: /root/.cache/neuron
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: neuron-cache
+          persistentVolumeClaim:
+            claimName: neuron-cache
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists

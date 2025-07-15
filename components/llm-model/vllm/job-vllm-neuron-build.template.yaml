@@ -20,7 +20,7 @@ spec:
           args:
             # TODO: Switch back to AWS Neuron repo when the PR is merged.
             # https://github.com/aws-neuron/upstreaming-to-vllm/pull/25
-            - "--context=git://github.com/aonz/upstreaming-to-vllm.git"
+            - "--context=git://github.com/aonz-idp/upstreaming-to-vllm.git"
             - "--dockerfile=docker/Dockerfile.neuron"
             - "--destination={{{IMAGE}}}"
             # - "--verbosity=debug"

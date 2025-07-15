@@ -25,7 +25,8 @@
         { "name": "magistral-24b-fp8", "deploy": false },
         { "name": "deepseek-r1-llama-8b-neuron", "deploy": false, "neuron": true },
         { "name": "llama-3-1-8b-neuron", "deploy": false, "neuron": true },
-        { "name": "mistral-7b-neuron", "deploy": false, "neuron": true }
+        { "name": "mistral-7b-neuron", "deploy": false, "neuron": true },
+        { "name": "qwen3-8b-neuron", "deploy": true, "neuron": true }
       ]
     },
     "sglang": {

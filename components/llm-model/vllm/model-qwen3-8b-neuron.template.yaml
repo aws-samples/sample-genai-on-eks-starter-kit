@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: llama-3-1-8b-neuron
+  name: qwen3-8b-neuron
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: llama-3-1-8b-neuron
+      app: qwen3-8b-neuron
   template:
     metadata:
       labels:
-        app: llama-3-1-8b-neuron
+        app: qwen3-8b-neuron
     spec:
       securityContext:
         seccompProfile:
@@ -19,7 +19,7 @@ spec:
       automountServiceAccountToken: false
       nodeSelector:
         eks.amazonaws.com/instance-family: inf2
-        node.kubernetes.io/instance-type: inf2.8xlarge 
+        node.kubernetes.io/instance-type: inf2.xlarge 
         karpenter.sh/capacity-type: on-demand
       containers:
         - name: vllm
@@ -34,53 +34,53 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - meta-llama/Llama-3.1-8B-Instruct
-            - --served-model-name=llama-3-1-8b-neuron
+            - /root/.cache/neuron/Qwen/Qwen3-8B-optimum-neuron
+            - --served-model-name=qwen3-8b-neuron
             - --trust-remote-code
             # - --gpu-memory-utilization=0.90
             # - --max-model-len=32768 # 32K
             - --disable-log-requests
-            # Llama 3.1 specific
+            # Qwen3 specific
             - --enable-auto-tool-choice
-            - --tool-call-parser=llama3_json
-            - --chat-template=examples/tool_chat_template_llama3.1_json.jinja
+            - --tool-call-parser=hermes
+            - --reasoning-parser=qwen3
             # Neuron specific
             - --tensor-parallel-size=2
             - --gpu-memory-utilization=0.95
             - --max-num-seqs=1
             - --max-model-len=4096
           env:
-            - name: HUGGING_FACE_HUB_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: hf-token
-                  key: token
+            # - name: HUGGING_FACE_HUB_TOKEN
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: hf-token
+            #       key: token
             - name: NEURON_COMPILED_ARTIFACTS
-              value: /root/.cache/neuron/meta-llama/Llama-3.1-8B-Instruct-optimum-neuron
+              value: /root/.cache/neuron/Qwen/Qwen3-8B-optimum-neuron
             - name: VLLM_LOGGING_LEVEL
               value: DEBUG              
           ports:
             - name: http
               containerPort: 8000
-          # resources:
-          #   requests:
-          #     cpu: 3 #90%
-          #     memory: 13Gi #90%
-          #     # memory: 14.5G #90%
-          #     aws.amazon.com/neuroncore: 2
-          #   limits:
-          #     # cpu: 3.6 #90%
-          #     # memory: 14Gi #90%
-          #     aws.amazon.com/neuroncore: 2
           resources:
             requests:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
+              cpu: 3 #90%
+              memory: 13Gi #90%
+              # memory: 14.5G #90%
               aws.amazon.com/neuroncore: 2
             limits:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
+              # cpu: 3.6 #90%
+              # memory: 14Gi #90%
               aws.amazon.com/neuroncore: 2
+          # resources:
+          #   requests:
+          #     cpu: 28.8 #90%
+          #     memory: 115Gi #90%
+          #     aws.amazon.com/neuroncore: 2
+          #   limits:
+          #     cpu: 28.8 #90%
+          #     memory: 115Gi #90%
+          #     aws.amazon.com/neuroncore: 2
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
@@ -101,11 +101,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: llama-3-1-8b-neuron
+  name: qwen3-8b-neuron
   namespace: vllm
 spec:
   selector:
-    app: llama-3-1-8b-neuron
+    app: qwen3-8b-neuron
   ports:
     - name: http
       port: 8000
