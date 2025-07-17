@@ -75,7 +75,7 @@ const model = (function () {
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
         const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE };
+        const modelVars = { IMAGE, compile: !!model.compile };
         fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
         if (model.deploy) {
           await $`kubectl apply -f ${modelRenderedPath}`;
@@ -110,7 +110,7 @@ const model = (function () {
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
         const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE };
+        const modelVars = { IMAGE, compile: !!model.compile };
         fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
         await $`kubectl apply -f ${modelRenderedPath}`;
         continue;
@@ -134,7 +134,7 @@ const model = (function () {
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
         const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE };
+        const modelVars = { IMAGE, compile: !!model.compile };
         fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
         await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
         continue;

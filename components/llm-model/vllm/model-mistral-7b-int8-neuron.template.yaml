@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mistral-7b-int8-neuron
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mistral-7b-int8-neuron
+  template:
+    metadata:
+      labels:
+        app: mistral-7b-int8-neuron
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        eks.amazonaws.com/instance-family: inf2
+        {{#if compile}}
+        node.kubernetes.io/instance-type: inf2.8xlarge 
+        karpenter.sh/capacity-type: on-demand
+        {{else}}
+        node.kubernetes.io/instance-type: inf2.xlarge
+        {{/if}}
+      containers:
+        - name: vllm
+          image: {{{IMAGE}}}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - mistralai/Mistral-7B-Instruct-v0.3
+            - --served-model-name=mistral-7b-int8-neuron
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.90
+            # - --max-model-len=32768 # 32K
+            - --disable-log-requests
+            # Mistral specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=mistral
+            - --chat-template=examples/tool_chat_template_mistral.jinja
+            - --tokenizer-mode=mistral
+            - --load-format=mistral
+            - --config-format=mistral
+            # Neuron specific
+            - --tensor-parallel-size=2
+            - --max-num-seqs=4
+            - --max-model-len=8192 #8K
+            - --device=neuron
+            {{#unless compile}}
+            - --quantization=neuron_quant
+            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--mistralai--Mistral-7B-Instruct-v0.3/snapshots/e0bc86c23ce5aae1db576c8cca6f06f1f73af2db", "kv_cache_quant": true}'
+            {{/unless}}            
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+            - name: NEURON_COMPILED_ARTIFACTS
+              value: /root/.cache/neuron/mistralai/Mistral-7B-Instruct-v0.3-int8
+          ports:
+            - name: http
+              containerPort: 8000
+          {{#if compile}}
+          resources:
+            requests:
+              cpu: 28.8 #90%
+              memory: 115Gi #90%
+              aws.amazon.com/neuroncore: 2
+            limits:
+              # cpu: 28.8 #90%
+              memory: 115Gi #90%
+              aws.amazon.com/neuroncore: 2
+          {{else}}
+          resources:
+            requests:
+              cpu: 3 #90%
+              memory: 13Gi #85%
+              aws.amazon.com/neuroncore: 2
+            limits:
+              # cpu: 3.6 #90%
+              memory: 13Gi #85%
+              aws.amazon.com/neuroncore: 2
+          {{/if}}
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            - name: neuron-cache
+              mountPath: /root/.cache/neuron
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: neuron-cache
+          persistentVolumeClaim:
+            claimName: neuron-cache
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mistral-7b-int8-neuron
+  namespace: vllm
+spec:
+  selector:
+    app: mistral-7b-int8-neuron
+  ports:
+    - name: http
+      port: 8000

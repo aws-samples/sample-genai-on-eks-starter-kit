@@ -251,6 +251,12 @@ The supported models will have the `-neuron` suffix. To enable the support, on `
 
 When a supported LLM model is deployed for the first time, Neorun just-in-time (JIT) compilation will compile the model which will take ~20-30 mins. The compiled model then will be cached on EFS file system for the subsequent deployments.
 
+Llama-3.1-8B-Instruct, DeepSeek-R1-Distill-Llama-8B, Mistral-7B-Instruct-v0.3 models can the INT8 quantization to run on single inf2.xlarge, but inf2.8xlarge is still required to compile.
+
+- 1st step is to deploy the model with will used inf2.8xlarge first to compile and cache the model
+- Then, on `config.json` (or `config.local.json`), change from `"compile": true` to `"compile": false`
+- Then, delete the model deploymen and then deploy again which will use inf2.xlarge
+
 ## Disclaimer
 
 ⚠️ **This repository is intended for demonstration and learning purposes only.**
