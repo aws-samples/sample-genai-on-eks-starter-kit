@@ -85,5 +85,9 @@
         }
       }
     }
+  },
+  "docker": {
+    "useBuildx": true,
+    "arch": "arm64"
   }
 }

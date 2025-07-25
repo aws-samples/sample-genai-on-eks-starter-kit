@@ -13,8 +13,10 @@ spec:
       labels:
         app: calculator
     spec:
-      # nodeSelector:
-      #   kubernetes.io/arch: arm64
+      {{#unless useBuildx}}
+      nodeSelector:
+        kubernetes.io/arch: {{{arch}}}
+      {{/unless}}
       containers:
         - name: server
           image: {{{IMAGE}}}

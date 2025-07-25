@@ -209,17 +209,17 @@ This command will:
 
 ## FAQs
 
-- **How the config files work?**
+### How the config files work?
 
 `.env` and `config.json` will be loaded first. Then, the configs will be merged/overriden with the values from `.env.local` and `config.local.json` if exist.
 
-- **How can I use this starter kit without having a Route 53 hosted zone?**
+### How can I use this starter kit without having a Route 53 hosted zone?
 
 With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. litellm.<DOMAIN> and openwebui.<DOMAIN>.
 
 Alternatively, when the `DOMAIN` filed on `.env` (or `.env.local`) is empty, mulitple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
 
-- **How can I configure and update the LiteLLM proxy model list?**
+### How can I configure and update the LiteLLM proxy model list?
 
 Run `./cli litellm install` again to update the LiteLLM models.
 
@@ -237,7 +237,7 @@ For Bedrock models, the model list hardcoded on config.json.
 }
 ```
 
-- **How can I change the EC2 GPU instance families and purchasing options?**
+### How can I change the EC2 GPU instance families and purchasing options?
 
 The default instance families are g6e, g6 and g5g and the default purchasing options are spot and on-demand. You can change the values on `terraform/0-common.tf` and then run `./cli terraform apply again`.
 
@@ -245,7 +245,7 @@ Note that the model deployment manifests use `nodeSelector` like `eks.amazonaws.
 
 For self-hosted models, they will be dynamically detected from the running model pods.
 
-- **How can I use LLM models with AWS Neuron and EC2 Inferentia 2?**
+### How can I use LLM models with AWS Neuron and EC2 Inferentia 2?
 
 The supported models will have the `-neuron` suffix. To enable the support, on `config.json` (or `config.local.json`), change `enableNeuron` to `true` and then install the component again (e.g `./cli llm-model vllm install`) which will take ~20-30 mins to build the vLLM Neuron container image and push it to ECR.
 
@@ -256,6 +256,10 @@ Llama-3.1-8B-Instruct, DeepSeek-R1-Distill-Llama-8B, Mistral-7B-Instruct-v0.3 mo
 - 1st step is to deploy the model with will used inf2.8xlarge first to compile and cache the model
 - Then, on `config.json` (or `config.local.json`), change from `"compile": true` to `"compile": false`
 - Then, delete the model deploymen and then deploy again which will use inf2.xlarge
+
+### How can I disable the multi-arch container image build?
+
+By default, `docker buildx` is used to build the multi-arch container images. To disable it, modify the `docker` section on `config.json` (or `config.local.json`) to set `"useBuildx": false` and `arch` based on your machine OS arch.
 
 ## Disclaimer
 

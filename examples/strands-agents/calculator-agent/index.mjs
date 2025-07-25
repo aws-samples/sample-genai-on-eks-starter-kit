@@ -26,9 +26,13 @@ export async function install() {
   const ecrRepoUrl = await utils.terraform.output(DIR, { outputName: "ecr_repository_url" });
   cd(DIR);
   await $`aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ecrRepoUrl.split("/")[0]}`;
-  await $`docker buildx build --platform linux/amd64,linux/arm64 -t ${ecrRepoUrl}:latest --push .`;
-  // await $`docker build -t ${ecrRepoUrl}:latest .`;
-  // await $`docker push ${ecrRepoUrl}:latest`;
+  const { useBuildx, arch } = config.docker;
+  if (useBuildx) {
+    await $`docker buildx build --platform linux/amd64,linux/arm64 -t ${ecrRepoUrl}:latest --push .`;
+  } else {
+    await $`docker build -t ${ecrRepoUrl}:latest .`;
+    await $`docker push ${ecrRepoUrl}:latest`;
+  }
   await $`kubectl apply -f ${path.join(DIR, "..", "namespace.yaml")}`;
   const agentTemplatePath = path.join(DIR, "agent.template.yaml");
   const agentRenderedPath = path.join(DIR, "agent.rendered.yaml");
@@ -36,6 +40,8 @@ export async function install() {
   const agentTemplate = handlebars.compile(agentTemplateString);
   const { LITELLM_API_KEY } = process.env;
   const agentVars = {
+    useBuildx,
+    arch,
     IMAGE: `${ecrRepoUrl}:latest`,
     ...config["examples"]["strands-agents"]["calculator-agent"].env,
     LITELLM_BASE_URL: `http://litellm.litellm:4000/v1`,
