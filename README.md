@@ -261,6 +261,10 @@ Llama-3.1-8B-Instruct, DeepSeek-R1-Distill-Llama-8B, Mistral-7B-Instruct-v0.3 mo
 
 By default, `docker buildx` is used to build the multi-arch container images. To disable it, modify the `docker` section on `config.json` (or `config.local.json`) to set `"useBuildx": false` and `arch` based on your machine OS arch.
 
+### How can I use the different AWS region for Bedrock?
+
+By default, the same region as the EKS cluster will be used. To change it, modify the `bedrock` section on `config.json` (or `config.local.json`) to set `region` to the preferred region.
+
 ## Disclaimer
 
 ⚠️ **This repository is intended for demonstration and learning purposes only.**

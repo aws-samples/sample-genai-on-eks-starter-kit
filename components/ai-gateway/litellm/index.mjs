@@ -28,6 +28,7 @@ export async function install() {
 
   const integration = { "llm-model": {}, "embedding-model": {}, o11y: {} };
   integration["bedrock"] = {
+    region: config["bedrock"]["region"],
     llm: config["bedrock"]["llm"]["models"],
     embedding: config["bedrock"]["embedding"]["models"],
   };

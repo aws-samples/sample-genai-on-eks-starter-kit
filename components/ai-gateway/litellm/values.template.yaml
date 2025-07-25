@@ -82,12 +82,18 @@ proxy_config:
     - model_name: bedrock/{{{name}}}
       litellm_params:
         model: bedrock/{{{model}}}
+        {{#if @root.integration.bedrock.region}}
+        aws_region_name: {{{@root.integration.bedrock.region}}}
+        {{/if}}
     {{/each}}
     # Bedrock Embedding Models
     {{#each integration.bedrock.embedding}}
     - model_name: bedrock/{{{name}}}
       litellm_params:
         model: bedrock/{{{model}}}
+        {{#if @root.integration.bedrock.region}}
+        aws_region_name: {{{@root.integration.bedrock.region}}}
+        {{/if}}
     {{/each}}
     {{#each integration.llm-model.vllm}}
     - model_name: vllm/{{@key}}
