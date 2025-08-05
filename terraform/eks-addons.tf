@@ -50,7 +50,7 @@ metadata:
   name: gpu
 spec:
   limits:
-    nvidia.com/gpu: 10
+    nvidia.com/gpu: 50
   disruption:
     budgets:
       - nodes: 100%

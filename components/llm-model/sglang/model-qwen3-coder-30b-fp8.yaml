@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gemma3-27b-gptq
-  namespace: vllm
+  name: qwen3-coder-30b-fp8
+  namespace: sglang
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gemma3-27b-gptq
+      app: qwen3-coder-30b-fp8
   template:
     metadata:
       labels:
-        app: gemma3-27b-gptq
+        app: qwen3-coder-30b-fp8
     spec:
       securityContext:
         seccompProfile:
@@ -20,8 +20,8 @@ spec:
       nodeSelector:
         eks.amazonaws.com/instance-family: g6e
       containers:
-        - name: vllm
-          image: vllm/vllm-openaiv0.10.0
+        - name: sglang
+          image: docker.io/lmsysorg/sglang:v0.4.10.post2-cu126
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -30,23 +30,27 @@ spec:
                 - NET_RAW
             seccompProfile:
               type: RuntimeDefault
-          command: ["vllm", "serve"]
+          command: ["python3", "-m", "sglang.launch_server"]
           args:
-            - ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g
-            - --served-model-name=gemma3-27b-gptq
+            - --model-path=Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+            - --host=0.0.0.0
+            - --port=30000
             - --trust-remote-code
-            - --gpu-memory-utilization=0.90
-            - --max-model-len=32768 # 32K
-            - --disable-log-requests
+            - --mem-fraction-static=0.90
+            # - --context-length=32768 # 32K
+            - --context-length=131072 # 128K
+            # Qwen3 specific
+            - --tool-call-parser=qwen25
+            - --reasoning-parser=qwen3
           env:
-            - name: HUGGING_FACE_HUB_TOKEN
+            - name: HF_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
           ports:
             - name: http
-              containerPort: 8000
+              containerPort: 30000
           resources:
             requests:
               cpu: 3.6 #90%
@@ -59,10 +63,16 @@ spec:
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
+            - name: shm
+              mountPath: /dev/shm
       volumes:
         - name: huggingface-cache
           persistentVolumeClaim:
             claimName: huggingface-cache
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 10Gi
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
@@ -71,11 +81,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: gemma3-27b-gptq
-  namespace: vllm
+  name: qwen3-coder-30b-fp8
+  namespace: sglang
 spec:
   selector:
-    app: gemma3-27b-gptq
+    app: qwen3-coder-30b-fp8
   ports:
     - name: http
-      port: 8000
+      port: 30000

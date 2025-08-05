@@ -151,6 +151,7 @@ const terraform = (function () {
     const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME"];
     checkRequiredEnvVars(requiredEnvVars);
     const { REGION, EKS_CLUSTER_NAME, DOMAIN } = process.env;
+    const { EFS_THROUGHPUT_MODE } = config.terraform.env;
     try {
       cd(TERRAFORM_DIR);
       await $`terraform init`;
@@ -159,7 +160,11 @@ const terraform = (function () {
     try {
       cd(TERRAFORM_DIR);
       await $`mkdir -p workspaces/${REGION}`;
-      const content = `region = "${REGION}"\n` + `name = "${EKS_CLUSTER_NAME}"\n` + `domain = "${DOMAIN}"\n`;
+      const content =
+        `region = "${REGION}"\n` +
+        `name = "${EKS_CLUSTER_NAME}"\n` +
+        `domain = "${DOMAIN}"\n` +
+        `efs_throughput_mode = "${EFS_THROUGHPUT_MODE}"\n`;
       fs.writeFileSync(`workspaces/${REGION}/terraform.tfvars`, content);
     } catch (error) {
       throw new Error(error);

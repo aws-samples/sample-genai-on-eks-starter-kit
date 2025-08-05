@@ -19,6 +19,7 @@
       "models": [
         { "name": "qwen3-30b-fp8", "deploy": true },
         { "name": "qwen3-32b-fp8", "deploy": true },
+        { "name": "qwen3-coder-30b-fp8", "deploy": false },
         { "name": "deepseek-r1-qwen3-8b", "deploy": false },
         { "name": "gemma3-27b-gptq", "deploy": false },
         { "name": "llama-4-scout-17b-16e-instruct-fp8", "deploy": false },
@@ -34,7 +35,8 @@
     "sglang": {
       "models": [
         { "name": "qwen3-30b-fp8", "deploy": true },
-        { "name": "qwen3-32b-fp8", "deploy": true }
+        { "name": "qwen3-32b-fp8", "deploy": true },
+        { "name": "qwen3-coder-30b-fp8", "deploy": false }
       ]
     },
     "ollama": { "models": ["qwen3:32b", "qwen3:30b", "gemma3:27b", "deepseek-r1:8b", "nomic-embed-text:v1.5"] }
@@ -90,5 +92,10 @@
   "docker": {
     "useBuildx": true,
     "arch": "arm64"
+  },
+  "terraform": {
+    "env": {
+      "EFS_THROUGHPUT_MODE": "bursting"
+    }
   }
 }

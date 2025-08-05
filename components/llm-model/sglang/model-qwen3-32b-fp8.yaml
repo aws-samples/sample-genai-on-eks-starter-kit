@@ -21,7 +21,7 @@ spec:
         eks.amazonaws.com/instance-family: g6e
       containers:
         - name: sglang
-          image: docker.io/lmsysorg/sglang@sha256:f90fe13c637d603ae5ab3f18645296f4dbf458f74f801aa5491618e2bca07ec0
+          image: docker.io/lmsysorg/sglang:v0.4.10.post2-cu126
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,6 +38,7 @@ spec:
             - --trust-remote-code
             - --mem-fraction-static=0.90
             - --context-length=32768 # 32K
+            # Qwen3 specific
             - --tool-call-parser=qwen25
             - --reasoning-parser=qwen3
           env:

@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gemma3-27b-gptq
+  name: qwen3-coder-30b-fp8
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gemma3-27b-gptq
+      app: qwen3-coder-30b-fp8
   template:
     metadata:
       labels:
-        app: gemma3-27b-gptq
+        app: qwen3-coder-30b-fp8
     spec:
       securityContext:
         seccompProfile:
@@ -32,12 +32,18 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g
-            - --served-model-name=gemma3-27b-gptq
+            - Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+            - --served-model-name=qwen3-coder-30b-fp8
             - --trust-remote-code
-            - --gpu-memory-utilization=0.90
-            - --max-model-len=32768 # 32K
+            # - --gpu-memory-utilization=0.90
+            - --gpu-memory-utilization=0.95
+            # - --max-model-len=32768 # 32K
+            - --max-model-len=131072 # 128K
             - --disable-log-requests
+            # Qwen3 specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+            - --reasoning-parser=qwen3
           env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
@@ -53,7 +59,6 @@ spec:
               memory: 29Gi #90%
               nvidia.com/gpu: 1
             limits:
-              cpu: 3.6 #90%
               memory: 29Gi #90%
               nvidia.com/gpu: 1
           volumeMounts:
@@ -71,11 +76,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: gemma3-27b-gptq
+  name: qwen3-coder-30b-fp8
   namespace: vllm
 spec:
   selector:
-    app: gemma3-27b-gptq
+    app: qwen3-coder-30b-fp8
   ports:
     - name: http
       port: 8000

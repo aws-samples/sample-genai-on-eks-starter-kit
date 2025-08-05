@@ -18,13 +18,16 @@ resource "aws_security_group" "efs" {
 }
 
 resource "aws_efs_file_system" "this" {
-  creation_token = "${module.eks.cluster_name}-efs"
-  encrypted      = true
+  creation_token  = "${module.eks.cluster_name}-efs"
+  encrypted       = true
+  throughput_mode = var.efs_throughput_mode
 
   lifecycle_policy {
-    transition_to_ia = "AFTER_1_DAY"
+    transition_to_ia = "AFTER_7_DAYS"
   }
-
+  lifecycle_policy {
+    transition_to_primary_storage_class = "AFTER_1_ACCESS"
+  }
   tags = {
     Name = "${module.eks.cluster_name}-efs"
   }

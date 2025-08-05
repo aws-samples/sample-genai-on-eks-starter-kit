@@ -74,7 +74,7 @@ spec:
 
 
 resource "kubectl_manifest" "ingress_internet_facing_alb" {
-  count = var.domain != "" ? 1 : 0
+  count     = var.domain != "" ? 1 : 0
   yaml_body = <<-YAML
 apiVersion: networking.k8s.io/v1
 kind: Ingress

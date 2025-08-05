@@ -26,7 +26,7 @@ spec:
         # node.kubernetes.io/instance-type: r7i.2xlarge
       containers:
         - name: tei
-          image: ghcr.io/huggingface/text-embeddings-inference@sha256:49b0916457823f64ebf0ce79b37ec0031da27b579c83c623dad7a2812f277cd4
+          image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
