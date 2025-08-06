@@ -27,16 +27,9 @@ const checkRequiredEnvVars = (requiredEnvVars) => {
 };
 
 const setK8sContext = async () => {
-  //   const contextFile = path.join(BASE_DIR, ".kubeconfig");
-  //   if (fs.existsSync(contextFile)) {
-  //     process.env.KUBECONFIG = contextFile;
-  //     return;
-  //   }
-  //   const { EKS_CLUSTER_NAME, REGION } = process.env;
-  //   const contextName = `${EKS_CLUSTER_NAME}-${REGION}`;
-  //   await $`kubectl config view --raw --minify --flatten --context=${contextName} > ${contextFile}`;
-  //   process.env.KUBECONFIG = contextFile;
-  //   await $`kubectl config use-context ${contextName}`;
+  const { EKS_CLUSTER_NAME, REGION } = process.env;
+  const contextName = `${EKS_CLUSTER_NAME}-${REGION}`;
+  await $`kubectl config use-context ${contextName}`;
 };
 // Model Management
 const model = (function () {
@@ -151,7 +144,6 @@ const terraform = (function () {
     const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME"];
     checkRequiredEnvVars(requiredEnvVars);
     const { REGION, EKS_CLUSTER_NAME, DOMAIN } = process.env;
-    const { EFS_THROUGHPUT_MODE } = config.terraform.env;
     try {
       cd(TERRAFORM_DIR);
       await $`terraform init`;
@@ -160,11 +152,10 @@ const terraform = (function () {
     try {
       cd(TERRAFORM_DIR);
       await $`mkdir -p workspaces/${REGION}`;
-      const content =
-        `region = "${REGION}"\n` +
-        `name = "${EKS_CLUSTER_NAME}"\n` +
-        `domain = "${DOMAIN}"\n` +
-        `efs_throughput_mode = "${EFS_THROUGHPUT_MODE}"\n`;
+      let content = `region = "${REGION}"\n` + `name = "${EKS_CLUSTER_NAME}"\n` + `domain = "${DOMAIN}"\n`;
+      for (const [key, value] of Object.entries(config.terraform.vars)) {
+        content += `${key} = "${value}"\n`;
+      }
       fs.writeFileSync(`workspaces/${REGION}/terraform.tfvars`, content);
     } catch (error) {
       throw new Error(error);

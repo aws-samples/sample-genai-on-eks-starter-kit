@@ -265,6 +265,10 @@ By default, `docker buildx` is used to build the multi-arch container images. To
 
 By default, the same region as the EKS cluster will be used. To change it, modify the `bedrock` section on `config.json` (or `config.local.json`) to set `region` to the preferred region.
 
+### How can I provision and manage multiple EKS clusters?
+
+You can change the values of the `REGION`, `EKS_CLUSTER_NAME`, and `DOMAIN` fields on `.env` (or `.env.local`). Then, Terraform workspace and kubectl context will automatically use those values when running the related `./cli` commands.
+
 ## Disclaimer
 
 ⚠️ **This repository is intended for demonstration and learning purposes only.**

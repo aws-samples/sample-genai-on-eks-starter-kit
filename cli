@@ -36,6 +36,7 @@ const componentCategories = [
     components: [
       { dir: "vllm", name: "vLLM" },
       { dir: "sglang", name: "SGLang" },
+      { dir: "tgi", name: "TGI" },
       { dir: "ollama", name: "Ollama" },
     ],
   },

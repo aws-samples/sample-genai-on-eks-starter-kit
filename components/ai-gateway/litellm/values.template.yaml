@@ -110,6 +110,14 @@ proxy_config:
         api_key: fake-key
         api_base: http://{{@key}}.sglang:30000/v1
     {{/each}}
+    # TGI Models
+    {{#each integration.llm-model.tgi}}
+    - model_name: tgi/{{@key}}
+      litellm_params:
+        model: openai/{{@key}}
+        api_key: fake-key
+        api_base: http://{{@key}}.tgi:80/v1
+    {{/each}}
     # Ollama Models
     {{#each integration.llm-model.ollama}}
     - model_name: ollama/{{@key}}

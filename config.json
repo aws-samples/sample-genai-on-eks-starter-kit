@@ -39,6 +39,13 @@
         { "name": "qwen3-coder-30b-fp8", "deploy": false }
       ]
     },
+    "tgi": {
+      "models": [
+        { "name": "deepseek-r1-qwen3-8b", "deploy": false },
+        { "name": "qwen3-8b", "deploy": false },
+        { "name": "qwen3-8b-fp8", "deploy": false }
+      ]
+    },
     "ollama": { "models": ["qwen3:32b", "qwen3:30b", "gemma3:27b", "deepseek-r1:8b", "nomic-embed-text:v1.5"] }
   },
   "embedding-model": {
@@ -94,8 +101,8 @@
     "arch": "arm64"
   },
   "terraform": {
-    "env": {
-      "EFS_THROUGHPUT_MODE": "bursting"
+    "vars": {
+      "efs_throughput_mode": "bursting"
     }
   }
 }

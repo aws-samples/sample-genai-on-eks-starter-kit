@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deepseek-r1-qwen3-8b
+  namespace: tgi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deepseek-r1-qwen3-8b
+  template:
+    metadata:
+      labels:
+        app: deepseek-r1-qwen3-8b
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        eks.amazonaws.com/instance-family: g6e
+      containers:
+        - name: tgi
+          image: ghcr.io/huggingface/text-generation-inference:3.3.4
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          args:
+            - --model-id=deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+            - --trust-remote-code
+            - --huggingface-hub-cache=/root/.cache/huggingface/hub
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+            # - name: CUDA_GRAPHS
+            #   value: "0"
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 3.6 #90%
+              memory: 29Gi #90%
+              nvidia.com/gpu: 1
+            limits:
+              memory: 29Gi #90%
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deepseek-r1-qwen3-8b
+  namespace: tgi
+spec:
+  selector:
+    app: deepseek-r1-qwen3-8b
+  ports:
+    - name: http
+      port: 80
