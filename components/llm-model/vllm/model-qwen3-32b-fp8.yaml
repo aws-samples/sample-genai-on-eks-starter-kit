@@ -21,7 +21,7 @@ spec:
         eks.amazonaws.com/instance-family: g6e
       containers:
         - name: vllm
-          image: vllm/vllm-openaiv0.10.0
+          image: vllm/vllm-openai:v0.10.0
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
