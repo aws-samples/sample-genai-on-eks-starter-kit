@@ -27,6 +27,8 @@
         { "name": "deepseek-r1-llama-8b-neuron", "deploy": false, "neuron": true },
         { "name": "llama-3-1-8b-neuron", "deploy": false, "neuron": true },
         { "name": "mistral-7b-neuron", "deploy": false, "neuron": true },
+        { "name": "qwen3-8b-neuron", "deploy": false, "neuron": true },
+        { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": false, "neuron": true },
         { "name": "deepseek-r1-llama-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
         { "name": "llama-3-1-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
         { "name": "mistral-7b-int8-neuron", "deploy": false, "neuron": true, "compile": true }
@@ -40,10 +42,12 @@
       ]
     },
     "tgi": {
+      "enableNeuron": false,
       "models": [
         { "name": "deepseek-r1-qwen3-8b", "deploy": false },
         { "name": "qwen3-8b", "deploy": false },
-        { "name": "qwen3-8b-fp8", "deploy": false }
+        { "name": "qwen3-8b-fp8", "deploy": false },
+        { "name": "qwen3-8b-neuron", "deploy": false, "neuron": true }
       ]
     },
     "ollama": { "models": ["qwen3:32b", "qwen3:30b", "gemma3:27b", "deepseek-r1:8b", "nomic-embed-text:v1.5"] }

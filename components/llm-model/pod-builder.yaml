@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: builder
+  namespace: vllm
+  # namespace: sglang
+  # namespace: tgi
+spec:
+  nodeSelector:
+    kubernetes.io/arch: amd64
+    eks.amazonaws.com/instance-category: m
+    eks.amazonaws.com/instance-generation: "7"
+    karpenter.sh/capacity-type: on-demand
+  containers:
+    - name: ubuntu
+      image: ubuntu
+      command: ["sleep", "604800"]
+      tty: true
+      stdin: true
+      env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-token
+              key: token
+        - name: HF_HOME
+          value: /root/.cache/huggingface
+      resources:
+        requests:
+          cpu: 3
+          memory: 12Gi
+      volumeMounts:
+        - name: huggingface-cache
+          mountPath: /root/.cache/huggingface
+        - name: neuron-cache
+          mountPath: /root/.cache/neuron
+  volumes:
+    - name: huggingface-cache
+      persistentVolumeClaim:
+        claimName: huggingface-cache
+    - name: neuron-cache
+      persistentVolumeClaim:
+        claimName: neuron-cache
+# Terminal 1
+# apt update && DEBIAN_FRONTEND=noninteractive apt install -y python3-venv python3-full htop
+# python3 -m venv ~/myenv
+# source ~/myenv/bin/activate
+# pip install -U "huggingface_hub[cli]"
+# huggingface-cli download Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
+# huggingface-cli download openai/gpt-oss-120b
+# huggingface-cli download moonshotai/Kimi-K2-Instruct
+# Terminal 2
+# cd /root/.cache/huggingface/hub
+# htop
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: builder-neuron
+  # namespace: vllm
+  # namespace: sglang
+  namespace: tgi
+spec:
+  nodeSelector:
+    eks.amazonaws.com/instance-family: inf2
+    node.kubernetes.io/instance-type: inf2.xlarge
+    karpenter.sh/capacity-type: on-demand
+  containers:
+    - name: ubuntu
+      image: public.ecr.aws/neuron/pytorch-inference-neuronx:2.7.0-neuronx-py310-sdk2.25.0-ubuntu22.04
+      tty: true
+      stdin: true
+      env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-token
+              key: token
+        - name: HF_HOME
+          value: /root/.cache/huggingface
+      resources:
+        requests:
+          cpu: 3
+          memory: 12Gi
+          aws.amazon.com/neuroncore: 2
+        limits:
+          aws.amazon.com/neuroncore: 2
+      volumeMounts:
+        - name: huggingface-cache
+          mountPath: /root/.cache/huggingface
+        - name: shm
+          mountPath: /dev/shm
+        - name: neuron-cache
+          mountPath: /root/.cache/neuron
+  volumes:
+    - name: huggingface-cache
+      persistentVolumeClaim:
+        claimName: huggingface-cache
+    - name: shm
+      emptyDir:
+        medium: Memory
+    - name: neuron-cache
+      persistentVolumeClaim:
+        claimName: neuron-cache
+  tolerations:
+    - key: aws.amazon.com/neuron
+      operator: Exists
+      effect: NoSchedule
+# Terminal 1
+# pip install optimum-neuron[neuronx]
+
+# pip show neuronx-cc
+# pip show optimum-neuron

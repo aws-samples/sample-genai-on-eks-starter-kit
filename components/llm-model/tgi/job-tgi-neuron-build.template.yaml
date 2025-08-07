@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tgi-neuron-build
+  namespace: tgi
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      # nodeSelector:
+      #   eks.amazonaws.com/instance-family: inf2
+      serviceAccountName: tgi-neuron-build
+      containers:
+        - name: kaniko
+          image: gcr.io/kaniko-project/executor:latest
+          args:
+            - "--context=git://github.com/aonz/text-generation-inference.git"
+            - "--dockerfile=Dockerfile.neuron"
+            - "--destination={{{IMAGE}}}"
+            # - "--verbosity=debug"
+          env:
+            - name: AWS_REGION
+              value: us-west-2
+          resources:
+            requests:
+              cpu: 28.8 #90%
+              memory: 115.2G #90%
+              aws.amazon.com/neuron: 1
+            limits:
+              cpu: 28.8 #90%
+              memory: 115.2G #90%
+              aws.amazon.com/neuron: 1
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tgi-neuron-build
+  namespace: tgi
+automountServiceAccountToken: false
