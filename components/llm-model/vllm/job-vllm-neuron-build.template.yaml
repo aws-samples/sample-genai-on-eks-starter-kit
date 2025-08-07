@@ -29,12 +29,10 @@ spec:
               value: us-west-2
           resources:
             requests:
-              cpu: 28.8 #90%
-              memory: 115.2G #90%
+              cpu: 24 #75%
+              memory: 96Gi #90%
               aws.amazon.com/neuron: 1
             limits:
-              cpu: 28.8 #90%
-              memory: 115.2G #90%
               aws.amazon.com/neuron: 1
       tolerations:
         - key: aws.amazon.com/neuron

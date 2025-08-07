@@ -37,7 +37,6 @@ spec:
             - --trust-remote-code
             - --gpu-memory-utilization=0.9
             - --max-model-len=32768 # 32K
-            - --disable-log-requests
             # Llama4 specific
             - --enable-auto-tool-choice
             - --tool-call-parser=llama3_json
@@ -54,12 +53,10 @@ spec:
               containerPort: 8000
           resources:
             requests:
-              cpu: 45.6 #95%
-              memory: 365Gi #95%
+              cpu: 36 #75%
+              memory: 288Gi #75%
               nvidia.com/gpu: 4
             limits:
-              cpu: 45.6 #95%
-              memory: 365Gi #95%
               nvidia.com/gpu: 4
           volumeMounts:
             - name: huggingface-cache

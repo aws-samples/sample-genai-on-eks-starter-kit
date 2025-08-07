@@ -62,20 +62,11 @@ spec:
               containerPort: 80
           resources:
             requests:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
+              cpu: 24 #75%
+              memory: 96Gi #75%
               aws.amazon.com/neuroncore: 2
             limits:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
               aws.amazon.com/neuroncore: 2
-            # requests:
-            #   cpu: 3 #90%
-            #   memory: 13Gi #85%
-            #   aws.amazon.com/neuroncore: 2
-            # limits:
-            #   memory: 13Gi #85%
-            #   aws.amazon.com/neuroncore: 2
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface

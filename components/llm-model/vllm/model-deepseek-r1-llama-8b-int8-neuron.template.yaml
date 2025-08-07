@@ -43,16 +43,13 @@ spec:
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
             # - --max-model-len=32768 # 32K
-            - --disable-log-requests
             # DeepSeek-R1 specific
             - --reasoning-parser=deepseek_r1
             # Neuron specific
             - --tensor-parallel-size=2
             - --max-num-seqs=4
             - --max-model-len=8192 #8K
-            - --device=neuron
             {{#unless compile}}
-            - --quantization=neuron_quant
             - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-R1-Distill-Llama-8B/snapshots/6a6f4aa4197940add57724a7707d069478df56b1", "kv_cache_quant": true}'
             {{/unless}}
           env:
@@ -72,22 +69,18 @@ spec:
           {{#if compile}}
           resources:
             requests:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
+              cpu: 24 #75%
+              memory: 96Gi #75%
               aws.amazon.com/neuroncore: 2
             limits:
-              # cpu: 28.8 #90%
-              memory: 115Gi #90%
               aws.amazon.com/neuroncore: 2
           {{else}}
           resources:
             requests:
-              cpu: 3 #90%
-              memory: 13Gi #85%
+              cpu: 3 #75%
+              memory: 12Gi #75%
               aws.amazon.com/neuroncore: 2
             limits:
-              # cpu: 3.6 #90%
-              memory: 13Gi #85%
               aws.amazon.com/neuroncore: 2
           {{/if}}
           volumeMounts:

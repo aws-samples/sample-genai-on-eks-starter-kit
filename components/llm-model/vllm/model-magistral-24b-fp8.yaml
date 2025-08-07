@@ -37,7 +37,6 @@ spec:
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
             - --max-model-len=32768 # 32K
-            - --disable-log-requests
             # Mistral specific
             - --enable-auto-tool-choice
             - --tool-call-parser=mistral
@@ -56,12 +55,10 @@ spec:
               containerPort: 8000
           resources:
             requests:
-              cpu: 3.6 #90%
-              memory: 29Gi #90%
+              cpu: 3 #75%
+              memory: 24Gi #75%
               nvidia.com/gpu: 1
             limits:
-              cpu: 3.6 #90%
-              memory: 29Gi #90%
               nvidia.com/gpu: 1
           volumeMounts:
             - name: huggingface-cache

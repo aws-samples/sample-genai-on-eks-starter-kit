@@ -47,11 +47,10 @@ spec:
               containerPort: 80
           resources:
             requests:
-              cpu: 3.6 #90%
-              memory: 29Gi #90%
+              cpu: 3 #75%
+              memory: 24Gi #75%
               nvidia.com/gpu: 1
             limits:
-              memory: 29Gi #90%
               nvidia.com/gpu: 1
           volumeMounts:
             - name: huggingface-cache

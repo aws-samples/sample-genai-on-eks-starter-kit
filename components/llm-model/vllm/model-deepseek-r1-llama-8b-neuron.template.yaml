@@ -39,7 +39,6 @@ spec:
             - --trust-remote-code
             # - --gpu-memory-utilization=0.90
             # - --max-model-len=32768 # 32K
-            - --disable-log-requests
             # DeepSeek-R1 specific
             - --reasoning-parser=deepseek_r1
             # Neuron specific
@@ -60,12 +59,10 @@ spec:
               containerPort: 8000
           resources:
             requests:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
+              cpu: 24 #75%
+              memory: 96Gi #75%
               aws.amazon.com/neuroncore: 2
             limits:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
               aws.amazon.com/neuroncore: 2
           volumeMounts:
             - name: huggingface-cache

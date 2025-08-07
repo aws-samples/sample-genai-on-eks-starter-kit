@@ -37,9 +37,8 @@ spec:
             - Qwen/Qwen3-8B
             - --served-model-name=qwen3-8b-neuron
             - --trust-remote-code
-            # - --gpu-memory-utilization=0.90
+            - --gpu-memory-utilization=0.90
             # - --max-model-len=32768 # 32K
-            - --disable-log-requests
             # Qwen3 specific
             - --enable-auto-tool-choice
             - --tool-call-parser=hermes
@@ -62,12 +61,10 @@ spec:
               containerPort: 8000
           resources:
             requests:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
+              cpu: 24 #75%
+              memory: 96Gi #75%
               aws.amazon.com/neuroncore: 2
             limits:
-              cpu: 28.8 #90%
-              memory: 115Gi #90%
               aws.amazon.com/neuroncore: 2
           volumeMounts:
             - name: huggingface-cache

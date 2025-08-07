@@ -27,8 +27,8 @@ spec:
           value: /root/.cache/huggingface
       resources:
         requests:
-          cpu: 3
-          memory: 12Gi
+          cpu: 3 #75%
+          memory: 12Gi #75%
       volumeMounts:
         - name: huggingface-cache
           mountPath: /root/.cache/huggingface
@@ -80,8 +80,8 @@ spec:
           value: /root/.cache/huggingface
       resources:
         requests:
-          cpu: 3
-          memory: 12Gi
+          cpu: 3 #75%
+          memory: 12Gi #75%
           aws.amazon.com/neuroncore: 2
         limits:
           aws.amazon.com/neuroncore: 2
@@ -111,3 +111,4 @@ spec:
 
 # pip show neuronx-cc
 # pip show optimum-neuron
+# optimum-cli neuron cache lookup Qwen/Qwen3-8B
