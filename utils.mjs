@@ -98,7 +98,7 @@ const model = (function () {
       if (!model.deploy) {
         continue;
       }
-      if (model.neuron && componentDir === "vllm") {
+      if (model.neuron) {
         const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
@@ -122,7 +122,7 @@ const model = (function () {
       IMAGE = `${ecrRepoUrl}:latest`;
     }
     for (const model of models) {
-      if (model.neuron && componentDir === "vllm") {
+      if (model.neuron) {
         const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
