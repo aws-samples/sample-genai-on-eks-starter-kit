@@ -1,0 +1,22 @@
+{
+  "demo": {
+    "components": [
+      { "category": "o11y", "component": "langfuse" },
+      { "category": "gui-app", "component": "openwebui" },
+      { "category": "ai-gateway", "component": "litellm" }
+    ]
+  },
+  "llm-model": {
+    "vllm": { "models": [] },
+    "sglang": { "models": [] },
+    "tgi": { "models": [] },
+    "ollama": { "models": [] }
+  },
+  "embedding-model": {
+    "tei": { "models": [] }
+  },
+  "bedrock": {
+    "llm": { "models": [{ "name": "claude-3.7-sonnet", "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0" }] },
+    "embedding": { "models": [] }
+  }
+}
