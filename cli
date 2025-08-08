@@ -22,13 +22,24 @@ let config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 const configWorkshopPath = path.join(DIR, "config.workshop.json");
 if (fs.existsSync(configWorkshopPath)) {
   const configWorkshop = JSON.parse(fs.readFileSync(configWorkshopPath, "utf8"));
-  config = _.merge(config, configWorkshop);
+  // config = _.merge(config, configWorkshop);
+  _.mergeWith(config, configWorkshop, (objValue, srcValue) => {
+    if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+      return srcValue;
+    }
+  });
 }
 const configLocalPath = path.join(DIR, "config.local.json");
 if (fs.existsSync(configLocalPath)) {
   const configLocal = JSON.parse(fs.readFileSync(configLocalPath, "utf8"));
-  config = _.merge(config, configLocal);
+  // config = _.merge(config, configLocal);
+  _.mergeWith(config, configLocal, (objValue, srcValue) => {
+    if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+      return srcValue;
+    }
+  });
 }
+// console.log(JSON.stringify(config, null, 2));
 process.env.KUBECONFIG = path.join(DIR, ".kubeconfig");
 const TERRAFORM_DIR = path.join(DIR, "terraform");
 const COMPONENTS_DIR = path.join(DIR, "components");
