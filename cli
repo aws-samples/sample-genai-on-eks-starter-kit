@@ -351,7 +351,7 @@ async function addTerraformCommands() {
       .addHelpCommand(false)
       .action(async () => {
         try {
-          await utils.setK8sContext();
+          // await utils.setK8sContext();
           await utils.terraform[command.action](TERRAFORM_DIR);
         } catch (error) {
           console.error(`Error running terraform ${command.name}:`, error);

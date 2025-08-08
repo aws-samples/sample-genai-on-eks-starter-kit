@@ -209,7 +209,7 @@ const terraform = (function () {
   const applyWithRetry = async (TERRAFORM_DIR, maxAttempts = 3) => {
     let attempts = 0;
     let success = false;
-    await setK8sContext();
+    // await setK8sContext();
     while (!success && attempts < maxAttempts) {
       attempts++;
       try {
