@@ -157,6 +157,7 @@ const terraform = (function () {
         content += `${key} = "${value}"\n`;
       }
       fs.writeFileSync(`workspaces/${REGION}/terraform.tfvars`, content);
+      await $`terraform workspace select ${REGION}`;
     } catch (error) {
       throw new Error(error);
     }
