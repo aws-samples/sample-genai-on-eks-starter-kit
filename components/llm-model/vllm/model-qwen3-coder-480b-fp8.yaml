@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-coder-480b-fp8
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-coder-480b-fp8
+  template:
+    metadata:
+      labels:
+        app: qwen3-coder-480b-fp8
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        # eks.amazonaws.com/instance-family: p4de
+        eks.amazonaws.com/instance-category: p
+        # eks.amazonaws.com/instance-generation: "5"
+        # eks.amazonaws.com/instance-gpu-name: h200
+        # eks.amazonaws.com/instance-family: p5en
+        # karpenter.sh/capacity-type: on-demand
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.10.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
+            - --served-model-name=qwen3-coder-480b-fp8
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.90
+            - --max-model-len=32768 # 32K
+            # - --max-model-len=262144 # 256K
+            - --tensor-parallel-size=8
+            # Qwen3 specific
+            - --enable-expert-parallel
+            - --enable-auto-tool-choice
+            - --tool-call-parser=qwen3_coder
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              # cpu: 144 #75%
+              # memory: 1536Gi #75%
+              nvidia.com/gpu: 8
+            limits:
+              nvidia.com/gpu: 8
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 100Gi
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen3-coder-480b-fp8
+  namespace: vllm
+spec:
+  selector:
+    app: qwen3-coder-480b-fp8
+  ports:
+    - name: http
+      port: 8000

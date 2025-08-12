@@ -48,6 +48,6 @@ export async function install() {
 }
 
 export async function uninstall() {
-  await $`kubectl delete -f ${DIR}/mcp-server.rendered.yaml`;
+  await $`kubectl delete -f ${DIR}/mcp-server.rendered.yaml --ignore-not-found`;
   await utils.terraform.destroy(DIR);
 }

@@ -58,6 +58,6 @@ export async function install() {
 }
 
 export async function uninstall() {
-  await $`kubectl delete -f ${DIR}/agent.rendered.yaml`;
+  await $`kubectl delete -f ${DIR}/agent.rendered.yaml --ignore-not-found`;
   await utils.terraform.destroy(DIR);
 }
