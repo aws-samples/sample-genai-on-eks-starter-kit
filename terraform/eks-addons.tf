@@ -23,7 +23,7 @@ spec:
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["spot", "on-demand"]
+          values: ["${join("\", \"", var.default_nodepool_capacity_type)}"]
         - key: eks.amazonaws.com/instance-category
           operator: In
           values: ["c", "m", "r"]
@@ -73,9 +73,6 @@ spec:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["${join("\", \"", var.gpu_nodepool_capacity_type)}"]
-        # - key: node.kubernetes.io/instance-type
-        #   operator: In
-        #   values: ["g6e.xlarge"]
         - key: eks.amazonaws.com/instance-family
           operator: In
           values: ["${join("\", \"", var.gpu_nodepool_instance_family)}"]
@@ -125,7 +122,7 @@ spec:
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
-          values: ["spot", "on-demand"]
+          values: ["${join("\", \"", var.neuron_nodepool_capacity_type)}"]
         - key: eks.amazonaws.com/instance-family
           operator: In
           values: ["inf2", "trn1", "trn2"]

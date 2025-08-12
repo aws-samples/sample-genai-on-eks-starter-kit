@@ -22,14 +22,21 @@ variable "efs_throughput_mode" {
   type    = string
   default = ""
 }
+variable "default_nodepool_capacity_type" {
+  type    = list(string)
+  default = ["spot", "on-demand"]
+}
 variable "gpu_nodepool_capacity_type" {
   type    = list(string)
   default = ["spot", "on-demand"]
 }
-
 variable "gpu_nodepool_instance_family" {
   type    = list(string)
   default = ["g6e", "g6", "g5g", "p5en", "p5e", "p5", "p4de", "p4d"]
+}
+variable "neuron_nodepool_capacity_type" {
+  type    = list(string)
+  default = ["spot", "on-demand"]
 }
 
 locals {

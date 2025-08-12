@@ -59,9 +59,15 @@ spec:
 # unzip awscliv2.zip
 # ./aws/install
 # cd /root/.cache
+
 # vi Dockerfile.model-llama-3-1-8b-int8-neuron
 # public_ecr_alias=t0h7h1e6
 # buildah build -f Dockerfile.model-llama-3-1-8b-int8-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:llama-3-1-8b-int8 .
 # aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
 # buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:llama-3-1-8b-int8
 
+# vi Dockerfile.model-qwen3-8b-fp8-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.model-qwen3-8b-fp8-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-8b-fp8 .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-8b-fp8

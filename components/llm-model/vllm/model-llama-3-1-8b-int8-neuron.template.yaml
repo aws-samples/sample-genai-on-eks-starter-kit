@@ -65,7 +65,7 @@ spec:
                 secretKeyRef:
                   name: hf-token
                   key: token
-            {{/if}}      
+            {{/if}}
             - name: NEURON_COMPILED_ARTIFACTS
               value: {{{neuronPath}}}
           ports:
