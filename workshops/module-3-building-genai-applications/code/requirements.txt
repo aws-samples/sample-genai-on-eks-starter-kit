@@ -1,0 +1,8 @@
+langgraph==0.6.4
+langchain-openai==0.3.16
+langchain==0.3.25
+langfuse==2.60.4
+langchain-mcp-adapters==0.0.11
+fastapi==0.115.12
+grandalf==0.8
+streamlit==1.45.1
