@@ -26,7 +26,7 @@ else:
     print("Using LiteLLM...")
     model = LiteLLMModel(
         client_args={
-            "base_url": os.environ.get("LITELLM_BASE_URL"),
+            "base_url": f"{os.environ.get("LITELLM_BASE_URL")}/v1",
             "api_key": os.environ.get("LITELLM_API_KEY"),
         },
         model_id="openai/" + os.environ.get("LITELLM_MODEL_NAME"),
@@ -65,9 +65,23 @@ async def startup_event():
     global mcp_client, agent
     if os.environ.get("USE_MCP_TOOLS", "").lower() == "true":
         print("Using MCP tools...")
-        mcp_client = MCPClient(
-            lambda: streamablehttp_client("http://calculator.mcp-server:8000/mcp")
-        )
+        if os.environ.get("USE_MCP_GATEWAY", "").lower() == "true":
+            print(f"Using MCP gateway...")
+            # Only need one of these 2 headers
+            headers = {
+                "Authorization": f"Bearer {os.environ.get("LITELLM_API_KEY")}",
+                "x-litellm-api-key": f"Bearer {os.environ.get("LITELLM_API_KEY")}",
+            }
+            mcp_client = MCPClient(
+                lambda: streamablehttp_client(
+                    f"{os.environ.get("LITELLM_BASE_URL")}/mcp", headers=headers
+                )
+            )
+        else:
+            print(f"Not using MCP gateway...")
+            mcp_client = MCPClient(
+                lambda: streamablehttp_client("http://calculator.mcp-server:8000/mcp")
+            )
         mcp_client.__enter__()
         tools = mcp_client.list_tools_sync()
         agent = Agent(model=model, system_prompt=system_prompt, tools=tools)

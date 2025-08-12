@@ -38,6 +38,8 @@ spec:
             {{/if}}
             - name: USE_MCP_TOOLS
               value: "{{{USE_MCP_TOOLS}}}"
+            - name: USE_MCP_GATEWAY
+              value: "{{{USE_MCP_GATEWAY}}}"
             {{#if LANGFUSE_HOST}}
             - name: LANGFUSE_HOST
               value: {{{LANGFUSE_HOST}}}

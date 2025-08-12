@@ -44,7 +44,7 @@ export async function install() {
     arch,
     IMAGE: `${ecrRepoUrl}:latest`,
     ...config["examples"]["strands-agents"]["calculator-agent"].env,
-    LITELLM_BASE_URL: `http://litellm.litellm:4000/v1`,
+    LITELLM_BASE_URL: `http://litellm.litellm:4000`,
     LITELLM_API_KEY: LITELLM_API_KEY,
   };
   const result = await $`kubectl get pod -n langfuse -l app=web --ignore-not-found`;

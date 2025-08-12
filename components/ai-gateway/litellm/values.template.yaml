@@ -135,3 +135,14 @@ proxy_config:
         api_key: fake-key
         api_base: http://{{@key}}.tei:80/v1
     {{/each}}
+  # MCP Servers
+  {{#if integration.mcp-servers.length}}
+  mcp_servers:
+    {{#each integration.mcp-servers}}
+    {{this}}:
+      url: "http://{{this}}.mcp-server:8000/mcp"
+      transport: "http"
+      auth_type: "api_key"
+      spec_version: "2025-03-26"
+    {{/each}}
+  {{/if}}    

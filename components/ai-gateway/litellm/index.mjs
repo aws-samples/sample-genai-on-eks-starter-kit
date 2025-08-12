@@ -26,7 +26,7 @@ export async function install() {
 
   await utils.terraform.apply(DIR);
 
-  const integration = { "llm-model": {}, "embedding-model": {}, o11y: {} };
+  const integration = { "llm-model": {}, "embedding-model": {}, "mcp-servers": [], o11y: {} };
   integration["bedrock"] = {
     region: config["bedrock"]["region"],
     llm: config["bedrock"]["llm"]["models"],
@@ -61,6 +61,17 @@ export async function install() {
           integration["embedding-model"][key][model.name] = true;
         }
       }
+    }
+  }
+  const mcpServices =
+    await $`kubectl get services -n mcp-server --no-headers -o custom-columns=":metadata.name" --ignore-not-found`;
+  if (mcpServices.stdout.trim()) {
+    const serviceNames = mcpServices.stdout
+      .trim()
+      .split("\n")
+      .filter((name) => name.trim());
+    for (const serviceName of serviceNames) {
+      integration["mcp-servers"].push(serviceName.trim());
     }
   }
   let result = await $`kubectl get pod -n langfuse -l app=web --ignore-not-found`;
