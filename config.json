@@ -30,10 +30,29 @@
         { "name": "qwen3-8b-neuron", "deploy": false, "neuron": true },
         { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": false, "neuron": true },
         { "name": "deepseek-r1-llama-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
-        { "name": "llama-3-1-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
+        {
+          "name": "llama-3-1-8b-int8-neuron",
+          "deploy": false,
+          "neuron": true,
+          "compile": false,
+          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:llama-3-1-8b-int8",
+          "modelPath": "/opt/vllm/huggingface-cache/Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659",
+          "neuronPath": "/opt/vllm/neuron-cache/Llama-3.1-8B-Instruct-int8"
+        },
         { "name": "mistral-7b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
         { "name": "qwen3-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
         { "name": "deepseek-r1-qwen3-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true }
+      ],
+      "oldModels": [
+        {
+          "name": "llama-3-1-8b-int8-neuron",
+          "deploy": true,
+          "neuron": true,
+          "compile": true,
+          "image": "public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04",
+          "modelPath": "/root/.cache/huggingface/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659",
+          "neuronPath": "/root/.cache/neuron/meta-llama/Llama-3.1-8B-Instruct-int8"
+        }
       ]
     },
     "sglang": {

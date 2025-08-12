@@ -1,6 +1,7 @@
 {
   "demo": {
     "components": [
+      { "category": "llm-model", "component": "vllm" },
       { "category": "o11y", "component": "langfuse" },
       { "category": "gui-app", "component": "openwebui" },
       { "category": "ai-gateway", "component": "litellm" }
@@ -8,7 +9,19 @@
     "examples": []
   },
   "llm-model": {
-    "vllm": { "models": [] },
+    "vllm": {
+      "models": [
+        {
+          "name": "llama-3-1-8b-int8-neuron",
+          "deploy": true,
+          "neuron": true,
+          "compile": false,
+          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:llama-3-1-8b-int8",
+          "modelPath": "/opt/vllm/huggingface-cache/Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659",
+          "neuronPath": "/opt/vllm/neuron-cache/Llama-3.1-8B-Instruct-int8"
+        }
+      ]
+    },
     "sglang": { "models": [] },
     "tgi": { "models": [] },
     "ollama": { "models": [] }
@@ -26,7 +39,8 @@
   },
   "terraform": {
     "vars": {
-      "efs_throughput_mode": "elastic"
+      "efs_throughput_mode": "elastic",
+      "gpu_nodepool_capacity_type": ["on-demand"]
     }
   }
 }
