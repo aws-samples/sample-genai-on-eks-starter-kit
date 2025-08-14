@@ -4,6 +4,8 @@ langfuse:
   nextauth:
     secret:
       value: secret
+  encryptionKey:
+    value: 7188cd4d31f5b0470ed96fa34615a3e779f3a71d1d0f68fc5c166b1c6e515c59 # Dummy key
   ingress:
     enabled: true
     annotations:

@@ -4,13 +4,13 @@ These components and examples will be deployed:
 
 - LiteLLM for AI gateway
 - vLLM for deploying and serving LLM models, with 2 models deployed:
-  - [Qwen/Qwen3-30B-A3B-FP8](https://huggingface.co/Qwen/Qwen3-30B-A3B-FP8) - 8-bit quantization (BF16) on single g6e EC2 instance, fast model ~75 token/sec with tools and thinking support
-  - [Qwen3-32B-FP8](https://huggingface.co/Qwen/Qwen3-32B-FP8) - 8-bit quantization (BF16) on single g6e EC2 instance, slow model ~15 token/sec with tools and thinking support
+  - [Qwen3-30B-A3B-Instruct-2507-FP8](https://huggingface.co/Qwen/Qwen3-30B-A3B-Instruct-2507-FP8) - 8-bit quantization (FP8) on single g6e EC2 instance, fast model ~75 token/sec, MoE model with non-thinking mode
+  - [Qwen3-32B-FP8](https://huggingface.co/Qwen/Qwen3-32B-FP8) - 8-bit quantization (FP8) on single g6e EC2 instance, slow model ~15 token/sec, dense model with both thinking and non-thinking modes
 - Langfuse for observability
 - Open WebUI fore GUI App
 - Qdrant for vector database
 - Text Embedding Inference (TEI) deploying and serving Embedding models, with 1 model deployed:
-  - [Qwen3-Embedding-4B](https://huggingface.co/Qwen/Qwen3-Embedding-4B) - 16-bit quantization (BF16) on single r7i EC2 instance.
+  - [Qwen3-Embedding-4B](https://huggingface.co/Qwen/Qwen3-Embedding-4B) - 16-bit quantization (BF16) on single r7i EC2 instance
 - Calculator MCP server built by using FastMCP 2.0
 - Calculator Agent built by using Strands Agents
 

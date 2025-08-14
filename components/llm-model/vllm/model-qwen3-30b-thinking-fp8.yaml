@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qwen3-30b-fp8
+  name: qwen3-30b-thinking-fp8
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qwen3-30b-fp8
+      app: qwen3-30b-thinking-fp8
   template:
     metadata:
       labels:
-        app: qwen3-30b-fp8
+        app: qwen3-30b-thinking-fp8
     spec:
       securityContext:
         seccompProfile:
@@ -32,14 +32,12 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - Qwen/Qwen3-30B-A3B-FP8
-            - --served-model-name=qwen3-30b-fp8
+            - Qwen/Qwen3-30B-A3B-Thinking-2507-FP8
+            - --served-model-name=qwen3-30b-thinking-fp8
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
             - --max-model-len=32768 # 32K
             # Qwen3 specific
-            - --enable-auto-tool-choice
-            - --tool-call-parser=hermes
             - --reasoning-parser=qwen3
           env:
             - name: HUGGING_FACE_HUB_TOKEN
@@ -72,11 +70,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: qwen3-30b-fp8
+  name: qwen3-30b-thinking-fp8
   namespace: vllm
 spec:
   selector:
-    app: qwen3-30b-fp8
+    app: qwen3-30b-thinking-fp8
   ports:
     - name: http
       port: 8000

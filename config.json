@@ -17,15 +17,16 @@
     "vllm": {
       "enableNeuron": false,
       "models": [
-        { "name": "qwen3-30b-fp8", "deploy": true },
+        { "name": "qwen3-30b-instruct-fp8", "deploy": true },
+        { "name": "qwen3-30b-thinking-fp8", "deploy": false },
         { "name": "qwen3-32b-fp8", "deploy": true },
         { "name": "qwen3-coder-30b-fp8", "deploy": false },
+        { "name": "qwen3-coder-480b-fp8", "deploy": false },
+        { "name": "gpt-oss-120b", "deploy": false },
         { "name": "deepseek-r1-qwen3-8b", "deploy": false },
         { "name": "gemma3-27b-gptq", "deploy": false },
         { "name": "magistral-24b-fp8", "deploy": false },
         { "name": "llama-4-scout-17b-16e-instruct-fp8", "deploy": false },
-        { "name": "gpt-oss-120b", "deploy": false },
-        { "name": "qwen3-coder-480b-fp8", "deploy": false }
         { "name": "deepseek-r1-llama-8b-neuron", "deploy": false, "neuron": true },
         { "name": "llama-3-1-8b-neuron", "deploy": false, "neuron": true },
         { "name": "mistral-7b-neuron", "deploy": false, "neuron": true },
@@ -40,7 +41,8 @@
     },
     "sglang": {
       "models": [
-        { "name": "qwen3-30b-fp8", "deploy": true },
+        { "name": "qwen3-30b-instruct-fp8", "deploy": true },
+        { "name": "qwen3-30b-thinking-fp8", "deploy": false },
         { "name": "qwen3-32b-fp8", "deploy": true },
         { "name": "qwen3-coder-30b-fp8", "deploy": false },
         { "name": "qwen3-coder-480b-fp8", "deploy": false }
