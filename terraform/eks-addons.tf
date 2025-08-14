@@ -311,3 +311,15 @@ resource "null_resource" "delete_gp2_storageclass" {
 
   depends_on = [module.eks_blueprints_addons_core]
 }
+
+
+resource "helm_release" "lws" {
+  name             = "lws"
+  namespace        = "lws-system"
+  repository       = "oci://registry.k8s.io/lws/charts"
+  chart            = "lws"
+  version          = "0.7.0"
+  create_namespace = true
+
+  depends_on = [module.eks_blueprints_addons_core]
+}
