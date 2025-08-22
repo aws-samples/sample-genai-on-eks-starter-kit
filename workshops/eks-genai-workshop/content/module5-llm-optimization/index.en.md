@@ -1,6 +1,6 @@
 ---
-title: "Module 1: Optimizing and Evaluating OSS LLMs on EKS"
-weight: 20
+title: "Module 5: Optimizing and Evaluating OSS LLMs on EKS"
+weight: 60
 duration: "2 hours"
 difficulty: "intermediate"
 ---

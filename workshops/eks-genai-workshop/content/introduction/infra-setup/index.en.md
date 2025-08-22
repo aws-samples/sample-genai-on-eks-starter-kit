@@ -1,6 +1,6 @@
 ---
 title: "Infrastructure Setup"
-weight: 12
+weight: 18
 ---
 
 # Infrastructure Setup
