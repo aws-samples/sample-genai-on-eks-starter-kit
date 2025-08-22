@@ -3,8 +3,6 @@ title: "At AWS Event"
 weight: 14
 ---
 
-# At AWS Event
-
 Welcome to the workshop! Your GenAI infrastructure has been pre-deployed by the event organizers. Let's get you connected to your workshop environment and verify everything is ready for an amazing learning experience.
 
 ## 🎯 What's Already Done

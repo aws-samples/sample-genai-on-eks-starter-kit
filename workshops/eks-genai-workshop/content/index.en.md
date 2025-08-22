@@ -3,8 +3,6 @@ title: "EKS GenAI Workshop: From LLMs to Scalable Agent Systems"
 weight: 0
 ---
 
-# EKS GenAI Workshop: From LLMs to Scalable Agent Systems
-
 Welcome to a comprehensive hands-on GenAI workshop on Amazon EKS! Over the next few hours, you'll build a complete generative AI platform - from deploying your first LLM to orchestrating sophisticated multi-agent systems.
 
 ## 🎯 What Makes This Workshop Special?

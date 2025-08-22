@@ -3,8 +3,6 @@ title: "Infrastructure Setup"
 weight: 18
 ---
 
-# Infrastructure Setup
-
 Welcome to the EKS GenAI Workshop! Before diving into building and deploying GenAI applications, let's explore the infrastructure that has been pre-configured for you. This workshop environment provides a ready to go foundation for running generative AI workloads on Amazon EKS.
 
 ::alert[All infrastructure components have been pre-deployed and configured. You can focus entirely on learning and experimenting with GenAI applications without worrying about setup complexities.]{type="success"}
@@ -127,7 +125,7 @@ kubectl get svc -A | grep -E "litellm|langfuse|openwebui|vllm"
 
 ## Architecture Diagram
 
-![alt text](/static/images/introduction/archi.png)
+![archi](/static/images/introduction/archi.png)
 
 ## 🎉 Success Checklist
 

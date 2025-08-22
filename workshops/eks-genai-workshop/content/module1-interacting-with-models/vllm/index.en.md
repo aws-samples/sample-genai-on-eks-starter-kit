@@ -3,20 +3,101 @@ title: "vLLM - Self-Hosted Model Serving"
 weight: 22
 ---
 
-# vLLM - Self-Hosted Model Serving
+Remember those models you just chatted with in OpenWebUI? Let's peek behind the curtain and see how they're actually running on Kubernetes! In this section, we'll explore the vLLM infrastructure that powers your AI conversations.
 
-vLLM is a high-performance inference engine for Large Language Models, optimized for throughput and latency. In this section, we'll explore how we've deployed Llama 3.1 8B and Qwen3 8B models on Amazon EKS using AWS Neuron hardware for cost-effective inference.
+## 🛠️ Hands-On: Explore Your Running Models
+
+Let's start by discovering what's actually running in your cluster right now:
+
+### Step 1: See Your Models in Action
+
+:::code{language=bash showCopyAction=true}
+# Check what vLLM models are running right now
+kubectl get pods -n vllm
+
+# See the actual deployments behind your chat experience
+kubectl get deployments -n vllm -o wide
+
+# Check which nodes are hosting your models
+kubectl get pods -n vllm -o wide
+:::
+
+You should see pods like `llama-3-1-8b-int8-neuron-xxx` and `qwen3-8b-fp8-neuron-xxx` - these are the exact models you just used in OpenWebUI!
+
+### Step 2: Examine the Real Configuration Files
+
+In your VSC IDE, let's explore the actual deployment files:
+
+:::code{language=bash showCopyAction=true}
+# Navigate to vLLM configurations
+ls /workshop/components/llm-model/vllm/
+
+# Look at the Llama deployment you just used
+cat /workshop/components/llm-model/vllm/model-llama-3-1-8b-int8-neuron.rendered.yaml
+
+# Compare with the Qwen deployment
+cat /workshop/components/llm-model/vllm/model-qwen3-8b-fp8-neuron.rendered.yaml
+:::
+
+### Step 3: Connect Your Chat Experience to Infrastructure
+
+That response you got from Llama 3.1? Here's exactly how it happened:
+
+1. **Your message** → Open WebUI → LiteLLM → **This vLLM pod**
+2. **The pod** you're looking at processed your request on AWS Neuron hardware
+3. **The response** traveled back through the same path to your browser
 
 ## What is vLLM?
 
+Now that you've seen it in action, let's understand what makes vLLM special:
+
 vLLM is an open-source LLM inference and serving library that provides:
 
-- ⚡ **High Throughput**: 24x higher throughput than HuggingFace Transformers
-- 🔄 **Continuous Batching**: Dynamic request batching for optimal GPU/NPU utilization
+- ⚡ **High Throughput**: Optimized for serving multiple requests efficiently
+- 🔄 **Continuous Batching**: Dynamic request batching for optimal hardware utilization
 - 📊 **PagedAttention**: Efficient memory management for long contexts
 - 🔧 **Tensor Parallelism**: Distribute models across multiple accelerators
 - 🎯 **OpenAI Compatible API**: Drop-in replacement for OpenAI API
-- 🧠 **Neuron Support**: Optimized for AWS Inferentia and Trainium chips
+
+## 📊 Monitor Your Models in Real-Time
+
+Let's watch your models work while you use them! This is where the magic happens.
+
+### Step 4: Watch Your Model Process Requests
+
+Open a second terminal in your VSC IDE and run:
+
+:::code{language=bash showCopyAction=true}
+# Watch your Llama model logs in real-time
+kubectl logs -f --tail=0 -n vllm deployment/llama-3-1-8b-int8-neuron
+:::
+
+Now go back to your OpenWebUI tab and send a message to the Llama model. Watch the logs - you'll see your request being processed in real-time!
+
+**Try this example question:**
+
+![OpenWebUI Question](/static/images/module-1/vllm/flies.png)
+
+As soon as you send the message "why would a fly fly into a fly pant", watch your terminal! You'll see detailed logs showing:
+
+![vLLM Processing Logs](/static/images/module-1/vllm/logs.png)
+
+**What you're seeing in the logs:**
+- 📨 **Request received**: Your prompt being processed by vLLM
+- 🧠 **Model thinking**: Token generation and processing metrics
+- ⚡ **Performance stats**: Throughput, latency, and cache usage
+- 🔄 **Real-time updates**: Each token being generated live
+
+**Key metrics to notice:**
+- **Prompt throughput**: ~4.5 tokens/s (how fast it reads your question)
+- **Generation throughput**: ~26.8 tokens/s (how fast it generates the response)
+- **GPU KV cache usage**: Shows memory utilization
+- **Request processing**: Complete request lifecycle from start to finish
+
+This gives you incredible insight into how your AI model actually works under the hood!
+
+**Press Ctrl+C to stop the logs when you're done exploring.**
+
 
 ## AWS Neuron: Purpose-Built for AI
 
@@ -27,9 +108,12 @@ AWS Neuron is the SDK for AWS Inferentia (inf2) and Trainium (trn1) chips:
 - **Quantization**: INT8 and FP8 support for reduced memory usage
 - **Compilation**: Pre-compiled models for optimal performance
 
-::alert[**Workshop Constraint**: We're using inf2.xlarge instances (2 Neuron cores) due to workshop limitations. Production deployments typically use inf2.8xlarge or larger for better performance.]{type="warning"}
+::alert[**Workshop Constraint**: We're using inf2.xlarge instances (2 Neuron cores each) due to workshop limitations. Production deployments typically use GPUs or larger Neuron instances for better performance.]{type="warning"}
 
-## Kubernetes Architecture
+## 🔍 Technical Deep Dive (Optional)
+
+<details>
+<summary><strong>Click to explore the Kubernetes deployment details</strong></summary>
 
 Let's examine how vLLM is deployed on EKS by exploring the actual YAML manifests used in your environment.
 
@@ -284,11 +368,15 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 kill %1
 :::
 
-### Step 3: Use Open WebUI
+## 🚀 Performance Testing with OpenWebUI
 
-1. Navigate to `https://openwebui.${DOMAIN}`
-2. Select **llama-3-1-8b-int8-neuron** from the model dropdown
-3. Try these prompts to test different capabilities:
+Now let's test the models you just explored and see the performance differences:
+
+### Step 1: Performance Comparison Exercise
+
+1. **Go back to your OpenWebUI tab**
+2. **Select llama-3-1-8b-int8-neuron** from the model dropdown
+3. **Try these prompts** to test different capabilities:
 
 :::code{language=markdown showCopyAction=true}
 # Test general knowledge
@@ -301,16 +389,24 @@ kill %1
 "If I have 3 apples and give away 40% of them, how many do I have left?"
 :::
 
-### Step 4: Compare Models
+### Step 2: Compare Models Side-by-Side
 
-Switch between models in Open WebUI:
-- **llama-3-1-8b-int8-neuron**: Meta's Llama 3.1 8B
-- **qwen3-8b-fp8-neuron**: Alibaba's Qwen3 8B
+Switch between models in Open WebUI and compare:
+- **llama-3-1-8b-int8-neuron**: Meta's Llama 3.1 8B (INT8 quantized)
+- **qwen3-8b-fp8-neuron**: Alibaba's Qwen3 8B (FP8 quantized)
 
-Notice differences in:
+**Try the same prompt with both models:**
+```
+"Explain the difference between Kubernetes Deployments and StatefulSets in 3 bullet points"
+```
+
+**While testing, notice:**
 - Response speed (first token latency)
 - Answer quality and style
 - Token generation rate
+- Different approaches to the same question
+
+**Pro Tip**: Use the "+" button in OpenWebUI to chat with both models simultaneously!
 
 ## Performance Considerations
 
@@ -347,20 +443,38 @@ spec:
   replicas: 3  # For load balancing
 ```
 
-## Monitoring vLLM
+</details>
 
-Check model performance and health:
+## 📈 Understanding Performance Metrics
+
+Based on what you saw in the logs, let's understand the key performance indicators:
+
+### **Throughput Metrics**
+- **Prompt Throughput**: ~4.5 tokens/s (how fast vLLM processes your input)
+- **Generation Throughput**: ~26.8 tokens/s (how fast it generates responses)
+- **Total Tokens**: Shows the complete token count for request + response
+
+### **Memory Usage**
+- **GPU KV Cache**: Shows how much memory is used for attention mechanisms
+- **Model Loading**: Initial memory allocation for the 8B parameter model
+
+### **Hardware Utilization**
+- **Neuron Core Usage**: How the 2 cores are being utilized
+- **Tensor Parallelism**: Model split across both Neuron cores for faster inference
+
+## 🔧 Advanced Monitoring
+
+For deeper insights into your models:
 
 :::code{language=bash showCopyAction=true}
-# View pod logs
-kubectl logs -n vllm deployment/llama-3-1-8b-int8-neuron --tail=50
-
-# Check resource usage
+# View detailed pod resource usage
 kubectl top pod -n vllm
 
-# View Neuron metrics (if neuron-monitor is deployed)
-kubectl exec -n vllm deployment/llama-3-1-8b-int8-neuron -- \
-  neuron-ls
+# Check Neuron hardware utilization
+kubectl exec -n vllm deployment/llama-3-1-8b-int8-neuron -- neuron-ls
+
+# Monitor ongoing requests
+kubectl logs -n vllm deployment/llama-3-1-8b-int8-neuron --tail=20
 :::
 
 ## Troubleshooting Common Issues

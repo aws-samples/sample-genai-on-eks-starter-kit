@@ -4,8 +4,6 @@ chapter: true
 weight: 12
 ---
 
-# Getting Started
-
 Before we dive into deploying Large Language Models and building intelligent agents, let's ensure you have access to the workshop environment. This workshop can be completed in two ways, depending on how you're participating.
 
 ## 🎯 Choose Your Path

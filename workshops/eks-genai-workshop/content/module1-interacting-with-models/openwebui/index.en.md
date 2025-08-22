@@ -3,8 +3,6 @@ title: "Open WebUI - Your Chat Interface"
 weight: 21
 ---
 
-# Open WebUI - Your Chat Interface
-
 Open WebUI is a feature-rich, self-hosted web interface for interacting with Large Language Models. In this workshop, we've deployed Open WebUI to provide you with an intuitive chat interface that connects to multiple model backends through LiteLLM.
 
 ## What is Open WebUI?
@@ -20,7 +18,21 @@ Open WebUI (formerly known as Ollama WebUI) is an open-source project that provi
 
 ## How We Deployed Open WebUI
 
-Let's examine how Open WebUI was deployed in your workshop environment using Helm charts.
+We used the official [Open Webui Helm chart](https://github.com/open-webui/helm-charts) to deploy Open Webui on our EKS Automode cluster.
+
+::alert[**Helm** is a package manager for Kubernetes that uses 'charts' as its package format. Charts are collections of YAML files that define Kubernetes resources, with support for Go template syntax to generate manifests dynamically. [Learn more about Helm →](https://helm.sh/)]{type="info"}
+
+### Exploring the Helm Chart
+
+You can examine the actual Helm chart configuration used in your VSC IDE:
+
+:::code{language=bash showCopyAction=true}
+# View the Open WebUI Helm chart values
+cat /workshop/components/gui-app/openwebui/values.template.yaml
+
+# Check deployed Helm releases
+helm ls -A | grep openwebui
+:::
 
 ### Helm Chart Configuration
 
@@ -72,90 +84,168 @@ Instead of connecting directly to model endpoints, Open WebUI connects to LiteLL
 - **Load Balancing**: Automatic distribution across model replicas
 - **Fallback Support**: Seamless switching between models
 
-::alert[LiteLLM acts as an API gateway, providing a unified OpenAI-compatible interface to all our models. We'll explore LiteLLM in detail in Module 2.]{type="info"}
+::alert[LiteLLM acts as an AI gateway, providing a unified OpenAI-compatible interface to all our models. We'll explore LiteLLM in detail in Module 2.]{type="info"}
 
 #### 2. **AWS Load Balancer Integration**
 The ingress configuration creates an Application Load Balancer (ALB):
 - **HTTPS Termination**: SSL/TLS handled at the load balancer
 - **Target Type IP**: Direct pod networking for better performance
-- **Custom Domain**: Accessible at `https://openwebui.${DOMAIN}`
+- **Custom Domain**: Accessible at `https://openwebui.${DOMAIN}`. However, in this workshop we do not have a domain thus, we just fallback on the ALB URL.
 
 #### 3. **Persistent Storage**
-100Gi of EFS storage ensures:
+100Gi of EBS storage (automatically provisioned by EKS Auto Mode) ensures:
 - **Conversation History**: All chats are preserved
 - **User Settings**: Preferences persist across sessions
-- **Shared Access**: Multiple pods can access the same data
+- **Reliable Performance**: Consistent I/O performance for the application
+
+::alert[**EKS Auto Mode** automatically provisions EBS storage for persistent volume claims, eliminating the need for manual storage configuration.]{type="info"}
 
 ### Deployment Process
 
-The actual deployment was executed using Helm:
+The deployment process involves several steps that were executed during infrastructure setup:
 
-:::code{language=bash showCopyAction=true}
-# Add the Open WebUI Helm repository
+**Step 1: Add Helm Repository**
+```bash
 helm repo add open-webui https://open-webui.github.io/helm-charts
 helm repo update
+```
 
-# Install Open WebUI with custom values
+**Step 2: Install with Custom Values**
+```bash
 helm upgrade --install openwebui open-webui/open-webui \
   --namespace openwebui \
   --create-namespace \
   -f values.rendered.yaml
-:::
+```
 
-## Accessing Open WebUI
+::alert[**Note**: These commands were already executed during your environment setup. You don't need to run them again.]{type="success"}
 
-Let's access the Open WebUI interface:
+## 🛠️ Hands-On: Your First Chat with an LLM
+
+Let's dive right into interacting with your first Large Language Model! This guided walkthrough will get you chatting with AI in minutes.
+
+### Step 1: Access Open WebUI
 
 :::code{language=bash showCopyAction=true}
 # Get the Open WebUI URL
-echo "Open WebUI URL: https://openwebui.${DOMAIN}"
-
-# Check if the pod is running
-kubectl get pods -n openwebui
-
-# View the service details
-kubectl get svc -n openwebui
+echo "Open WebUI URL: http://$(kubectl get ingress -n openwebui openwebui -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 :::
 
-::alert[**First Time Access**: When you first access Open WebUI, you'll need to create an account. Use any email/password combination - this is local authentication within the workshop environment.]{type="warning"}
+Copy the URL and open it in your browser.
 
-## Interface Tour
+### Step 2: Create Your Account
 
-Once logged in, explore these key features:
+When you first access Open WebUI, you'll see a sign-up screen:
 
-### 1. **Model Selection**
-- Click the model dropdown at the top of the chat
-- You'll see available models from vLLM and Bedrock
-- Models are automatically discovered through LiteLLM
+1. **Email**: Use any email (doesn't need to be real) - e.g., `workshop@example.com`
+2. **Password**: Choose any password you'll remember for the workshop
+3. **Name**: Enter your preferred name
+4. Click **Sign Up**
 
-### 2. **Chat Interface**
-- **New Chat**: Click the "+" button to start fresh
-- **Message Editing**: Hover over messages to edit or regenerate
-- **Code Blocks**: Automatic syntax highlighting and copy buttons
-- **Markdown Support**: Full markdown rendering in responses
+::alert[This is local authentication within your workshop environment - no external accounts are created.]{type="info"}
 
-### 3. **Settings & Customization**
-Access settings through the gear icon:
-- **Theme**: Light/dark mode toggle
-- **Model Parameters**: Temperature, max tokens, etc.
-- **System Prompts**: Default instructions for models
+### Step 3: Select Your Model
 
-### 4. **Conversation Management**
-- **Search**: Find previous conversations
-- **Folders**: Organize chats by topic
-- **Export**: Download conversations as JSON or Markdown
+Once logged in, you'll see the model selection dropdown at the top:
 
-## Testing the Connection
+![Model Selection](/static/images/module-1/models.png)
 
-Let's verify Open WebUI can communicate with our models:
+**Important**: Select **vllm/llama-3-1-8b-int8-neuron** from the dropdown. You'll see several options:
+- ✅ **vllm/llama-3-1-8b-int8-neuron** (use this one)
+- ✅ **vllm/qwen3-8b-fp8-neuron** (also available)
+- ❌ **bedrock/claude-3.7-sonnet** (not configured yet - we'll enable this later)
 
-1. **Open the Interface**: Navigate to `https://openwebui.${DOMAIN}`
-2. **Create an Account**: Sign up with any credentials
-3. **Start a Chat**: Click "New Chat"
-4. **Select a Model**: Choose "llama-3-1-8b-int8-neuron" from the dropdown
-5. **Send a Test Message**: Try "Hello! Can you tell me about yourself?"
+::alert[**Model Selection**: Stick with the vLLM models for now. We'll configure Bedrock access in a future section of this module.]{type="warning"}
 
-::alert[The first response might be slow as the model loads into memory. Subsequent responses will be faster.]{type="info"}
+### Step 4: Start Your First Conversation
+
+Now for the exciting part - let's chat with the AI!
+
+1. **Click "New Chat"** (if not already in a new chat)
+2. **Type your first message** in the "Send a Message" box at the bottom
+3. **Try this example**: "What is the strongest creature relative to body size?"
+4. **Press Enter** or click the send button
+
+You should see a response similar to this:
+
+![First Chat Response](/static/images/module-1/vllm.png)
+
+Notice how the model provides a detailed, well-structured response about ants, fleas, and mantis shrimp!
+
+### Step 5: Explore Response Features
+
+After receiving your first response, explore these interface features:
+
+- **📝 Edit**: Hover over messages to edit them
+- **📋 Copy**: Copy the response text
+- **🔊 Speak**: Have the response read aloud
+- **👍 👎**: Rate the response quality
+- **➡️ Continue Response**: Ask the model to continue its response if it was cut off
+- **🔄 Regenerate**: Get a different response to the same prompt
+- **💬 Follow up**: Continue the conversation naturally
+
+### Step 6: Try Model Comparison (Optional)
+
+Want to see how different models respond to the same question?
+
+1. **Click the "+" button** next to the model name
+2. **Select a second model** (try "vllm/qwen3-8b-fp8-neuron")
+3. **Ask the same question** to both models
+4. **Compare their responses** side by side
+
+This is a powerful feature for understanding model differences!
+
+## 🎯 Interface Features Deep Dive
+
+Now that you've had your first chat, let's explore the full interface:
+
+### **Conversation Management**
+- **Left Sidebar**: Browse your chat history
+- **Search**: Find specific conversations
+- **Export**: Download conversations as JSON, Plain Text or Markdown
+
+### **Advanced Settings**
+Click the gear icon to access:
+- **Model Parameters**: Adjust temperature, max tokens, top-p
+- **System Prompts**: Set default instructions for the AI
+- **Valves**: Allows you to add tools & functions for your models to use
+
+### **File Upload Capabilities**
+- **Document Upload**: Upload PDFs, text files for analysis
+- **Image Upload**: Share images with vision-capable models
+- **Code Files**: Get help with programming projects
+
+## 💡 Suggested Prompts to Try
+
+Get familiar with the model's capabilities:
+
+::::tabs
+
+:::tab{label="General Knowledge"}
+```
+Explain quantum computing in simple terms
+What are the key differences between Kubernetes and Docker?
+How does machine learning differ from traditional programming?
+```
+:::
+
+:::tab{label="Technical Help"}
+```
+Write a Python function to calculate fibonacci numbers
+Explain the benefits of using microservices architecture
+What are Kubernetes operators and when would you use them?
+```
+:::
+
+:::tab{label="Creative Tasks"}
+```
+Write a haiku about cloud computing
+Create a story about a robot learning to code
+Explain AI concepts using cooking analogies
+```
+:::
+
+::::
 
 ## Architecture Integration
 
@@ -184,54 +274,13 @@ sequenceDiagram
     OpenWebUI-->>User: Display in chat
 ```
 
-## Troubleshooting
-
-If you encounter issues:
-
-::::tabs
-
-:::tab{label="Connection Issues"}
-```bash
-# Check if Open WebUI pod is running
-kubectl get pods -n openwebui
-
-# View pod logs
-kubectl logs -n openwebui deployment/openwebui
-
-# Test internal connectivity
-kubectl run test-curl --image=curlimages/curl -it --rm -- \
-  curl http://openwebui.openwebui:80
-```
-:::
-
-:::tab{label="Model Not Appearing"}
-```bash
-# Verify LiteLLM connection
-kubectl exec -n openwebui deployment/openwebui -- \
-  curl http://litellm.litellm:4000/v1/models
-
-# Check LiteLLM is running
-kubectl get pods -n litellm
-```
-:::
-
-:::tab{label="Slow Performance"}
-- First requests are slow due to model loading
-- Check if vLLM pods are running: `kubectl get pods -n vllm`
-- Consider switching to Bedrock models for faster responses
-:::
-
-::::
-
 ## Key Takeaways
 
 ✅ **Helm Deployment**: Open WebUI deployed via official Helm chart with custom values
 
 ✅ **LiteLLM Integration**: Connected to unified API gateway instead of direct model endpoints
 
-✅ **AWS Integration**: Uses ALB for ingress and EFS for persistent storage
-
-✅ **Production Patterns**: Configuration follows best practices for Kubernetes deployments
+✅ **AWS Integration**: Uses ALB for ingress and EBS for persistent storage
 
 ## What's Next?
 

@@ -3,8 +3,6 @@ title: "Introduction"
 weight: 10
 ---
 
-# Introduction
-
 Welcome to the frontier of artificial intelligence on Kubernetes! This workshop represents the convergence of two transformative technologies: **Generative AI** and **Amazon EKS**. Together, they enable you to build scalable AI systems that can transform how organizations work.
 
 ## 🌟 Why GenAI on EKS?
