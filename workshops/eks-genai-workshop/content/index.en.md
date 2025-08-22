@@ -49,19 +49,18 @@ graph LR
 
 ## 📚 Module Overview
 
-### Module 1: Interacting with Models (90 minutes)
+### Module 1: Interacting with Models
 **From Zero to LLM in Production**
 
 You'll start by interacting with Large Language Models through different deployment patterns:
 
 - 💬 **Open WebUI** - Deploy a ChatGPT-like interface for model interaction
-- ⚡ **vLLM on AWS Neuron** - Host Llama 3.1 8B with hardware acceleration
-- ☁️ **AWS Bedrock Integration** - Connect to Claude 3.5 and compare performance
-- 📊 **Performance Analysis** - Understand latency, throughput, and cost trade-offs
+- ⚡ **vLLM on AWS Neuron** - Host Llama 3.1 8B & Qwen3 8b with hardware acceleration
+- ☁️ **AWS Bedrock Integration** - Connect to Claude 3.7 via Amazon Bedrock
 
-::alert[**Hands-on Focus**: You'll deploy real models and see immediate results - no simulation or mocking!]{type="success"}
+::alert[**Hands-on Focus**: You'll get to use real models deployed on EKS and see immediate results - no simulation or mocking!]{type="success"}
 
-### Module 2: GenAI Platform Components (90 minutes)
+### Module 2: GenAI Platform Components
 **Building Your AI Infrastructure**
 
 Transform individual components into a unified platform:
@@ -69,9 +68,8 @@ Transform individual components into a unified platform:
 - 🔄 **LiteLLM Gateway** - Create a unified API for all your models
 - 📊 **Langfuse Observability** - Track every token, cost, and interaction
 - 🔧 **Platform Integration** - Connect all components seamlessly
-- 🎯 **Enterprise Patterns** - Implement retry logic, fallbacks, and load balancing
 
-### Module 3: Building GenAI Applications (150 minutes)
+### Module 3: Building GenAI Applications
 **From Chatbots to Intelligent Agents**
 
 Create sophisticated AI applications using modern frameworks:
@@ -82,7 +80,7 @@ Create sophisticated AI applications using modern frameworks:
 - 🤖 **Multi-Agent Systems** - Orchestrate teams of specialized agents
 - 🧠 **Agentic RAG** - Build intelligent retrieval-augmented generation
 
-### Module 4: Scaling and Securing Agents (90 minutes)
+### Module 4: Scaling and Securing Agents
 **Enterprise-Grade AI Systems**
 
 Implement enterprise patterns for scale and security:
@@ -92,7 +90,7 @@ Implement enterprise patterns for scale and security:
 - 💰 **Cost Optimization** - Calculate and optimize agentic transaction costs
 - 🛡️ **Security Best Practices** - Implement guardrails and compliance
 
-### Module 5: vLLM Optimization (60 minutes)
+### Module 5: vLLM Optimization
 **Advanced Performance Tuning**
 
 Master the art of LLM optimization:
@@ -111,7 +109,6 @@ Master the art of LLM optimization:
 - **AWS Neuron** - Purpose-built AI chips (inf2/trn1)
 - **Amazon EFS** - Shared storage for models
 - **Pod Identity** - Modern AWS authentication
-- **ACK Controllers** - Native AWS resource management
 :::
 
 :::tab{label="AI/ML Stack"}
@@ -126,8 +123,6 @@ Master the art of LLM optimization:
 - **LangChain** - LLM application framework
 - **LangGraph** - Workflow orchestration
 - **Model Context Protocol** - Tool integration
-- **ChromaDB** - Vector database
-- **pgvector** - PostgreSQL with embeddings
 :::
 
 ::::
@@ -165,54 +160,11 @@ By the end of this workshop, you will be able to:
 - ✅ Calculate and optimize costs for GenAI workloads
 - ✅ Evaluate and compare different model deployment strategies
 
-## 🏗️ What You'll Build Today
-
-Throughout this workshop, you'll construct a complete GenAI platform:
-
-```mermaid
-graph TB
-    subgraph "User Layer"
-        UI[Open WebUI<br/>Chat Interface]
-    end
-    
-    subgraph "API Gateway"
-        LLM[LiteLLM<br/>Unified API]
-    end
-    
-    subgraph "Model Layer"
-        VLLM[vLLM<br/>Self-hosted Models]
-        BEDROCK[AWS Bedrock<br/>Managed Models]
-    end
-    
-    subgraph "Application Layer"
-        AGENTS[Intelligent Agents]
-        RAG[RAG Systems]
-        MEMORY[Vector Stores]
-    end
-    
-    subgraph "Observability"
-        LANGFUSE[Langfuse<br/>Tracing & Analytics]
-    end
-    
-    UI --> LLM
-    LLM --> VLLM
-    LLM --> BEDROCK
-    LLM --> LANGFUSE
-    AGENTS --> LLM
-    RAG --> MEMORY
-    RAG --> LLM
-    
-    style UI fill:#e1f5fe
-    style LLM fill:#fff3e0
-    style LANGFUSE fill:#f3e5f5
-```
-
 ## 🚦 Workshop Format
 
-- **Duration**: 8 hours (with breaks)
+- **Duration**: 3 hours (with breaks)
 - **Style**: Hands-on with guided exercises
 - **Pace**: Progressive difficulty with checkpoints
-- **Support**: Instructors available for questions
 
 ## 💡 Tips for Success
 
@@ -224,7 +176,7 @@ graph TB
 
 ## 🎉 Ready to Begin?
 
-Your GenAI journey starts here. In just 8 hours, you'll go from deploying your first model to building sophisticated agent systems. The infrastructure is ready, the models are waiting, and your instructors are here to help.
+Your GenAI journey starts here. In just 3 hours, you'll go from deploying your first model to building sophisticated agent systems. The infrastructure is ready, the models are waiting, and your instructors are here to help.
 
 Let's build something amazing together!
 

@@ -86,6 +86,7 @@ journey
       Performance Optimization: 1: Module 5
 ```
 
+
 ## 🏗️ What We're Building
 
 Throughout this workshop, you'll construct a complete GenAI platform with these capabilities:
@@ -108,23 +109,13 @@ Throughout this workshop, you'll construct a complete GenAI platform with these 
 - Performance monitoring and alerting
 - Security and compliance controls
 
-## 📊 Real-World Impact
-
-The patterns you'll learn are actively used by organizations in:
-
-- **Financial Services** - Risk analysis and compliance automation
-- **Healthcare** - Clinical decision support and research acceleration
-- **Retail** - Personalized customer experiences and inventory optimization
-- **Manufacturing** - Quality control and predictive maintenance
-- **Technology** - Code generation and documentation automation
-
 ## 🔍 What Sets This Workshop Apart?
 
 ### **Comprehensive Coverage**
 From infrastructure to applications, we cover the entire GenAI stack on Kubernetes.
 
 ### **Current Technology**
-Work with the latest models (Llama 3.1, Claude 3.5) and frameworks (LangChain, MCP).
+Work with the latest models and frameworks (LangChain, MCP).
 
 ### **AWS Integration**
 Leverage AWS-specific optimizations like Neuron chips and Bedrock services.
@@ -156,15 +147,6 @@ Generative AI is evolving at an unprecedented pace. The foundations you learn to
 - **Principles** that transcend specific models
 - **Patterns** that scale with your needs
 - **Practices** that ensure operational success
-
-## 🤝 Your Workshop Team
-
-Throughout this journey, you'll be supported by:
-
-- **Expert instructors** with real-world GenAI experience
-- **Fellow participants** exploring the same challenges
-- **Comprehensive documentation** for reference
-- **Pre-built infrastructure** so you can focus on learning
 
 ## ⚡ Infrastructure Already Deployed
 

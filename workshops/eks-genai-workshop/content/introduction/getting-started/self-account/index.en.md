@@ -87,188 +87,47 @@ kubectl get nodes --watch
 kubectl get pods -A | grep -E "vllm|litellm|langfuse|openwebui"
 :::
 
-## ✅ Step 3: Verify Deployment
+## ✅ Step 3: Access Your Development Environment
 
-Once deployment completes, verify all components are working:
+### 3.1 Open VSC IDE
 
-### 3.1 Check Cluster Status
+Once deployment completes, you'll need access to a development environment:
 
 :::code{language=bash showCopyAction=true}
+# If using local development
+kubectl config current-context
+
 # Verify cluster access
 kubectl cluster-info
-
-# Check all nodes are ready
-kubectl get nodes
-
-# Verify specialized hardware nodes
-kubectl get nodes -l node.kubernetes.io/instance-type=inf2.xlarge
 :::
 
-### 3.2 Verify GenAI Components
+Alternatively, you can set up a cloud-based IDE by deploying VSC Server:
 
 :::code{language=bash showCopyAction=true}
-# Check vLLM model servers
-kubectl get pods -n vllm
+# Deploy VSC Server (optional)
+./scripts/deploy-vsc-server.sh
 
-# Check platform components
-kubectl get pods -n litellm
-kubectl get pods -n langfuse
-kubectl get pods -n openwebui
-
-# All pods should be in Running state
+# Get VSC Server URL
+kubectl get ingress -n vsc-server
 :::
 
-### 3.3 Get Service Access URLs
+## 🎉 Setup Complete!
 
-:::code{language=bash showCopyAction=true}
-# Get Open WebUI URL
-export OPENWEBUI_URL=$(kubectl get ingress -n openwebui openwebui -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-echo "Open WebUI: https://$OPENWEBUI_URL"
+Congratulations! You now have:
 
-# Get Langfuse URL
-export LANGFUSE_URL=$(kubectl get ingress -n langfuse langfuse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-echo "Langfuse: https://$LANGFUSE_URL"
+✅ **EKS cluster** deployed and accessible
 
-# Save URLs for later use
-echo "export OPENWEBUI_URL=$OPENWEBUI_URL" >> ~/.bashrc
-echo "export LANGFUSE_URL=$LANGFUSE_URL" >> ~/.bashrc
-:::
+✅ **GenAI infrastructure** deployed
 
-## 🔧 Step 4: Configure Access
+✅ **Development environment** configured
 
-### 4.1 Set Up Open WebUI
+✅ **kubectl** connected to your cluster
 
-1. Navigate to your Open WebUI URL
-2. Create an admin account:
-   - Email: admin@workshop.local
-   - Password: Choose a secure password
-3. Verify you can access the chat interface
+## 💰 Cost Management
 
-### 4.2 Configure Langfuse
+::alert[**Important**: Your workshop environment costs ~$2-3/hour. Remember to clean up when finished!]{type="warning"}
 
-1. Navigate to your Langfuse URL
-2. Create an account for observability access
-3. Create a new project called "GenAI Workshop"
-4. Generate API keys for integration
-
-### 4.3 Test Model Access
-
-:::code{language=bash showCopyAction=true}
-# Test vLLM model endpoint
-curl -X POST "http://$(kubectl get svc -n vllm llama-3-1-8b -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/v1/chat/completions" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "llama-3-1-8b",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "max_tokens": 50
-  }'
-:::
-
-## 🔍 Step 5: Run Health Check
-
-Execute our comprehensive health check:
-
-:::code{language=bash showCopyAction=true}
-# Run workshop health check
-./scripts/health-check.sh
-
-# This verifies:
-# ✓ Cluster connectivity
-# ✓ All pods running
-# ✓ Service endpoints accessible
-# ✓ Models responding
-# ✓ Observability configured
-:::
-
-## 💰 Step 6: Cost Management Setup
-
-### 6.1 Enable Cost Monitoring
-
-:::code{language=bash showCopyAction=true}
-# Tag resources for cost tracking
-aws eks tag-resource \
-  --resource-arn $(aws eks describe-cluster --name $CLUSTER_NAME --query 'cluster.arn' --output text) \
-  --tags workshop=genai-eks,environment=learning
-
-# Set up cost alerts (optional)
-./scripts/setup-cost-alerts.sh
-:::
-
-### 6.2 Understand Costs
-
-Your workshop environment costs approximately:
-- **inf2.xlarge nodes**: ~$0.76/hour each (2 nodes = ~$1.52/hour)
-- **EKS cluster**: $0.10/hour
-- **Load balancers**: ~$0.025/hour each
-- **Storage**: ~$0.10/hour
-- **Total**: ~$2-3/hour when running
-
-## 🎉 Success Checklist
-
-Before proceeding to Module 1, confirm:
-
-✅ **EKS cluster** created and accessible
-
-✅ **All GenAI pods** in Running state
-
-✅ **Open WebUI** accessible with account created
-
-✅ **Langfuse** accessible with project configured
-
-✅ **Model endpoints** responding to test requests
-
-✅ **Health check** passed completely
-
-## 🆘 Troubleshooting
-
-::::tabs
-
-:::tab{label="Deployment Failures"}
-```bash
-# Check deployment logs
-./scripts/check-deployment-status.sh
-
-# Common issues:
-# - Insufficient quotas (request increases)
-# - Region doesn't support inf2 (try us-west-2)
-# - IAM permissions (ensure admin access)
-
-# Retry deployment
-./scripts/deploy-infrastructure.sh --retry
-```
-:::
-
-:::tab{label="Pods Not Starting"}
-```bash
-# Check pod events
-kubectl describe pod <pod-name> -n <namespace>
-
-# Check node resources
-kubectl describe nodes
-
-# Scale down if resource constrained
-kubectl scale deployment <deployment> --replicas=1 -n <namespace>
-```
-:::
-
-:::tab{label="Service Access Issues"}
-```bash
-# Check ingress status
-kubectl get ingress -A
-
-# Verify load balancer provisioning
-aws elbv2 describe-load-balancers
-
-# Use port-forward as backup
-kubectl port-forward -n openwebui svc/openwebui 8080:80
-```
-:::
-
-::::
-
-## 🧹 Cleanup Instructions
-
-::alert[**Important**: Remember to clean up resources after the workshop to avoid ongoing charges!]{type="warning"}
+### Cleanup Instructions
 
 When you're finished with the workshop:
 
@@ -276,44 +135,14 @@ When you're finished with the workshop:
 # Run the cleanup script
 ./scripts/cleanup-infrastructure.sh
 
-# This will:
-# - Delete the EKS cluster
-# - Remove all associated resources
-# - Clean up storage volumes
-# - Delete load balancers and networking
-
 # Verify cleanup completed
 aws eks list-clusters --region $AWS_REGION
 :::
 
-## 📚 Additional Configuration
+## 🚀 What's Next?
 
-### Optional: Enable Advanced Features
-
-:::code{language=bash showCopyAction=true}
-# Enable GPU support (if you have g5 instances)
-./scripts/enable-gpu-support.sh
-
-# Configure additional models
-./scripts/deploy-additional-models.sh
-
-# Set up custom monitoring
-./scripts/setup-advanced-monitoring.sh
-:::
-
-## 🚀 Ready for Module 1!
-
-Congratulations! Your personal GenAI environment is ready. You have:
-
-- ✅ Complete control over the infrastructure
-- ✅ All GenAI components deployed and verified
-- ✅ Cost monitoring and cleanup procedures
-- ✅ Ability to experiment beyond the workshop
-
-You're now ready to start deploying and interacting with Large Language Models!
+Now that your infrastructure is deployed and you have development environment access, let's explore the GenAI components and verify everything is working correctly.
 
 ---
 
 **[Continue to Infrastructure Overview →](/introduction/infra-setup/)**
-
-**[Or jump directly to Module 1 →](/module1-interacting-with-models/)**

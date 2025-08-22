@@ -183,20 +183,159 @@ Now that you understand the infrastructure foundation, you're ready to explore t
 
 ::alert[Each module builds upon the previous one, creating a comprehensive understanding of GenAI on EKS from infrastructure to production deployment.]{type="info"}
 
-## Quick Verification
+## ✅ Step 1: Verify GenAI Stack
 
-Let's verify that all components are running correctly:
+Now that you have access to your development environment, let's ensure all GenAI components are running properly:
+
+### 1.1 Check Core Components
 
 :::code{language=bash showCopyAction=true}
-# Check cluster status
-kubectl get nodes
-
-# Verify GenAI stack is running
+# Check vLLM model servers
 kubectl get pods -n vllm
+
+# Expected: 2-3 pods in Running state
+# - llama-3-1-8b-xxx
+# - qwen3-8b-xxx
+:::
+
+:::code{language=bash showCopyAction=true}
+# Check platform components
 kubectl get pods -n litellm
 kubectl get pods -n langfuse
 kubectl get pods -n openwebui
+
+# All pods should be in Running state
 :::
+
+### 1.2 Get Service URLs
+
+Retrieve the URLs for accessing the workshop services:
+
+:::code{language=bash showCopyAction=true}
+# Get Open WebUI URL
+echo "Open WebUI: https://$(kubectl get ingress -n openwebui openwebui -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+
+# Get Langfuse URL  
+echo "Langfuse: https://$(kubectl get ingress -n langfuse langfuse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+:::
+
+Save these URLs - you'll use them throughout the workshop!
+
+### 1.3 Test Open WebUI Access
+
+1. Open the Open WebUI URL in your browser
+2. You should see a login screen
+3. **Create a new account** with:
+   - Any email (e.g., workshop@example.com)
+   - Any password (remember it for the workshop)
+
+::alert[**Note**: This is a local account within your workshop environment, not connected to any external service.]{type="info"}
+
+## 🔍 Step 2: Run Health Check
+
+Execute our comprehensive health check:
+
+:::code{language=bash showCopyAction=true}
+# Run workshop health check
+curl -s https://raw.githubusercontent.com/aws-samples/eks-genai-workshop/main/scripts/health-check.sh | bash
+
+# This checks:
+# ✓ Cluster connectivity
+# ✓ Required namespaces
+# ✓ Pod health
+# ✓ Service endpoints
+# ✓ Model availability
+:::
+
+You should see all green checkmarks ✅. If any component shows ❌, notify your instructor.
+
+## 📊 Step 3: Explore Your Environment
+
+Take a moment to familiarize yourself with the deployed infrastructure:
+
+### View Namespaces
+
+:::code{language=bash showCopyAction=true}
+# List all namespaces
+kubectl get namespaces
+
+# Key namespaces:
+# - vllm: Model serving
+# - litellm: API gateway
+# - langfuse: Observability
+# - openwebui: Chat interface
+:::
+
+### Check Resource Allocation
+
+:::code{language=bash showCopyAction=true}
+# View node resources
+kubectl top nodes
+
+# Check pod resource usage
+kubectl top pods -A | grep -E "vllm|litellm"
+:::
+
+## 🎉 Success Checklist
+
+Before proceeding to Module 1, confirm:
+
+✅ **AWS Console** access working
+
+✅ **Development environment** opened and terminal ready
+
+✅ **kubectl** connected to EKS cluster
+
+✅ **All pods** in Running state
+
+✅ **Open WebUI** accessible and account created
+
+✅ **Health check** passed
+
+## 🆘 Troubleshooting
+
+::::tabs
+
+:::tab{label="Pods Not Running"}
+```bash
+# Check pod events
+kubectl describe pod <pod-name> -n <namespace>
+
+# Check logs
+kubectl logs <pod-name> -n <namespace>
+
+# Common issues:
+# - Image pull errors (temporary, wait 2-3 minutes)
+# - Insufficient resources (notify instructor)
+```
+:::
+
+:::tab{label="Cannot Access Open WebUI"}
+```bash
+# Check ingress status
+kubectl get ingress -n openwebui
+
+# Check ALB status in AWS Console
+# EC2 → Load Balancers → Check health
+
+# Try port-forward as backup
+kubectl port-forward -n openwebui svc/openwebui 8080:80
+# Then access http://localhost:8080
+```
+:::
+
+:::tab{label="Model Endpoints Not Responding"}
+```bash
+# Test vLLM endpoints directly
+kubectl port-forward -n vllm svc/llama-3-1-8b 8000:8000 &
+curl http://localhost:8000/v1/models
+
+# Check model loading status
+kubectl logs -n vllm deployment/llama-3-1-8b --tail=50
+```
+:::
+
+::::
 
 ## Key Takeaways
 
@@ -232,6 +371,18 @@ kubectl get pods -n openwebui
 
 ::::
 
+## 🚀 Ready for Module 1!
+
+Congratulations! Your GenAI environment is fully verified and ready. You have:
+
+- ✅ Access to a fully configured EKS cluster
+- ✅ GenAI platform components running and verified
+- ✅ Development environment set up
+- ✅ All tools and access confirmed
+- ✅ Open WebUI account created and tested
+
+You're now ready to start your hands-on GenAI journey!
+
 ---
 
-**Ready to start building?** Let's move on to the next section where we'll begin working with these powerful GenAI tools!
+**[Begin Module 1: Interacting with Models →](/module1-interacting-with-models/)**
