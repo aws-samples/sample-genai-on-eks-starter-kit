@@ -3,7 +3,7 @@ title: "Module 2: GenAI Platform Components"
 weight: 30
 ---
 
-# Module 2: GenAI Platform Components
+# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
 
 Welcome to Module 2! In this module, you'll explore the core platform components that enable production-ready GenAI applications on EKS. You'll learn how LiteLLM provides a unified API gateway for multiple model providers and how Langfuse enables comprehensive observability for your AI workloads.
 

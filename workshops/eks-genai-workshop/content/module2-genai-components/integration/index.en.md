@@ -3,6 +3,8 @@ title: "Integration - Bringing It All Together"
 weight: 3
 ---
 
+# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
+
 ## Overview
 
 In this section, we'll explore how Open WebUI, LiteLLM, and Langfuse work together as an integrated GenAI platform on EKS. We'll trace a complete request flow and demonstrate the full system capabilities.

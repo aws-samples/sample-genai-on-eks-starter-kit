@@ -3,9 +3,7 @@ title: "AWS Bedrock - Managed AI Services"
 weight: 23
 ---
 
-# AWS Bedrock - Managed AI Services
-
-AWS Bedrock is a fully managed service that provides access to high-performing foundation models from leading AI companies through a single API. In this section, you'll configure access to Claude 3.7 Sonnet and experience the performance difference compared to self-hosted models.
+AWS Bedrock is a fully managed service that provides access to high-performing foundation models from leading AI companies through a single API. In this section, you'll configure access to Claude 3.7 Sonnet and learn how to use Bedrock models for the GenAI platforms you configure on EKS.
 
 ## What is AWS Bedrock?
 
@@ -18,16 +16,16 @@ Amazon Bedrock offers:
 - ⚡ **High Performance**: Optimized infrastructure with consistent low latency
 - 🛠️ **Additional Features**: Fine-tuning, RAG, agents, and guardrails
 
-## Why Use Bedrock in This Workshop?
+## Why Use Bedrock for This Workshop?
 
-While self-hosting models on EKS provides full control and customization, Bedrock offers:
+You've just experienced self-hosted models on our workshop infrastructure. Due to our hardware constraints (inf2.xlarge instances), the self-hosted models have limited performance. For the best learning experience in the remaining modules, we suggest using Bedrock:
 
-1. **Superior Performance**: No cold starts, instant responses
-2. **Latest Models**: Access to Claude 3.7 Sonnet with 200K context window
-3. **No Resource Constraints**: Not limited by workshop hardware
-4. **Cost Efficiency**: For intermittent use, pay-per-token is often cheaper
+1. **No Hardware Constraints**: Not limited by workshop instance sizes
+2. **Consistent Performance**: Reliable response times for hands-on exercises  
+3. **Latest Models**: Access to Claude 3.7 Sonnet with advanced capabilities
+4. **Focus on Learning**: Spend time on concepts, not waiting for responses
 
-::alert[**Recommendation**: After trying both vLLM and Bedrock, we recommend using Bedrock (Claude 3.7 Sonnet) for the remainder of the workshop due to its superior performance and capabilities.]{type="success"}
+::alert[**Workshop Suggestion**: For the remaining modules, we recommend using Bedrock (Claude 3.7 Sonnet) to ensure optimal learning experience. Both self-hosted and managed approaches have their place in different scenarios.]{type="info"}
 
 ## Enabling Bedrock Model Access
 
@@ -101,7 +99,7 @@ Once model access is enabled, Bedrock models automatically appear in Open WebUI 
 
 ### Step 1: Access Open WebUI
 
-1. Navigate to `https://openwebui.${DOMAIN}`
+1. Use the OpenWebUI URL from your previous commands
 2. Log in with your credentials
 
 ### Step 2: Select Bedrock Model
@@ -112,55 +110,27 @@ Once model access is enabled, Bedrock models automatically appear in Open WebUI 
 
 ### Step 3: Test Claude 3.7 Sonnet
 
-Try these prompts to experience Claude's capabilities:
+Let's experience Claude's capabilities with some practical examples:
+
+#### Try Advanced Reasoning
 
 :::code{language=markdown showCopyAction=true}
-# Test advanced reasoning
 "Explain the concept of Kubernetes operators and provide a simple example of when you would create a custom operator."
-
-# Test code generation with explanation
-"Write a Python class that implements a simple LRU cache with get and put methods. Explain the time complexity of each operation."
-
-# Test long-form content
-"Create a detailed comparison table between self-hosted LLMs on Kubernetes and managed services like AWS Bedrock. Include at least 8 comparison criteria."
-
-# Test creative + technical
-"Write a haiku about Kubernetes, then explain what makes it technically accurate."
 :::
 
-## Performance Comparison
-
-Let's compare the performance between self-hosted vLLM and Bedrock:
-
-### Quick Benchmark
-
-Try this same prompt on both models:
+#### Test Code Generation
 
 :::code{language=markdown showCopyAction=true}
-"Generate a Python script that:
-1. Connects to a Kubernetes cluster
-2. Lists all pods in all namespaces
-3. Outputs their status in a formatted table
-Include error handling and comments."
+"Write a Python class that implements a simple LRU cache with get and put methods. Explain the time complexity of each operation."
 :::
 
-### Measure the Differences
+#### Test Long-Form Analysis
 
-| Metric | vLLM (Llama 3.1 8B) | Bedrock (Claude 3.7) |
-|--------|---------------------|---------------------|
-| **First Token Latency** | 3-5 seconds | <1 second |
-| **Tokens per Second** | 10-15 | 50-80 |
-| **Context Window** | 8,192 tokens | 200,000 tokens |
-| **Response Quality** | Good | Excellent |
-| **Code Accuracy** | Good | Excellent |
-| **Availability** | 99% (if pods running) | 99.99% |
+:::code{language=markdown showCopyAction=true}
+"Analyze the benefits and challenges of running AI workloads on Kubernetes. Consider aspects like scalability, resource management, and operational complexity."
+:::
 
-### Why Such a Difference?
-
-1. **Hardware**: Bedrock runs on optimized infrastructure vs our inf2.xlarge
-2. **Model Size**: Claude 3.7 is a much larger, more capable model
-3. **Optimization**: Bedrock's infrastructure is highly optimized for inference
-4. **No Cold Starts**: Models are always warm in Bedrock
+Notice how Claude provides detailed, well-structured responses that are ideal for the learning exercises in the upcoming modules.
 
 ## Advanced Features: RAG in Open WebUI
 
@@ -211,24 +181,18 @@ EOF
 "Explain the difference between a ConfigMap and a Secret."
 :::
 
-### Step 3: Compare RAG Performance
+### Step 3: Experience RAG with Bedrock
 
-- **With vLLM**: RAG works but responses are slower
-- **With Bedrock**: Fast retrieval and high-quality synthesis
+Try asking questions about the uploaded document - you'll notice how Claude can effectively analyze and synthesize information from the provided context.
 
-## Cost Considerations
+## Cost Considerations for Workshop
 
 ### Bedrock Pricing (Claude 3.7 Sonnet)
 - **Input**: $0.003 per 1K tokens
 - **Output**: $0.015 per 1K tokens
 - **Example**: A typical workshop session (~10K tokens) costs ~$0.15
 
-### Self-Hosted vLLM
-- **inf2.xlarge**: ~$0.75/hour
-- **Break-even**: Need to process >500K tokens/hour to justify self-hosting
-- **Additional costs**: Storage, networking, management overhead
-
-For workshop purposes, Bedrock is significantly more cost-effective!
+::alert[**Workshop Context**: Both self-hosted and managed approaches have different cost profiles depending on usage patterns, scale, and requirements. For this workshop's learning objectives, Bedrock provides the most consistent experience.]{type="info"}
 
 ## Best Practices with Bedrock
 
@@ -331,13 +295,13 @@ aws iam get-role-policy --role-name <your-role> --policy-name <policy>
 
 ✅ **Instant Deployment**: No infrastructure to manage, models ready immediately
 
-✅ **Superior Performance**: 5-10x faster than self-hosted on workshop hardware
+✅ **Managed Service Benefits**: Optimized infrastructure without operational overhead
 
-✅ **Latest Models**: Access to Claude 3.7 with 200K context window
+✅ **Advanced Models**: Access to Claude 3.7 with 200K context window
 
-✅ **Cost Effective**: Pay-per-use model ideal for variable workloads
+✅ **Pay-Per-Use**: Cost model ideal for variable workloads
 
-✅ **Enterprise Ready**: Built-in security, compliance, and governance
+✅ **Enterprise Features**: Built-in security, compliance, and governance
 
 ## Module Summary
 
@@ -347,13 +311,13 @@ Congratulations! You've now experienced three different approaches to model depl
 2. **vLLM**: Self-hosted models with full control but hardware constraints
 3. **Bedrock**: Managed service with superior performance and capabilities
 
-### Recommendation for Remaining Workshops
+### Suggested Approach for Remaining Modules
 
-**Use Bedrock (Claude 3.7 Sonnet)** for the best experience:
-- Faster responses for better productivity
-- Higher quality outputs for complex tasks
-- No infrastructure concerns
-- Cost-effective for workshop usage
+**Use Bedrock (Claude 3.7 Sonnet)** for optimal workshop experience:
+- Consistent performance for hands-on exercises
+- Advanced capabilities for complex learning scenarios
+- No infrastructure management overhead
+- Reliable responses for interactive learning
 
 ### What You've Learned
 

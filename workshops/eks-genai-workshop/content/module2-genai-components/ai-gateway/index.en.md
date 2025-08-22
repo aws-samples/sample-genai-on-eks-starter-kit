@@ -3,6 +3,8 @@ title: "LiteLLM - Unified AI Gateway"
 weight: 1
 ---
 
+# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
+
 ## Overview
 
 LiteLLM serves as a unified API gateway for all your LLM models, providing a single OpenAI-compatible endpoint that can route requests to multiple backend providers including self-hosted models (vLLM), AWS Bedrock, and other cloud providers.

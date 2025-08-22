@@ -76,11 +76,11 @@ Now go back to your OpenWebUI tab and send a message to the Llama model. Watch t
 
 **Try this example question:**
 
-![OpenWebUI Question](/static/images/module-1/vllm/flies.png)
+![OpenWebUI Question](/static/images/module-1/flies.png)
 
 As soon as you send the message "why would a fly fly into a fly pant", watch your terminal! You'll see detailed logs showing:
 
-![vLLM Processing Logs](/static/images/module-1/vllm/logs.png)
+![vLLM Processing Logs](/static/images/module-1/logs.png)
 
 **What you're seeing in the logs:**
 - 📨 **Request received**: Your prompt being processed by vLLM
@@ -112,12 +112,12 @@ AWS Neuron is the SDK for AWS Inferentia (inf2) and Trainium (trn1) chips:
 
 ## 🔍 Technical Deep Dive (Optional)
 
-<details>
-<summary><strong>Click to explore the Kubernetes deployment details</strong></summary>
+For those interested in the Kubernetes implementation details:
 
-Let's examine how vLLM is deployed on EKS by exploring the actual YAML manifests used in your environment.
+::::tabs
 
-### 1. Namespace Isolation
+:::tab{label="Infrastructure"}
+**Namespace Isolation**
 
 First, we create a dedicated namespace for vLLM workloads:
 
@@ -129,12 +129,7 @@ metadata:
   name: vllm
 :::
 
-This provides:
-- **Resource Isolation**: Separate from other workloads
-- **Security Boundaries**: Network policies and RBAC can be applied
-- **Resource Quotas**: Limit resource consumption if needed
-
-### 2. Persistent Storage for Model Caching
+**Storage Configuration**
 
 We use Amazon EFS to cache downloaded models and compiled Neuron graphs:
 
@@ -152,29 +147,16 @@ spec:
   resources:
     requests:
       storage: 100Gi
-
----
-# pvc-neuron-cache.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: neuron-cache
-  namespace: vllm
-spec:
-  storageClassName: efs
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 100Gi
 :::
 
 **Why Two Caches?**
 - **HuggingFace Cache**: Stores downloaded model weights (~15GB per model)
 - **Neuron Cache**: Stores compiled model graphs (~10GB per model)
 - **Reusability**: Cached data persists across pod restarts
+:::
 
-### 3. Secrets Management
+:::tab{label="Security"}
+**Secrets Management**
 
 The HuggingFace token is stored securely:
 
@@ -190,12 +172,22 @@ stringData:
   token: ${HF_TOKEN}  # Injected during deployment
 :::
 
-### 4. Model Deployment Manifest
+**Security Context**
+
+Pods run with restricted security settings:
+- No privilege escalation
+- Dropped network capabilities
+- Runtime security profiles
+- No service account token mounting
+:::
+
+:::tab{label="Deployment"}
+**Main Deployment Manifest**
 
 Here's the complete deployment for Llama 3.1 8B with Neuron optimization:
 
 :::code{language=yaml showCopyAction=true}
-# model-llama-3-1-8b-int8-neuron.yaml (simplified)
+# model-llama-3-1-8b-int8-neuron.yaml (key sections)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -207,16 +199,7 @@ spec:
     matchLabels:
       app: llama-3-1-8b-int8-neuron
   template:
-    metadata:
-      labels:
-        app: llama-3-1-8b-int8-neuron
     spec:
-      # Security context for pod
-      securityContext:
-        seccompProfile:
-          type: RuntimeDefault
-      automountServiceAccountToken: false
-      
       # Node selection for Neuron hardware
       nodeSelector:
         eks.amazonaws.com/instance-family: inf2
@@ -225,209 +208,35 @@ spec:
       containers:
         - name: vllm
           image: public.ecr.aws/t0h7h1e6/vllm-neuron:llama-3-1-8b-int8
-          imagePullPolicy: IfNotPresent
-          
-          # Security settings
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - NET_RAW
-                
-          # vLLM server command
           command: ["vllm", "serve"]
           args:
-            # Model configuration
-            - /opt/vllm/huggingface-cache/Llama-3.1-8B-Instruct/...
             - --served-model-name=llama-3-1-8b-int8-neuron
-            - --trust-remote-code
-            
-            # Performance settings
-            - --gpu-memory-utilization=0.90
-            - --max-model-len=8192  # 8K context
-            
-            # Llama 3.1 specific features
-            - --enable-auto-tool-choice
-            - --tool-call-parser=llama3_json
-            - --chat-template=examples/tool_chat_template_llama3.1_json.jinja
-            
-            # Neuron optimization
-            - --tensor-parallel-size=2  # Use both Neuron cores
-            - --max-num-seqs=4  # Concurrent sequences
-            - '--override-neuron-config={"quantized": true, ...}'
-          
-          # Environment variables
-          env:
-            - name: NEURON_COMPILED_ARTIFACTS
-              value: /opt/vllm/neuron-cache/Llama-3.1-8B-Instruct-int8
-          
-          # Networking
-          ports:
-            - name: http
-              containerPort: 8000
-          
-          # Resource allocation
-          resources:
-            requests:
-              cpu: 3
-              memory: 12Gi
-              aws.amazon.com/neuroncore: 2  # Request 2 Neuron cores
-            limits:
-              aws.amazon.com/neuroncore: 2
-      
-      # Tolerations for Neuron nodes
-      tolerations:
-        - key: aws.amazon.com/neuron
-          operator: Exists
-          effect: NoSchedule
-
----
-# Service to expose the deployment
-apiVersion: v1
-kind: Service
-metadata:
-  name: llama-3-1-8b-int8-neuron
-  namespace: vllm
-spec:
-  selector:
-    app: llama-3-1-8b-int8-neuron
-  ports:
-    - name: http
-      port: 8000
+            - --tensor-parallel-size=2
+            - --max-num-seqs=4
+            - --max-model-len=8192
+:::
 :::
 
-### Key Configuration Details
+:::tab{label="Performance"}
+**Resource Allocation**
 
-#### **Node Selection**
-```yaml
-nodeSelector:
-  eks.amazonaws.com/instance-family: inf2
-  node.kubernetes.io/instance-type: inf2.xlarge
-```
-- Ensures pods run only on Neuron-equipped instances
-- inf2.xlarge provides 2 Neuron cores
-
-#### **Neuron Resource Allocation**
-```yaml
+:::code{language=yaml showCopyAction=true}
 resources:
   requests:
-    aws.amazon.com/neuroncore: 2
+    cpu: 3
+    memory: 12Gi
+    aws.amazon.com/neuroncore: 2  # Request 2 Neuron cores
   limits:
     aws.amazon.com/neuroncore: 2
-```
-- Requests and limits must match for Neuron cores
-- Each core handles part of the model (tensor parallelism)
-
-#### **vLLM Neuron Configuration**
-```yaml
-- --tensor-parallel-size=2  # Split model across 2 cores
-- --max-num-seqs=4          # Handle 4 concurrent requests
-- --max-model-len=8192      # 8K token context window
-```
-- Optimized for workshop hardware constraints
-- Production would use more cores and higher concurrency
-
-## Hands-On: Interacting with vLLM Models
-
-Let's interact with the deployed models through Open WebUI:
-
-### Step 1: Verify Model Deployment
-
-:::code{language=bash showCopyAction=true}
-# Check if vLLM pods are running
-kubectl get pods -n vllm
-
-# View pod details
-kubectl describe pod -n vllm -l app=llama-3-1-8b-int8-neuron
-
-# Check service endpoints
-kubectl get svc -n vllm
 :::
 
-### Step 2: Test Direct API Access
+**Key Configuration Details:**
+- **Node Selection**: Ensures pods run only on Neuron-equipped instances
+- **Neuron Cores**: Requests and limits must match for Neuron cores
+- **Tensor Parallelism**: Model split across 2 cores for faster inference
+- **Concurrency**: Handle 4 concurrent requests with 8K context window
 
-:::code{language=bash showCopyAction=true}
-# Port-forward to access vLLM directly
-kubectl port-forward -n vllm svc/llama-3-1-8b-int8-neuron 8000:8000 &
-
-# Test the model endpoint
-curl http://localhost:8000/v1/models
-
-# Send a test completion request
-curl -X POST http://localhost:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "llama-3-1-8b-int8-neuron",
-    "messages": [
-      {"role": "user", "content": "Explain Kubernetes in one sentence"}
-    ],
-    "max_tokens": 50
-  }'
-
-# Stop port-forward
-kill %1
-:::
-
-## 🚀 Performance Testing with OpenWebUI
-
-Now let's test the models you just explored and see the performance differences:
-
-### Step 1: Performance Comparison Exercise
-
-1. **Go back to your OpenWebUI tab**
-2. **Select llama-3-1-8b-int8-neuron** from the model dropdown
-3. **Try these prompts** to test different capabilities:
-
-:::code{language=markdown showCopyAction=true}
-# Test general knowledge
-"What are the benefits of using Kubernetes for container orchestration?"
-
-# Test code generation
-"Write a Python function to calculate fibonacci numbers"
-
-# Test reasoning
-"If I have 3 apples and give away 40% of them, how many do I have left?"
-:::
-
-### Step 2: Compare Models Side-by-Side
-
-Switch between models in Open WebUI and compare:
-- **llama-3-1-8b-int8-neuron**: Meta's Llama 3.1 8B (INT8 quantized)
-- **qwen3-8b-fp8-neuron**: Alibaba's Qwen3 8B (FP8 quantized)
-
-**Try the same prompt with both models:**
-```
-"Explain the difference between Kubernetes Deployments and StatefulSets in 3 bullet points"
-```
-
-**While testing, notice:**
-- Response speed (first token latency)
-- Answer quality and style
-- Token generation rate
-- Different approaches to the same question
-
-**Pro Tip**: Use the "+" button in OpenWebUI to chat with both models simultaneously!
-
-## Performance Considerations
-
-### Why Responses Might Be Slow
-
-1. **Hardware Limitations**
-   - inf2.xlarge has only 2 Neuron cores
-   - Limited memory bandwidth compared to larger instances
-
-2. **Model Size vs Hardware**
-   - 8B parameter models are large for 2 cores
-   - Tensor parallelism overhead
-
-3. **Quantization Trade-offs**
-   - INT8 reduces memory but adds computation overhead
-   - Some accuracy loss from quantization
-
-### Production Optimizations
-
-In production environments, you would:
-
+**Production Optimizations:**
 ```yaml
 # Use larger instances
 nodeSelector:
@@ -437,13 +246,10 @@ nodeSelector:
 args:
   - --tensor-parallel-size=12
   - --max-num-seqs=32
-
-# Deploy multiple replicas
-spec:
-  replicas: 3  # For load balancing
 ```
+:::
 
-</details>
+::::
 
 ## 📈 Understanding Performance Metrics
 

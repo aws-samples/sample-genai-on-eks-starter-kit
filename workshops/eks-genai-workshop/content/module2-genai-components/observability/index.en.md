@@ -3,7 +3,7 @@ title: "Langfuse - LLM Observability"
 weight: 2
 ---
 
-## Overview
+# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
 
 Langfuse provides comprehensive observability for LLM applications, enabling you to monitor, debug, and optimize your AI interactions. It captures detailed traces of LLM calls, including prompts, completions, latency, and costs.
 
