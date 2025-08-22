@@ -1,7 +1,7 @@
 ---
 title: "Building GenAI Application"
 date: 2025-08-13T11:05:19-07:00
-weight: 150
+weight: 40
 draft: true
 ---
 

@@ -177,7 +177,7 @@ Now that you understand the infrastructure foundation, you're ready to explore t
 
 - **Module 2: GenAI Platform Components** - Deep dive into observability with Langfuse for monitoring and debugging, and implement unified API management with LiteLLM
 
-- **Module 3: Building GenAI Applications** - Create production-ready applications using LangChain, implement RAG patterns, and build intelligent agents
+- **Module 3: Building GenAI Applications** - Create sophisticated applications using LangChain, implement RAG patterns, and build intelligent agents
 
 - **Module 4: Securing and Scaling Agents** - Implement enterprise security patterns, scale agentic systems, and optimize for production workloads
 
@@ -223,7 +223,7 @@ kubectl get pods -n openwebui
 :::tab{label="Benefits"}
 ✅ **Zero setup time** - Focus on learning, not configuration
 
-✅ **Production-ready** - Same patterns used in real deployments
+✅ **Enterprise patterns** - Same patterns used in real deployments
 
 ✅ **Cost-optimized** - Leverages Spot instances and Neuron chips
 

@@ -1,106 +1,319 @@
 ---
-title : "Using your account"
-weight : 16
+title: "Using Your Own Account"
+weight: 16
 ---
 
-You will spin up an already built website, API end point, and media stream. In this lab, you'll use a CloudFormation template to launch the web application.
+# Using Your Own Account
 
-### Step 1. Deploy the CloudFormation Stacks
+Running this workshop in your own AWS account gives you complete control over the environment and the ability to experiment beyond the workshop timeline. Let's deploy the GenAI infrastructure stack and get you ready for an incredible learning journey!
 
-#### Download the CloudFormation templates
-You will run **curl** command in your command line interface, so check whether your OS already has curl installed. Mac OS and Linux OS usually has curl command installed. For Windows 10, you can use curl (located in \windows\system32) in command prompt, or use Windows Subsystem for Linux.  
+## 📋 Prerequisites
 
-::alert[Amazon Linux on Amazon EC2 or AWS CloudShell does have curl installed, however using curl on AWS region resource will yield incorrect performance measurement of CloudFront, since AWS regions and CloudFront Edge Locations are connected to AWS Global Network.]{type="warning"}
+Before starting, ensure you have:
 
+### AWS Account Requirements
+- ✅ AWS account with administrative access
+- ✅ Service quotas for:
+  - EKS clusters (1)
+  - inf2.xlarge instances (minimum 2)
+  - g5.xlarge instances (optional, for GPU modules)
+  - VPC Elastic IPs (5)
+- ✅ Estimated cost: ~$10-15/hour during workshop
 
+::alert[**Cost Warning**: This workshop uses specialized ML instances. Remember to run the cleanup script when finished!]{type="warning"}
 
-```bash
-curl -o setup-cf-with-cdk.yaml "https://ws-assets-prod-iad-r-iad-ed304a55c2ca1aee.s3.us-east-1.amazonaws.com/f3269cf5-aacf-4149-abd0-917622b2fc9e/setup-cf-with-cdk.yaml"
-curl -o vscode-server.yaml "https://ws-assets-prod-iad-r-iad-ed304a55c2ca1aee.s3.us-east-1.amazonaws.com/f3269cf5-aacf-4149-abd0-917622b2fc9e/vscode-server.yaml"
-```
+### Local Environment Requirements
+- ✅ AWS CLI v2 installed and configured
+- ✅ kubectl v1.28+ installed
+- ✅ eksctl v0.150+ installed
+- ✅ Git installed
+- ✅ Terminal with bash/zsh
 
-Launch the CloudFormation stack in **the us-east-1 N. Virginia Region**. The setup-cf-with-cdk template will create the following resources:
-- An API gateway with Lambda functions
-- IAM roles that Lambda functions will assume
-- S3 buckets with web page
-- MediaPackage for stream
+## 🚀 Step 1: Clone Workshop Repository
 
-The vscode-server template will create the following resources:
-- EC2 Instance that hosts Visual Studio Code Server (VSCS)
-- CloudFront Distribution to access VSCS
+First, get the workshop materials and infrastructure code:
 
-:::alert{type="warning"}
-Please remember to clean up the resources after the workshop to avoid any unnecessary costs. Go to the [Conclusion and Cleanup](/Setting-up-CloudFront/conclusion) section to cleanup.
+:::code{language=bash showCopyAction=true}
+# Clone the workshop repository
+git clone https://github.com/aws-samples/eks-genai-workshop.git
+cd eks-genai-workshop
+
+# Set workshop home directory
+export WORKSHOP_HOME=$(pwd)
+echo "Workshop directory: $WORKSHOP_HOME"
 :::
 
-#### Deploy setup-cf-with-cdk.yaml
+## 🏗️ Step 2: Deploy Infrastructure Stack
 
-| Region | Launch Template |
-|------- | -------- |
-| N. Virginia (us-east-1) | :button[Deploy to N. Virginia]{iconName="external" iconAlign="right" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=cloudfront-foundation-i"} |
+We'll use an automated deployment script that creates all required resources:
 
-The link will automatically bring you to the CloudFormation dashboard and start the stack creation process in the specified region. In **Template source,** choose *Upload a template file* and upload the file you just downloaded (setup-cf-with-cdk.yaml), enter *setup-cf-with-cdk* as stack name, proceed through the wizard to launch the stack. Leave all options at their default values, but make sure to check the box to allow CloudFormation to create IAM roles on your behalf:
+### 2.1 Set Deployment Parameters
 
-![Create Stack](/static/Setup-CloudFront-using-CDK/Preparation/Using-your-account/create-stack.png)
+:::code{language=bash showCopyAction=true}
+# Set your desired AWS region (us-west-2 recommended for Neuron availability)
+export AWS_REGION=us-west-2
+export CLUSTER_NAME=genai-workshop-cluster
 
-Name your stack *setup-cf-with-cdk* and input **content-acceleration-cloudfront-workshop-aws-asset** in  **AssetsBucketName** Parammeter and Leave the **AssetsBucketPrefix** blank 
-![Stack Details](/static/Setup-CloudFront-using-CDK/Preparation/Using-your-account/stack-details.png)
+# Verify your AWS credentials
+aws sts get-caller-identity
+:::
 
-Click Next
+### 2.2 Run Infrastructure Deployment
 
-Keep all of the defaults **Configure stack options** menu
+:::code{language=bash showCopyAction=true}
+# Deploy the complete GenAI infrastructure
+./scripts/deploy-infrastructure.sh
 
-Click Next
+# This script will:
+# 1. Create EKS cluster with Auto Mode
+# 2. Deploy specialized node pools (Neuron, GPU)
+# 3. Install GenAI platform components
+# 4. Configure networking and security
+# 5. Pre-load models and configure storage
+:::
 
-Accept the Acknowlegment that AWS CloudFormation might create IAM resources
+The deployment takes approximately 15-20 minutes. You'll see progress updates as each component is deployed.
 
-![IAM Role](/static/Setup-CloudFront-using-CDK/Preparation/Using-your-account/iam-role.png)
+### 2.3 Monitor Deployment Progress
 
-After you click on **Submit**, and please wait for the stack to show **CREATE_COMPLETE** in green under status, it takes about 3 minutes for the stack to be created.
+:::code{language=bash showCopyAction=true}
+# Watch cluster creation
+eksctl get cluster --region $AWS_REGION
 
-#### Deploy vscode-server.yaml
+# Monitor node provisioning
+kubectl get nodes --watch
 
-| Region | Launch Template |
-|------- | -------- |
-| N. Virginia (us-east-1) | :button[Deploy to N. Virginia]{iconName="external" iconAlign="right" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=cloudfront-foundation-i"} |
+# Check GenAI stack deployment
+kubectl get pods -A | grep -E "vllm|litellm|langfuse|openwebui"
+:::
 
-The link will automatically bring you to the CloudFormation dashboard and start the stack creation process in the specified region. In **Template source,** choose *Upload a template file* and upload the file you just downloaded (vscode-server.yaml) , enter *vscode-server* as stack name, proceed through the wizard to launch the stack. Leave all options at their default values, but make sure to check the box to allow CloudFormation to create IAM roles on your behalf.
+## ✅ Step 3: Verify Deployment
 
+Once deployment completes, verify all components are working:
 
-### Step 2. Check Stack Outputs
+### 3.1 Check Cluster Status
 
-1. Go to the AWS Console and Navigate to setup-cf-with-cdk (CloudFormation > Stacks > setup-cf-with-cdk) and check the Outputs tab.
+:::code{language=bash showCopyAction=true}
+# Verify cluster access
+kubectl cluster-info
 
-Take note of the following Outputs, API GW Endpoint, S3 Origin Bucket, Media Package endpoint and the S3 Website domain:
+# Check all nodes are ready
+kubectl get nodes
 
-- apiOriginEndPoint
-- originBucket
-- videoOriginDomain
-- s3WebsiteDomain
+# Verify specialized hardware nodes
+kubectl get nodes -l node.kubernetes.io/instance-type=inf2.xlarge
+:::
 
-2. Go to the AWS Console and Navigate to vscode-server (CloudFormation > Stacks > vscode-server) and check the Outputs tab.
+### 3.2 Verify GenAI Components
 
-Take note of the following Outputs:
+:::code{language=bash showCopyAction=true}
+# Check vLLM model servers
+kubectl get pods -n vllm
 
-- Password
-- URL
+# Check platform components
+kubectl get pods -n litellm
+kubectl get pods -n langfuse
+kubectl get pods -n openwebui
 
-![Stack Outputs](/static/vsc-stack.png)
+# All pods should be in Running state
+:::
 
+### 3.3 Get Service Access URLs
 
-### Step 3. Setup VSC IDE
+:::code{language=bash showCopyAction=true}
+# Get Open WebUI URL
+export OPENWEBUI_URL=$(kubectl get ingress -n openwebui openwebui -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+echo "Open WebUI: https://$OPENWEBUI_URL"
 
-This workshop uses Microsoft Visual Studio Code Server (VSCS) as an integrated development environment (IDE). 
+# Get Langfuse URL
+export LANGFUSE_URL=$(kubectl get ingress -n langfuse langfuse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+echo "Langfuse: https://$LANGFUSE_URL"
 
-From our last step locate the **URL** field and copy the URL. Open this URL in a new browser tab. You will be prompted to enter a password.  
+# Save URLs for later use
+echo "export OPENWEBUI_URL=$OPENWEBUI_URL" >> ~/.bashrc
+echo "export LANGFUSE_URL=$LANGFUSE_URL" >> ~/.bashrc
+:::
 
-Enter the value from the **Password** field (found in the Event Outputs) to access the IDE.  
+## 🔧 Step 4: Configure Access
 
-![Password](/static/vsc-password.png)
+### 4.1 Set Up Open WebUI
 
-Once the IDE has loaded, you will see the terminal where you can execute commands for the labs.
+1. Navigate to your Open WebUI URL
+2. Create an admin account:
+   - Email: admin@workshop.local
+   - Password: Choose a secure password
+3. Verify you can access the chat interface
 
-![IDE-Loaded](/static/vsc.png)
+### 4.2 Configure Langfuse
 
-You are now ready to proceed to the next section of the lab.
+1. Navigate to your Langfuse URL
+2. Create an account for observability access
+3. Create a new project called "GenAI Workshop"
+4. Generate API keys for integration
 
+### 4.3 Test Model Access
+
+:::code{language=bash showCopyAction=true}
+# Test vLLM model endpoint
+curl -X POST "http://$(kubectl get svc -n vllm llama-3-1-8b -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama-3-1-8b",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 50
+  }'
+:::
+
+## 🔍 Step 5: Run Health Check
+
+Execute our comprehensive health check:
+
+:::code{language=bash showCopyAction=true}
+# Run workshop health check
+./scripts/health-check.sh
+
+# This verifies:
+# ✓ Cluster connectivity
+# ✓ All pods running
+# ✓ Service endpoints accessible
+# ✓ Models responding
+# ✓ Observability configured
+:::
+
+## 💰 Step 6: Cost Management Setup
+
+### 6.1 Enable Cost Monitoring
+
+:::code{language=bash showCopyAction=true}
+# Tag resources for cost tracking
+aws eks tag-resource \
+  --resource-arn $(aws eks describe-cluster --name $CLUSTER_NAME --query 'cluster.arn' --output text) \
+  --tags workshop=genai-eks,environment=learning
+
+# Set up cost alerts (optional)
+./scripts/setup-cost-alerts.sh
+:::
+
+### 6.2 Understand Costs
+
+Your workshop environment costs approximately:
+- **inf2.xlarge nodes**: ~$0.76/hour each (2 nodes = ~$1.52/hour)
+- **EKS cluster**: $0.10/hour
+- **Load balancers**: ~$0.025/hour each
+- **Storage**: ~$0.10/hour
+- **Total**: ~$2-3/hour when running
+
+## 🎉 Success Checklist
+
+Before proceeding to Module 1, confirm:
+
+✅ **EKS cluster** created and accessible
+
+✅ **All GenAI pods** in Running state
+
+✅ **Open WebUI** accessible with account created
+
+✅ **Langfuse** accessible with project configured
+
+✅ **Model endpoints** responding to test requests
+
+✅ **Health check** passed completely
+
+## 🆘 Troubleshooting
+
+::::tabs
+
+:::tab{label="Deployment Failures"}
+```bash
+# Check deployment logs
+./scripts/check-deployment-status.sh
+
+# Common issues:
+# - Insufficient quotas (request increases)
+# - Region doesn't support inf2 (try us-west-2)
+# - IAM permissions (ensure admin access)
+
+# Retry deployment
+./scripts/deploy-infrastructure.sh --retry
+```
+:::
+
+:::tab{label="Pods Not Starting"}
+```bash
+# Check pod events
+kubectl describe pod <pod-name> -n <namespace>
+
+# Check node resources
+kubectl describe nodes
+
+# Scale down if resource constrained
+kubectl scale deployment <deployment> --replicas=1 -n <namespace>
+```
+:::
+
+:::tab{label="Service Access Issues"}
+```bash
+# Check ingress status
+kubectl get ingress -A
+
+# Verify load balancer provisioning
+aws elbv2 describe-load-balancers
+
+# Use port-forward as backup
+kubectl port-forward -n openwebui svc/openwebui 8080:80
+```
+:::
+
+::::
+
+## 🧹 Cleanup Instructions
+
+::alert[**Important**: Remember to clean up resources after the workshop to avoid ongoing charges!]{type="warning"}
+
+When you're finished with the workshop:
+
+:::code{language=bash showCopyAction=true}
+# Run the cleanup script
+./scripts/cleanup-infrastructure.sh
+
+# This will:
+# - Delete the EKS cluster
+# - Remove all associated resources
+# - Clean up storage volumes
+# - Delete load balancers and networking
+
+# Verify cleanup completed
+aws eks list-clusters --region $AWS_REGION
+:::
+
+## 📚 Additional Configuration
+
+### Optional: Enable Advanced Features
+
+:::code{language=bash showCopyAction=true}
+# Enable GPU support (if you have g5 instances)
+./scripts/enable-gpu-support.sh
+
+# Configure additional models
+./scripts/deploy-additional-models.sh
+
+# Set up custom monitoring
+./scripts/setup-advanced-monitoring.sh
+:::
+
+## 🚀 Ready for Module 1!
+
+Congratulations! Your personal GenAI environment is ready. You have:
+
+- ✅ Complete control over the infrastructure
+- ✅ All GenAI components deployed and verified
+- ✅ Cost monitoring and cleanup procedures
+- ✅ Ability to experiment beyond the workshop
+
+You're now ready to start deploying and interacting with Large Language Models!
+
+---
+
+**[Continue to Infrastructure Overview →](/introduction/infra-setup/)**
+
+**[Or jump directly to Module 1 →](/module1-interacting-with-models/)**
