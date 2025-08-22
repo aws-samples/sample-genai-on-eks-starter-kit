@@ -80,23 +80,6 @@ Throughout this workshop, you'll construct a complete GenAI platform with these 
 - Performance monitoring and alerting
 - Security and compliance controls
 
-## 🔍 What Sets This Workshop Apart?
-
-### **Comprehensive Coverage**
-From infrastructure to applications, we cover the entire GenAI stack on Kubernetes.
-
-### **Current Technology**
-Work with the latest models and frameworks (LangChain, MCP).
-
-### **AWS Integration**
-Leverage AWS-specific optimizations like Neuron chips and Bedrock services.
-
-### **Enterprise Patterns**
-Learn patterns used by AWS customers running GenAI at scale.
-
-### **Hands-On Experience**
-Over 20 practical exercises with immediate feedback.
-
 ## 🚀 By the End of Today
 
 You will have:

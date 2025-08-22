@@ -42,12 +42,12 @@ Your cluster includes specialized node pools optimized for different workload ty
 - **Scaling**: Automatically scales based on pod requirements
 
 #### 2. **GPU-Accelerated Nodes** 
-- **Instance Types**: g5 instances with NVIDIA GPUs
+- **Instance Types**: NVIDIA GPUs (g5, g6, p4 & p5 families)
 - **Purpose**: Running GPU-intensive AI/ML workloads
 - **Features**: CUDA support, GPU operator pre-installed
 
 #### 3. **AWS Neuron Nodes**
-- **Instance Types**: inf2 and trn1 instances
+- **Instance Types**: inf2, trn1 and trn2 instances
 - **Purpose**: Optimized inference for large language models
 - **Benefits**: 
   - Up to 50% lower cost per inference compared to GPUs

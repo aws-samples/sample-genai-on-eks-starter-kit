@@ -104,6 +104,8 @@ The ingress configuration creates an Application Load Balancer (ALB):
 
 The deployment process involves several steps that were executed during infrastructure setup:
 
+::alert[**Note**: These commands were already executed during your environment setup. You don't need to run them again.]{type="success"}
+
 **Step 1: Add Helm Repository**
 ```bash
 helm repo add open-webui https://open-webui.github.io/helm-charts
@@ -117,8 +119,6 @@ helm upgrade --install openwebui open-webui/open-webui \
   --create-namespace \
   -f values.rendered.yaml
 ```
-
-::alert[**Note**: These commands were already executed during your environment setup. You don't need to run them again.]{type="success"}
 
 ## 🛠️ Hands-On: Your First Chat with an LLM
 

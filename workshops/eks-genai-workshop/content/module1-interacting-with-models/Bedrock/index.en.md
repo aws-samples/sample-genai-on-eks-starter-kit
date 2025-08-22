@@ -33,13 +33,7 @@ Before using Bedrock models, you need to enable access in your AWS account. Foll
 
 ### Step 1: Access AWS Console
 
-:::code{language=bash showCopyAction=true}
-# Get your AWS Console URL (provided by Workshop Studio)
-echo "AWS Console: https://console.aws.amazon.com"
 
-# Verify your current region
-aws configure get region
-:::
 
 ### Step 2: Navigate to Bedrock
 

@@ -3,305 +3,314 @@ title: "LiteLLM - Unified AI Gateway"
 weight: 1
 ---
 
-# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
+# LiteLLM - Unified AI Gateway
 
-## Overview
+Remember switching between vLLM and Bedrock models in OpenWebUI? That seamless experience is powered by LiteLLM - your AI gateway that's been quietly orchestrating all your model interactions behind the scenes!
 
-LiteLLM serves as a unified API gateway for all your LLM models, providing a single OpenAI-compatible endpoint that can route requests to multiple backend providers including self-hosted models (vLLM), AWS Bedrock, and other cloud providers.
+## 🛠️ Hands-On: Explore Your API Gateway
 
-## Architecture
+Let's discover how LiteLLM has been managing all your model interactions:
+
+### Step 1: See LiteLLM in Action
+
+:::code{language=bash showCopyAction=true}
+# Check your running LiteLLM instance
+kubectl get pods -n litellm
+
+# Notice the complete stack: LiteLLM + PostgreSQL + Redis
+kubectl get all -n litellm
+:::
+
+You should see three key components:
+- **litellm-xxx**: The main API gateway
+- **litellm-postgresql-0**: Database for storing model configurations and usage
+- **litellm-redis-master-0**: Caching layer for improved performance
+
+### Step 2: Explore the Real Configuration
+
+In your VSC IDE, let's examine the actual configuration:
+
+:::code{language=bash showCopyAction=true}
+# Look at the actual LiteLLM Helm values
+cat /workshop/components/ai-gateway/litellm/values.template.yaml
+
+# See how models are dynamically discovered
+grep -A 20 "model_list:" /workshop/components/ai-gateway/litellm/values.template.yaml
+:::
+
+Notice the Handlebars templating (`{{#each}}`) that automatically discovers and configures models from your vLLM deployments and Bedrock access!
+
+### Step 3: Watch LiteLLM Route Your Requests
+
+Open a second terminal in your VSC IDE and run:
+
+:::code{language=bash showCopyAction=true}
+# Monitor LiteLLM processing requests in real-time
+kubectl logs -f --tail=0 -n litellm deployment/litellm
+:::
+
+Now go back to your OpenWebUI tab and switch between models, then send a message. Watch how LiteLLM routes each request to the appropriate backend!
+
+## What is LiteLLM?
+
+Now that you've seen it in action, let's understand what makes LiteLLM special:
+
+LiteLLM is an open-source proxy that provides:
+
+- 🔄 **Unified API**: Single OpenAI-compatible endpoint for all models
+- 🎯 **Smart Routing**: Automatically routes requests to appropriate backends
+- 📊 **Built-in Observability**: Integrated with Langfuse for comprehensive tracking
+- 💾 **Persistent Storage**: PostgreSQL for configuration, Redis for caching
+- 🔒 **Authentication**: Master key authentication and user management
+- ⚡ **Load Balancing**: Distributes requests across multiple model replicas
+
+## How LiteLLM Powers Your Experience
+
+Here's what happened every time you switched models in OpenWebUI:
 
 ```mermaid
-graph LR
-    A[Open WebUI] --> B[LiteLLM Gateway]
-    B --> C[vLLM Models]
-    B --> D[AWS Bedrock]
-    B --> E[Other Providers]
+sequenceDiagram
+    participant User
+    participant OpenWebUI
+    participant LiteLLM
+    participant vLLM
+    participant Bedrock
     
-    style B fill:#f9f,stroke:#333,stroke-width:4px
+    User->>OpenWebUI: Select model & send message
+    OpenWebUI->>LiteLLM: POST /v1/chat/completions
+    
+    alt vLLM Model Selected
+        LiteLLM->>vLLM: Route to vLLM endpoint
+        vLLM-->>LiteLLM: Model response
+    else Bedrock Model Selected
+        LiteLLM->>Bedrock: Route to Bedrock API
+        Bedrock-->>LiteLLM: Model response
+    end
+    
+    LiteLLM-->>OpenWebUI: Unified response format
+    OpenWebUI-->>User: Display in chat
 ```
 
-## Deployment Configuration
+## 🔍 Explore Available Models
 
-LiteLLM is deployed using Helm with dynamic model discovery. Let's examine the configuration:
+Let's see what models LiteLLM is currently managing:
 
-### Helm Values Template
+:::code{language=bash showCopyAction=true}
+# Get LiteLLM service URL
+echo "LiteLLM URL: http://$(kubectl get ingress -n litellm litellm -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 
-```yaml
-# components/ai-gateway/litellm/values.template.yaml
-replicaCount: 1
+# Or use port-forward for direct access
+kubectl port-forward -n litellm svc/litellm 4000:4000 &
 
-image:
-  repository: ghcr.io/berriai/litellm
-  tag: main-v1.55.8
-  pullPolicy: Always
+# List all available models
+curl -X GET http://localhost:4000/v1/models \
+  -H "Authorization: Bearer $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.masterkey}' | base64 -d)"
+:::
 
-service:
-  type: ClusterIP
-  port: 4000
-  annotations: {}
+You should see all the models you've been using:
+- **vLLM models**: `vllm/llama-3-1-8b-int8-neuron`, `vllm/qwen3-8b-fp8-neuron`
+- **Bedrock models**: `bedrock/claude-3-7-sonnet` (if you enabled it)
 
-resources:
-  limits:
-    cpu: "2"
-    memory: "2Gi"
-  requests:
-    cpu: "1"
-    memory: "1Gi"
-
-# Dynamic model configuration using Handlebars templating
-env:
-  - name: LITELLM_MASTER_KEY
-    value: "sk-1234"
-  - name: DATABASE_URL
-    value: "postgresql://llmproxy:dbpassword9999@litellm-db:5432/litellm"
-  - name: STORE_MODEL_IN_DB
-    value: "True"
-  - name: LITELLM_MODE
-    value: "PROXY"
-
-# Model configuration loaded dynamically
-litellm_settings:
-  drop_params: true
-  set_verbose: true
-  
-model_list:
-{{#each litellm_models}}
-  - model_name: {{this.model_name}}
-    litellm_params:
-      model: {{this.litellm_params.model}}
-      {{#if this.litellm_params.api_base}}
-      api_base: {{this.litellm_params.api_base}}
-      {{/if}}
-      {{#if this.litellm_params.aws_region_name}}
-      aws_region_name: {{this.litellm_params.aws_region_name}}
-      {{/if}}
-      {{#if this.litellm_params.aws_access_key_id}}
-      aws_access_key_id: {{this.litellm_params.aws_access_key_id}}
-      {{/if}}
-      {{#if this.litellm_params.aws_secret_access_key}}
-      aws_secret_access_key: {{this.litellm_params.aws_secret_access_key}}
-      {{/if}}
-{{/each}}
-```
-
-### Dynamic Model Discovery
-
-The configuration uses Handlebars templating to dynamically discover and configure models:
-
-1. **vLLM Models**: Automatically discovered from running vLLM services
-2. **Bedrock Models**: Configured through environment variables
-3. **Other Providers**: Can be added through the model_list configuration
-
-## Current Deployment
-
-Check the current LiteLLM deployment:
-
-```bash
-# View the deployment
-kubectl get deployment litellm -n genai
-
-# Check the pods
-kubectl get pods -n genai -l app=litellm
-
-# View the service
-kubectl get svc litellm -n genai
-```
-
-Expected output:
-```
-NAME      READY   UP-TO-DATE   AVAILABLE   AGE
-litellm   1/1     1            1           2h
-
-NAME                       READY   STATUS    RESTARTS   AGE
-litellm-7b9c5d4f6-x2m3p   1/1     Running   0          2h
-
-NAME      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-litellm   ClusterIP   10.100.50.123   <none>        4000/TCP   2h
-```
-
-## Access LiteLLM UI
+## 🎯 LiteLLM Web Interface
 
 LiteLLM provides a web interface for monitoring and management:
 
-```bash
-# Port-forward to access the UI
-kubectl port-forward -n genai svc/litellm 4000:4000
-```
+:::code{language=bash showCopyAction=true}
+# Access the LiteLLM UI (if port-forward is running)
+echo "LiteLLM UI: http://localhost:4000"
 
-Then open http://localhost:4000 in your browser. Use the master key `sk-1234` to authenticate.
+# Get the UI credentials
+echo "Username: $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.ui_username}' | base64 -d)"
+echo "Password: $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.ui_password}' | base64 -d)"
+:::
 
-## Current Models
+Open the UI in your browser to see:
+- **Model Status**: Which models are healthy and available
+- **Request Metrics**: Throughput, latency, and error rates
+- **Cost Tracking**: Token usage and costs per model
+- **Configuration**: Model routing and settings
 
-View the currently configured models:
+## 🔍 Technical Deep Dive (Optional)
 
-```bash
-# Get the current configuration
-kubectl get configmap litellm-config -n genai -o yaml | grep -A 20 "model_list:"
-```
+For those interested in how LiteLLM is configured:
 
-You should see models like:
-- `meta-llama/Llama-3.2-1B-Instruct` (from vLLM)
-- `bedrock/anthropic.claude-3-sonnet-20240229-v1:0` (from Bedrock)
+::::tabs
 
-## 🛠️ Exercise: Add Claude 3.5 Haiku to LiteLLM
+:::tab{label="Architecture"}
+**LiteLLM Stack Components**
 
-Let's add a new Bedrock model (Claude 3.5 Haiku) to LiteLLM using Helm upgrade.
+LiteLLM runs as a complete stack:
 
-### Step 1: Enable Claude 3.5 Haiku in Bedrock
+:::code{language=yaml showCopyAction=true}
+# Core components in the litellm namespace
+- LiteLLM Proxy: Main API gateway
+- PostgreSQL: Model configurations and usage data
+- Redis: Caching layer for improved performance
+:::
 
-First, ensure the model is enabled in your AWS account:
+**Benefits of This Architecture:**
+- **Persistence**: Model configurations survive restarts
+- **Performance**: Redis caching reduces latency
+- **Scalability**: Database-backed configuration supports multiple replicas
+:::
 
-1. Open the AWS Console and navigate to Amazon Bedrock
-2. Go to **Model access** in the left sidebar
-3. Find **Claude 3.5 Haiku** (anthropic.claude-3-5-haiku-20241022-v1:0)
-4. Click **Request model access** if not already enabled
-5. Wait for the status to show **Access granted**
+:::tab{label="Model Discovery"}
+**Dynamic Model Configuration**
 
-### Step 2: Update the Helm Values
+LiteLLM uses Handlebars templating for dynamic model discovery:
 
-Create a new values file with the additional model:
+:::code{language=yaml showCopyAction=true}
+# Bedrock models discovered automatically
+{{#each integration.bedrock.llm}}
+- model_name: bedrock/{{{name}}}
+  litellm_params:
+    model: bedrock/{{{model}}}
+    aws_region_name: {{{@root.integration.bedrock.region}}}
+{{/each}}
 
-```bash
-cat > litellm-update-values.yaml <<EOF
-model_list:
-  # Existing vLLM model
-  - model_name: "meta-llama/Llama-3.2-1B-Instruct"
-    litellm_params:
-      model: "openai/meta-llama/Llama-3.2-1B-Instruct"
-      api_base: "http://vllm-llama3-2-1b:8000/v1"
-      api_key: "dummy"
-      
-  # Existing Bedrock Sonnet model  
-  - model_name: "claude-3-sonnet"
-    litellm_params:
-      model: "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
-      aws_region_name: "us-west-2"
-      
-  # NEW: Claude 3.5 Haiku model
-  - model_name: "claude-3.5-haiku"
-    litellm_params:
-      model: "bedrock/anthropic.claude-3-5-haiku-20241022-v1:0"
-      aws_region_name: "us-west-2"
-EOF
-```
+# vLLM models discovered from running services
+{{#each integration.llm-model.vllm}}
+- model_name: vllm/{{@key}}
+  litellm_params:
+    model: openai/{{@key}}
+    api_base: http://{{@key}}.vllm:8000/v1
+{{/each}}
+:::
 
-### Step 3: Upgrade the Helm Release
+This means new models are automatically available without manual configuration!
+:::
 
-Apply the configuration update:
+:::tab{label="Observability"}
+**Built-in Observability Integration**
 
-```bash
-# Upgrade the LiteLLM deployment
-helm upgrade litellm litellm/litellm \
-  -n genai \
-  -f litellm-update-values.yaml \
-  --reuse-values
+LiteLLM is pre-configured with observability tools:
 
-# Watch the rollout
-kubectl rollout status deployment/litellm -n genai
-```
+:::code{language=yaml showCopyAction=true}
+envVars:
+  LANGFUSE_HOST: http://langfuse-web.langfuse:3000
+  LANGFUSE_PUBLIC_KEY: {{{LANGFUSE_PUBLIC_KEY}}}
+  LANGFUSE_SECRET_KEY: {{{LANGFUSE_SECRET_KEY}}}
+  PHOENIX_COLLECTOR_ENDPOINT: http://phoenix-svc.phoenix:4317/v1/traces
+:::
 
-### Step 4: Verify the New Model
+**What This Means:**
+- Every request is automatically traced in Langfuse
+- Performance metrics are collected
+- Cost tracking happens automatically
+- No additional configuration needed!
+:::
 
-Check that the new model is available:
+:::tab{label="Configuration"}
+**Helm Configuration Details**
 
-```bash
-# Test the model endpoint
-curl -X POST http://localhost:4000/v1/models \
-  -H "Authorization: Bearer sk-1234" | jq '.data[] | select(.id == "claude-3.5-haiku")'
-```
+Key configuration settings:
 
-### Step 5: Test in Open WebUI
+:::code{language=yaml showCopyAction=true}
+proxy_config:
+  general_settings:
+    store_model_in_db: true
+    store_prompts_in_spend_logs: true
+  litellm_settings:
+    callbacks: ["langfuse"]
+    success_callback: ["langfuse"]
+    failure_callback: ["langfuse"]
+    redact_user_api_key_info: true
+:::
 
-1. Go back to Open WebUI (http://localhost:3000)
-2. Click on the model selector dropdown
-3. You should now see **claude-3.5-haiku** in the list
-4. Select it and test with a prompt:
-   ```
-   What makes you different from Claude 3 Sonnet?
-   ```
+**Security & Performance Features:**
+- Master key authentication
+- API key redaction for security
+- Automatic prompt logging for analysis
+- Database persistence for reliability
+:::
 
-## Model Routing Logic
+::::
 
-LiteLLM intelligently routes requests based on:
+## 🚀 Test the Unified API
 
-1. **Model Availability**: Checks if the model endpoint is healthy
-2. **Cost Optimization**: Can route to cheaper models when appropriate
-3. **Rate Limiting**: Distributes load across multiple endpoints
-4. **Fallback Logic**: Automatically fails over to backup models
+Let's test LiteLLM's unified interface directly:
 
-Example routing configuration:
+:::code{language=bash showCopyAction=true}
+# Test the unified API with different models
+# (Make sure port-forward is running: kubectl port-forward -n litellm svc/litellm 4000:4000)
 
-```yaml
-router_settings:
-  routing_strategy: "least-cost"  # Options: least-cost, latency-based, simple-shuffle
-  
-  model_group_alias:
-    "claude-models":
-      - "claude-3-sonnet"
-      - "claude-3.5-haiku"
-    "llama-models":
-      - "meta-llama/Llama-3.2-1B-Instruct"
-```
+# Test vLLM model
+curl -X POST http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.masterkey}' | base64 -d)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "vllm/llama-3-1-8b-int8-neuron",
+    "messages": [{"role": "user", "content": "Hello from vLLM!"}],
+    "max_tokens": 50
+  }'
 
-## Monitoring and Metrics
+# Test Bedrock model (if enabled)
+curl -X POST http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.masterkey}' | base64 -d)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "bedrock/claude-3-7-sonnet",
+    "messages": [{"role": "user", "content": "Hello from Bedrock!"}],
+    "max_tokens": 50
+  }'
+:::
 
-LiteLLM provides built-in monitoring:
+Notice how both requests use the exact same API format - that's the power of LiteLLM's unified interface!
 
-```bash
-# View metrics endpoint
-curl http://localhost:4000/metrics
+## Key Benefits You've Experienced
 
-# Check model usage
-curl -X GET http://localhost:4000/spend/report \
-  -H "Authorization: Bearer sk-1234"
-```
+✅ **Seamless Model Switching**: Switch between any model without changing your application
 
-Key metrics to monitor:
-- Request latency per model
-- Token usage and costs
-- Error rates by provider
-- Model availability status
+✅ **Automatic Discovery**: New models appear automatically when deployed
+
+✅ **Built-in Observability**: Every request is tracked in Langfuse
+
+✅ **Load Balancing**: Requests distributed across available model replicas
+
+✅ **Fallback Support**: Automatic failover if a model becomes unavailable
 
 ## Troubleshooting
 
-Common issues and solutions:
+::::tabs
 
-### Model Not Appearing
+:::tab{label="Model Not Appearing"}
 ```bash
-# Check LiteLLM logs
-kubectl logs -n genai deployment/litellm --tail=50
+# Check LiteLLM logs for model discovery
+kubectl logs -n litellm deployment/litellm --tail=50
 
-# Verify ConfigMap
-kubectl get configmap litellm-config -n genai -o yaml
+# Verify model endpoints are accessible
+kubectl get svc -n vllm
+kubectl get svc -n bedrock
 ```
+:::
 
-### Authentication Errors
+:::tab{label="Connection Issues"}
 ```bash
-# Verify AWS credentials
-kubectl get secret -n genai aws-credentials -o yaml
+# Test LiteLLM health
+kubectl exec -n litellm deployment/litellm -- curl http://localhost:4000/health
 
-# Test Bedrock access
-aws bedrock list-foundation-models --region us-west-2
+# Check database connectivity
+kubectl logs -n litellm litellm-postgresql-0 --tail=20
 ```
+:::
 
-### Connection Issues
+:::tab{label="Authentication Errors"}
 ```bash
-# Test internal connectivity
-kubectl run test-curl --image=curlimages/curl -it --rm -- \
-  curl http://litellm:4000/health
+# Verify master key
+kubectl get secret -n litellm litellm-secret -o yaml
+
+# Test authentication
+curl -X GET http://localhost:4000/v1/models \
+  -H "Authorization: Bearer YOUR_MASTER_KEY"
 ```
+:::
 
-## Best Practices
+::::
 
-1. **Use Environment Variables**: Store sensitive credentials in Kubernetes secrets
-2. **Enable Caching**: Configure Redis for response caching
-3. **Set Rate Limits**: Protect backend services from overload
-4. **Monitor Costs**: Track token usage across models
-5. **Configure Fallbacks**: Ensure high availability with backup models
+## What's Next?
 
-## Next Steps
+Now that you understand how LiteLLM unifies all your models, let's explore Langfuse - the observability platform that's been tracking every one of your interactions!
 
-Now that LiteLLM is configured with multiple models, let's move on to setting up observability with Langfuse to track and analyze our LLM interactions.
+---
 
-[Continue to Langfuse →](../observability/)
+**[Next: Langfuse - Observability Platform →](../observability/)**

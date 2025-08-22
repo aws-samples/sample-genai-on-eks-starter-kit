@@ -62,6 +62,7 @@ You're now in your workshop environment!
 In the Workshop Studio left sidebar, locate and click:
 
 **🔧 Open AWS Console**
+![alt text](/static/images/introduction/open-aws-console.png)
 
 This opens the AWS Management Console in a new tab with temporary credentials already configured.
 

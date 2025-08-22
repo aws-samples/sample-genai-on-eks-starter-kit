@@ -3,493 +3,357 @@ title: "Langfuse - LLM Observability"
 weight: 2
 ---
 
-# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
+# Langfuse - LLM Observability
 
-Langfuse provides comprehensive observability for LLM applications, enabling you to monitor, debug, and optimize your AI interactions. It captures detailed traces of LLM calls, including prompts, completions, latency, and costs.
+Remember all those conversations you had with vLLM and Bedrock models? Langfuse has been quietly tracking every single interaction - capturing prompts, responses, performance metrics, and costs. Let's explore the treasure trove of data it's collected about your AI usage!
 
-## Architecture
+## 🛠️ Hands-On: See Your AI Interactions Tracked
 
-Langfuse deployment includes multiple components for scalability:
+Let's discover what Langfuse has been learning about your AI usage:
+
+### Step 1: Explore Your Observability Stack
+
+:::code{language=bash showCopyAction=true}
+# Check your running Langfuse instance
+kubectl get pods -n langfuse
+
+# See the complete observability stack
+kubectl get all -n langfuse
+:::
+
+You should see a comprehensive observability platform:
+- **langfuse-web-xxx**: Main Langfuse application
+- **langfuse-postgresql-0**: Database for trace metadata
+- **langfuse-clickhouse-0**: Analytics database for performance data
+- **langfuse-redis-master-0**: Caching layer
+- **langfuse-s3-xxx**: Object storage for large data
+
+### Step 2: Explore the Real Configuration
+
+In your VSC IDE, let's examine the actual configuration:
+
+:::code{language=bash showCopyAction=true}
+# Look at the actual Langfuse Helm values
+cat /workshop/components/o11y/langfuse/values.template.yaml
+
+# See the complete stack configuration
+grep -A 5 "postgresql:\|clickhouse:\|redis:" /workshop/components/o11y/langfuse/values.template.yaml
+:::
+
+Notice how Langfuse is pre-configured with your project settings and automatically initialized!
+
+### Step 3: Access Your Traces
+
+:::code{language=bash showCopyAction=true}
+# Get Langfuse URL
+echo "Langfuse URL: http://$(kubectl get ingress -n langfuse langfuse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+
+# Get pre-configured credentials
+echo "Email: $(kubectl get secret -n langfuse langfuse-secret -o jsonpath='{.data.username}' | base64 -d)"
+echo "Password: $(kubectl get secret -n langfuse langfuse-secret -o jsonpath='{.data.password}' | base64 -d)"
+:::
+
+Open Langfuse in your browser and log in - you should see traces from all your Module 1 interactions already captured!
+
+### Step 4: Watch New Traces Appear
+
+Open a second terminal in your VSC IDE and run:
+
+:::code{language=bash showCopyAction=true}
+# Monitor Langfuse processing new traces
+kubectl logs -f --tail=0 -n langfuse deployment/langfuse-web
+:::
+
+Now go back to your OpenWebUI tab and send a message to any model. Watch the trace appear in Langfuse in real-time!
+
+## What is Langfuse?
+
+Now that you've seen your data, let's understand what makes Langfuse powerful:
+
+Langfuse is an open-source LLM observability platform that provides:
+
+- 📊 **Comprehensive Tracing**: Every LLM interaction captured with full context
+- 💰 **Cost Tracking**: Token usage and costs across all models
+- ⚡ **Performance Analytics**: Latency, throughput, and quality metrics
+- 🔍 **Debugging Tools**: Detailed request/response inspection
+- 📈 **Usage Analytics**: Patterns, trends, and optimization insights
+- 🏗️ **Multi-Database Architecture**: PostgreSQL + ClickHouse + Redis for scale
+
+## 🔍 Explore Your AI Usage Data
+
+Let's dive into the insights Langfuse has gathered:
+
+### Your Conversation History
+
+In the Langfuse UI, explore:
+
+1. **Traces Tab**: See every model interaction from Module 1
+2. **Sessions**: Grouped conversations and their context
+3. **Models**: Performance comparison between vLLM and Bedrock
+4. **Users**: Your usage patterns and preferences
+
+### Performance Insights
+
+Look for these patterns in your data:
+- **Model Response Times**: Compare vLLM vs Bedrock latency
+- **Token Usage**: See which prompts used more tokens
+- **Cost Analysis**: Track spending across different models
+- **Quality Patterns**: Which models gave better responses
+
+### Real-Time Dashboard
+
+:::code{language=bash showCopyAction=true}
+# Generate some test data to see live updates
+curl -X POST http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.masterkey}' | base64 -d)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "vllm/llama-3-1-8b-int8-neuron",
+    "messages": [{"role": "user", "content": "Analyze my usage patterns in this workshop"}],
+    "max_tokens": 100
+  }'
+:::
+
+Watch this request appear in your Langfuse dashboard within seconds!
+
+## How Langfuse Powers Your Insights
+
+Here's what happens every time you send a message:
 
 ```mermaid
-graph TB
-    A[LLM Applications] --> B[Langfuse Server]
-    B --> C[(PostgreSQL)]
-    B --> D[(ClickHouse)]
-    B --> E[(Redis)]
+sequenceDiagram
+    participant User
+    participant OpenWebUI
+    participant LiteLLM
+    participant Model
+    participant Langfuse
     
-    F[Langfuse Worker] --> C
-    F --> D
-    F --> E
+    User->>OpenWebUI: Send message
+    OpenWebUI->>LiteLLM: API request
+    LiteLLM->>Model: Route to model
+    LiteLLM->>Langfuse: Start trace
+    Model-->>LiteLLM: Response
+    LiteLLM->>Langfuse: Complete trace with metrics
+    LiteLLM-->>OpenWebUI: Response
+    OpenWebUI-->>User: Display response
     
-    style B fill:#9f9,stroke:#333,stroke-width:4px
-    style F fill:#9f9,stroke:#333,stroke-width:2px
+    Note over Langfuse: Stores: prompt, response,<br/>tokens, cost, latency
 ```
 
-## Deployment Configuration
+## 🎯 Langfuse Features You Can Use
 
-Langfuse is deployed with a complete observability stack:
+### Trace Analysis
 
-### Helm Values Overview
-
-```yaml
-# components/o11y/langfuse/values.template.yaml
-langfuse:
-  service:
-    type: ClusterIP
-    port: 3000
-    
-  resources:
-    limits:
-      cpu: "2"
-      memory: "2Gi"
-    requests:
-      cpu: "500m"
-      memory: "512Mi"
-
-  env:
-    - name: DATABASE_URL
-      value: "postgresql://postgres:postgres@langfuse-postgresql:5432/langfuse"
-    - name: CLICKHOUSE_URL
-      value: "http://langfuse-clickhouse:8123"
-    - name: REDIS_URL
-      value: "redis://langfuse-redis-master:6379"
-    - name: NEXTAUTH_SECRET
-      value: "mysecretkey"
-    - name: SALT
-      value: "mysalt"
-    - name: NEXTAUTH_URL
-      value: "http://localhost:3001"
-    - name: TELEMETRY_ENABLED
-      value: "false"
-    - name: LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES
-      value: "true"
-
-# PostgreSQL for metadata
-postgresql:
-  enabled: true
-  auth:
-    username: postgres
-    password: postgres
-    database: langfuse
-  primary:
-    persistence:
-      enabled: true
-      size: 10Gi
-
-# ClickHouse for analytics
-clickhouse:
-  enabled: true
-  auth:
-    username: default
-    password: clickhouse
-  persistence:
-    enabled: true
-    size: 20Gi
-
-# Redis for caching
-redis:
-  enabled: true
-  auth:
-    enabled: false
-  master:
-    persistence:
-      enabled: true
-      size: 5Gi
-
-# Background worker for async processing
-langfuseWorker:
-  enabled: true
-  replicaCount: 1
-```
-
-## Current Deployment Status
-
-Check the Langfuse components:
-
-```bash
-# View all Langfuse components
-kubectl get all -n genai -l app.kubernetes.io/instance=langfuse
-
-# Check specific components
-kubectl get pods -n genai | grep langfuse
-```
-
-Expected output:
-```
-langfuse-server-7d9f8b6c5-k2x3m          1/1     Running   0          2h
-langfuse-worker-6b5c4d3f2-p9q8n          1/1     Running   0          2h
-langfuse-postgresql-0                     1/1     Running   0          2h
-langfuse-clickhouse-0                     1/1     Running   0          2h
-langfuse-redis-master-0                   1/1     Running   0          2h
-```
-
-## Access Langfuse UI
-
-Set up port forwarding to access the Langfuse dashboard:
-
-```bash
-# Port-forward the Langfuse service
-kubectl port-forward -n genai svc/langfuse 3001:3000
-```
-
-Open http://localhost:3001 in your browser.
-
-### Initial Setup
-
-1. **Create an account**:
-   - Click "Sign up"
-   - Enter your email and password
-   - Confirm your account
-
-2. **Create a project**:
-   - Click "New Project"
-   - Name: `eks-workshop`
-   - Description: `EKS GenAI Workshop Traces`
-
-3. **Generate API keys**:
-   - Go to Settings → API Keys
-   - Click "Create new API key"
-   - Copy the Public and Secret keys
-
-## 🛠️ Exercise: Configure LiteLLM Integration
-
-Now let's connect LiteLLM to send traces to Langfuse:
-
-### Step 1: Update LiteLLM Configuration
-
-Create an updated values file with Langfuse integration:
-
-```bash
-cat > litellm-langfuse-values.yaml <<EOF
-env:
-  # Existing environment variables
-  - name: LITELLM_MASTER_KEY
-    value: "sk-1234"
-  - name: DATABASE_URL
-    value: "postgresql://llmproxy:dbpassword9999@litellm-db:5432/litellm"
-  - name: STORE_MODEL_IN_DB
-    value: "True"
-  - name: LITELLM_MODE
-    value: "PROXY"
-    
-  # Langfuse integration
-  - name: LANGFUSE_PUBLIC_KEY
-    value: "pk_lf_YOUR_PUBLIC_KEY"  # Replace with your key
-  - name: LANGFUSE_SECRET_KEY
-    value: "sk_lf_YOUR_SECRET_KEY"  # Replace with your key
-  - name: LANGFUSE_HOST
-    value: "http://langfuse:3000"
-  - name: LITELLM_CALLBACKS
-    value: "langfuse"
-  - name: LANGFUSE_FLUSH_INTERVAL
-    value: "1"
-
-# Keep existing model configuration
-model_list:
-  - model_name: "meta-llama/Llama-3.2-1B-Instruct"
-    litellm_params:
-      model: "openai/meta-llama/Llama-3.2-1B-Instruct"
-      api_base: "http://vllm-llama3-2-1b:8000/v1"
-      api_key: "dummy"
-      
-  - model_name: "claude-3-sonnet"
-    litellm_params:
-      model: "bedrock/anthropic.claude-3-sonnet-20240229-v1:0"
-      aws_region_name: "us-west-2"
-      
-  - model_name: "claude-3.5-haiku"
-    litellm_params:
-      model: "bedrock/anthropic.claude-3-5-haiku-20241022-v1:0"
-      aws_region_name: "us-west-2"
-EOF
-```
-
-### Step 2: Apply the Configuration
-
-```bash
-# Upgrade LiteLLM with Langfuse integration
-helm upgrade litellm litellm/litellm \
-  -n genai \
-  -f litellm-langfuse-values.yaml \
-  --reuse-values
-
-# Wait for rollout
-kubectl rollout status deployment/litellm -n genai
-```
-
-### Step 3: Test the Integration
-
-Generate some test traces:
-
-```bash
-# Send a test request through LiteLLM
-curl -X POST http://localhost:4000/v1/chat/completions \
-  -H "Authorization: Bearer sk-1234" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-3.5-haiku",
-    "messages": [
-      {"role": "user", "content": "What is observability in the context of LLMs?"}
-    ]
-  }'
-```
-
-### Step 4: View Traces in Langfuse
-
-1. Go back to Langfuse UI (http://localhost:3001)
-2. Navigate to the **Traces** section
-3. You should see your request with:
-   - Input prompt
-   - Model response
-   - Token usage
-   - Latency metrics
-   - Cost calculation
-
-## Exploring Langfuse Features
-
-### Traces Dashboard
-
-The main dashboard shows:
-- **Request volume** over time
-- **Token usage** trends
-- **Cost breakdown** by model
-- **Latency distribution**
-- **Error rates**
-
-### Detailed Trace View
-
-Click on any trace to see:
-
-1. **Conversation Flow**:
-   ```
-   User → LiteLLM → Claude 3.5 Haiku → Response
-   ```
-
-2. **Metadata**:
-   - Request ID
-   - Timestamp
-   - Model used
-   - Token counts (input/output)
-   - Duration
-
-3. **Raw Data**:
-   - Full prompt
-   - Complete response
-   - Model parameters
-
-### Sessions
-
-Group related traces into sessions:
-
-```python
-# Example: Tracking a conversation session
-headers = {
-    "Authorization": "Bearer sk-1234",
-    "Content-Type": "application/json",
-    "X-Langfuse-Session-Id": "workshop-session-001"
-}
-```
-
-### Scoring and Feedback
-
-Add quality scores to traces:
-
-```bash
-# Add a score via API
-curl -X POST http://localhost:3001/api/public/scores \
-  -H "Authorization: Bearer YOUR_SECRET_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "traceId": "TRACE_ID_HERE",
-    "name": "quality",
-    "value": 0.9,
-    "comment": "High quality response"
-  }'
-```
-
-## Analytics and Insights
+Click on any trace in Langfuse to see:
+- **Full conversation context**
+- **Token breakdown** (input/output)
+- **Response time** and performance metrics
+- **Cost calculation** for that specific interaction
+- **Model parameters** used
 
 ### Model Comparison
 
-Compare performance across models:
-
+Use Langfuse to compare your models:
 1. Go to **Analytics** → **Models**
-2. View side-by-side metrics:
-   - Average latency
-   - Token efficiency
-   - Cost per request
-   - Error rates
+2. Compare metrics between:
+   - `vllm/llama-3-1-8b-int8-neuron`
+   - `vllm/qwen3-8b-fp8-neuron`
+   - `bedrock/claude-3-7-sonnet` (if you used it)
 
-### Usage Patterns
+### Cost Tracking
 
-Analyze usage patterns:
+Monitor your AI spending:
+- **Total costs** across all interactions
+- **Cost per model** comparison
+- **Token efficiency** analysis
+- **Usage trends** over time
 
-```sql
--- Example query in ClickHouse (accessible via Langfuse UI)
-SELECT 
-  model,
-  COUNT(*) as requests,
-  AVG(latency_ms) as avg_latency,
-  SUM(total_tokens) as total_tokens
-FROM traces
-WHERE timestamp > now() - INTERVAL 1 DAY
-GROUP BY model
-ORDER BY requests DESC
-```
+## 🔍 Technical Deep Dive (Optional)
 
-### Cost Optimization
+For those interested in Langfuse's architecture:
 
-Identify cost optimization opportunities:
+::::tabs
 
-1. **High-cost queries**: Find prompts using excessive tokens
-2. **Model selection**: Compare cost/performance trade-offs
-3. **Caching opportunities**: Identify repeated queries
+:::tab{label="Architecture"}
+**Langfuse Observability Stack**
 
-## Alerting and Monitoring
+Langfuse runs as a complete observability platform:
 
-### Set Up Alerts
+:::code{language=yaml showCopyAction=true}
+# Core components in the langfuse namespace
+- Langfuse Web: Main application and UI
+- PostgreSQL: Trace metadata and user data
+- ClickHouse: Analytics and time-series data
+- Redis: Caching and session management
+- S3: Object storage for large traces
+:::
 
-Configure alerts for:
+**Why This Architecture?**
+- **PostgreSQL**: Fast queries for recent traces and metadata
+- **ClickHouse**: Optimized for analytics and aggregations
+- **Redis**: Fast caching for UI responsiveness
+- **S3**: Cost-effective storage for historical data
+:::
 
-1. **High latency** (> 5 seconds)
-2. **Error spikes** (> 5% error rate)
-3. **Cost thresholds** (> $10/hour)
-4. **Token limits** (> 100k tokens/request)
+:::tab{label="Integration"}
+**Automatic LiteLLM Integration**
 
-Example alert configuration:
+Langfuse is pre-integrated with LiteLLM:
 
-```yaml
-alerts:
-  - name: high_latency
-    condition: "avg(latency_ms) > 5000"
-    window: "5m"
-    notification:
-      slack: "#genai-alerts"
-      
-  - name: cost_threshold
-    condition: "sum(cost_usd) > 10"
-    window: "1h"
-    notification:
-      email: "team@example.com"
-```
+:::code{language=yaml showCopyAction=true}
+# From LiteLLM configuration
+envVars:
+  LANGFUSE_HOST: http://langfuse-web.langfuse:3000
+  LANGFUSE_PUBLIC_KEY: {{{LANGFUSE_PUBLIC_KEY}}}
+  LANGFUSE_SECRET_KEY: {{{LANGFUSE_SECRET_KEY}}}
+:::
 
-## Debugging with Langfuse
+**What This Means:**
+- Every LiteLLM request is automatically traced
+- No additional configuration needed
+- Real-time data collection
+- Automatic cost calculation
+:::
 
-### Common Issues to Track
+:::tab{label="Initialization"}
+**Pre-Configured Setup**
 
-1. **Prompt Issues**:
-   - Ambiguous instructions
-   - Missing context
-   - Token limit exceeded
+Langfuse is initialized with your workshop project:
 
-2. **Model Behavior**:
-   - Inconsistent responses
-   - Hallucinations
-   - Refusals
+:::code{language=yaml showCopyAction=true}
+additionalEnv:
+  - name: LANGFUSE_INIT_ORG_ID
+    value: my-org
+  - name: LANGFUSE_INIT_PROJECT_ID
+    value: my-project
+  - name: LANGFUSE_INIT_USER_EMAIL
+    value: {{{LANGFUSE_USERNAME}}}
+  - name: LANGFUSE_INIT_USER_PASSWORD
+    value: {{{LANGFUSE_PASSWORD}}}
+:::
 
-3. **Performance Problems**:
-   - Slow responses
-   - Timeouts
-   - Rate limiting
+**Benefits:**
+- No manual setup required
+- Project automatically created
+- User account pre-configured
+- Ready to use immediately
+:::
 
-### Using Filters
+:::tab{label="Storage"}
+**Multi-Database Strategy**
 
-Filter traces to debug specific issues:
+Different data types stored optimally:
 
-```javascript
-// Filter examples in Langfuse UI
-filters = {
-  model: "claude-3.5-haiku",
-  latency: "> 3000",
-  status: "error",
-  timeRange: "last_hour"
-}
-```
+:::code{language=yaml showCopyAction=true}
+postgresql:  # Metadata, users, projects
+  auth:
+    username: admin
+    password: password123
 
-## Export and Integration
+clickhouse:  # Analytics, aggregations
+  auth:
+    password: password123
+  resources:
+    memory: 3Gi
 
-### Export Data
+redis:  # Caching, sessions
+  auth:
+    password: password123
 
-Export trace data for analysis:
+s3:  # Large objects, historical data
+  auth:
+    rootPassword: password123
+:::
+:::
 
-```bash
-# Export traces via API
-curl -X GET "http://localhost:3001/api/public/traces?limit=1000" \
-  -H "Authorization: Bearer YOUR_SECRET_KEY" \
-  -o traces.json
-```
+::::
 
-### Integrate with Other Tools
+## 🚀 Explore Your Data
 
-Langfuse can integrate with:
+Let's dive into the insights Langfuse has collected:
 
-1. **Grafana**: For custom dashboards
-2. **Datadog**: For infrastructure correlation
-3. **Slack**: For notifications
-4. **Python SDK**: For custom analysis
+### Your Model Usage Patterns
 
-Example Python integration:
+In Langfuse, explore:
 
-```python
-from langfuse import Langfuse
+1. **Dashboard**: Overview of your AI interactions
+2. **Traces**: Every conversation from Module 1
+3. **Sessions**: Grouped interactions by topic
+4. **Models**: Performance comparison of models you used
 
-# Initialize client
-langfuse = Langfuse(
-    public_key="pk_lf_YOUR_KEY",
-    secret_key="sk_lf_YOUR_KEY",
-    host="http://localhost:3001"
-)
+### Generate More Data
 
-# Fetch traces
-traces = langfuse.get_traces(limit=100)
-for trace in traces:
-    print(f"Model: {trace.model}, Latency: {trace.latency_ms}ms")
-```
+:::code{language=bash showCopyAction=true}
+# Create some varied interactions for analysis
+curl -X POST http://localhost:4000/v1/chat/completions \
+  -H "Authorization: Bearer $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.masterkey}' | base64 -d)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "vllm/llama-3-1-8b-int8-neuron",
+    "messages": [{"role": "user", "content": "What are the benefits of observability in AI systems?"}],
+    "max_tokens": 150
+  }'
+:::
 
-## Best Practices
+Watch this new trace appear in your Langfuse dashboard!
 
-1. **Consistent Naming**: Use clear, consistent names for traces and sessions
-2. **Add Metadata**: Include relevant context (user ID, feature flags, etc.)
-3. **Score Important Interactions**: Add quality scores for critical paths
-4. **Regular Review**: Schedule weekly reviews of analytics
-5. **Set Baselines**: Establish performance baselines for each model
-6. **Privacy Compliance**: Configure data retention according to requirements
+## Key Insights You Can Discover
+
+✅ **Model Performance**: Compare response times between your models
+
+✅ **Cost Analysis**: See exactly how much each interaction cost
+
+✅ **Usage Patterns**: Understand your AI interaction habits
+
+✅ **Quality Tracking**: Identify which models gave better responses
+
+✅ **Token Efficiency**: See which prompts were most effective
 
 ## Troubleshooting
 
-### No Traces Appearing
+::::tabs
 
+:::tab{label="No Traces Appearing"}
 ```bash
-# Check LiteLLM logs for Langfuse connection
-kubectl logs -n genai deployment/litellm | grep -i langfuse
+# Check LiteLLM → Langfuse connection
+kubectl logs -n litellm deployment/litellm | grep -i langfuse
 
-# Verify Langfuse is accessible from LiteLLM
-kubectl exec -n genai deployment/litellm -- curl http://langfuse:3000/health
+# Verify Langfuse is accessible
+kubectl exec -n litellm deployment/litellm -- curl http://langfuse-web.langfuse:3000/health
 ```
+:::
 
-### Missing Data
-
+:::tab{label="UI Access Issues"}
 ```bash
-# Check Langfuse worker logs
-kubectl logs -n genai -l app=langfuse-worker
+# Check Langfuse web service
+kubectl get svc -n langfuse
+
+# Check ingress status
+kubectl get ingress -n langfuse
+
+# Use port-forward as backup
+kubectl port-forward -n langfuse svc/langfuse-web 3000:3000
+```
+:::
+
+:::tab{label="Missing Data"}
+```bash
+# Check Langfuse worker processing
+kubectl logs -n langfuse deployment/langfuse-worker --tail=50
 
 # Verify database connections
-kubectl exec -n genai langfuse-postgresql-0 -- psql -U postgres -d langfuse -c "SELECT COUNT(*) FROM traces;"
+kubectl logs -n langfuse langfuse-postgresql-0 --tail=20
 ```
+:::
 
-### Performance Issues
+::::
 
-```bash
-# Check resource usage
-kubectl top pods -n genai | grep langfuse
+## What's Next?
 
-# Scale if needed
-kubectl scale deployment langfuse-worker -n genai --replicas=3
-```
+Now that you've explored both LiteLLM (your API gateway) and Langfuse (your observability platform), you have a complete GenAI platform running on EKS! 
 
-## Next Steps
+In the next module, we'll use this platform foundation to build sophisticated AI applications with agents, memory, and advanced reasoning capabilities.
 
-With Langfuse providing comprehensive observability, let's explore how all components work together in an integrated system.
+---
 
-[Continue to Integration →](../integration/)
+**[Continue to Module 3: Building GenAI Applications →](../../module3-genai-applications/)**

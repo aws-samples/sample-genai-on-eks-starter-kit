@@ -114,9 +114,11 @@ AWS Neuron is the SDK for AWS Inferentia (inf2) and Trainium (trn1) chips:
 
 For those interested in the Kubernetes implementation details:
 
+::alert[**Complete Files Available**: All the YAML manifests shown in these tabs are available in your VSC IDE at `/workshop/components/llm-model/vllm/` if you want to explore the complete configurations in detail.]{type="info"}
+
 ::::tabs
 
-:::tab{label="Infrastructure"}
+:::tab{label="Namespace"}
 **Namespace Isolation**
 
 First, we create a dedicated namespace for vLLM workloads:
@@ -128,11 +130,15 @@ kind: Namespace
 metadata:
   name: vllm
 :::
+:::
+
+:::tab{label="Storage"}
 
 **Storage Configuration**
 
 We use Amazon EFS to cache downloaded models and compiled Neuron graphs:
 
+Cache Hugging Face Models:
 :::code{language=yaml showCopyAction=true}
 # pvc-huggingface-cache.yaml
 apiVersion: v1
@@ -149,13 +155,31 @@ spec:
       storage: 100Gi
 :::
 
+Compiled Neuron Models:
+:::code{language=yaml showCopyAction=true}
+# pvc-neuron-cache.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neuron-cache
+  namespace: vllm
+spec:
+  storageClassName: efs
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+:::
+
+
 **Why Two Caches?**
-- **HuggingFace Cache**: Stores downloaded model weights (~15GB per model)
-- **Neuron Cache**: Stores compiled model graphs (~10GB per model)
+- **HuggingFace Cache**: Stores downloaded model weights
+- **Neuron Cache**: Stores compiled model graphs
 - **Reusability**: Cached data persists across pod restarts
 :::
 
-:::tab{label="Security"}
+:::tab{label="Secret"}
 **Secrets Management**
 
 The HuggingFace token is stored securely:
@@ -171,20 +195,14 @@ type: Opaque
 stringData:
   token: ${HF_TOKEN}  # Injected during deployment
 :::
-
-**Security Context**
-
-Pods run with restricted security settings:
-- No privilege escalation
-- Dropped network capabilities
-- Runtime security profiles
-- No service account token mounting
 :::
 
 :::tab{label="Deployment"}
 **Main Deployment Manifest**
 
-Here's the complete deployment for Llama 3.1 8B with Neuron optimization:
+Here's the deployment for Llama 3.1 8B with Neuron optimization:
+
+::alert[Shortened the deployment manifest file to only show the key details.]{type="warning"}
 
 :::code{language=yaml showCopyAction=true}
 # model-llama-3-1-8b-int8-neuron.yaml (key sections)
@@ -214,20 +232,13 @@ spec:
             - --tensor-parallel-size=2
             - --max-num-seqs=4
             - --max-model-len=8192
-:::
-:::
-
-:::tab{label="Performance"}
-**Resource Allocation**
-
-:::code{language=yaml showCopyAction=true}
-resources:
-  requests:
-    cpu: 3
-    memory: 12Gi
-    aws.amazon.com/neuroncore: 2  # Request 2 Neuron cores
-  limits:
-    aws.amazon.com/neuroncore: 2
+          resources:
+            requests:
+              cpu: 3
+              memory: 12Gi
+              aws.amazon.com/neuroncore: 2  # Request 2 Neuron cores
+            limits:
+              aws.amazon.com/neuroncore: 2
 :::
 
 **Key Configuration Details:**
@@ -235,91 +246,37 @@ resources:
 - **Neuron Cores**: Requests and limits must match for Neuron cores
 - **Tensor Parallelism**: Model split across 2 cores for faster inference
 - **Concurrency**: Handle 4 concurrent requests with 8K context window
-
-**Production Optimizations:**
-```yaml
-# Use larger instances
-nodeSelector:
-  node.kubernetes.io/instance-type: inf2.24xlarge  # 12 Neuron cores
-
-# Increase parallelism
-args:
-  - --tensor-parallel-size=12
-  - --max-num-seqs=32
-```
 :::
 
-::::
+:::tab{label="Service"}
+**Service Configuration**
 
-## 📈 Understanding Performance Metrics
+The Service exposes the vLLM deployment and makes it accessible to other components:
 
-Based on what you saw in the logs, let's understand the key performance indicators:
-
-### **Throughput Metrics**
-- **Prompt Throughput**: ~4.5 tokens/s (how fast vLLM processes your input)
-- **Generation Throughput**: ~26.8 tokens/s (how fast it generates responses)
-- **Total Tokens**: Shows the complete token count for request + response
-
-### **Memory Usage**
-- **GPU KV Cache**: Shows how much memory is used for attention mechanisms
-- **Model Loading**: Initial memory allocation for the 8B parameter model
-
-### **Hardware Utilization**
-- **Neuron Core Usage**: How the 2 cores are being utilized
-- **Tensor Parallelism**: Model split across both Neuron cores for faster inference
-
-## 🔧 Advanced Monitoring
-
-For deeper insights into your models:
-
-:::code{language=bash showCopyAction=true}
-# View detailed pod resource usage
-kubectl top pod -n vllm
-
-# Check Neuron hardware utilization
-kubectl exec -n vllm deployment/llama-3-1-8b-int8-neuron -- neuron-ls
-
-# Monitor ongoing requests
-kubectl logs -n vllm deployment/llama-3-1-8b-int8-neuron --tail=20
+:::code{language=yaml showCopyAction=true}
+# model-llama-3-1-8b-int8-neuron.yaml (In same file as the deployment)
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-3-1-8b-int8-neuron
+  namespace: vllm
+spec:
+  selector:
+    app: llama-3-1-8b-int8-neuron
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP
 :::
 
-## Troubleshooting Common Issues
-
-::::tabs
-
-:::tab{label="Pod Not Starting"}
-```bash
-# Check pod events
-kubectl describe pod -n vllm -l app=llama-3-1-8b-int8-neuron
-
-# Common issues:
-# - No inf2 nodes available
-# - Neuron cores already allocated
-# - Image pull errors
-```
+**Service Details:**
+- **Selector**: Matches pods with the `app: llama-3-1-8b-int8-neuron` label
+- **Port 8000**: Standard vLLM API port for OpenAI-compatible endpoints
+- **ClusterIP**: Internal service accessible only within the cluster
+- **Target**: Routes traffic to the vLLM container port 8000
 :::
-
-:::tab{label="Slow Responses"}
-```bash
-# Check if model is loaded
-kubectl logs -n vllm deployment/llama-3-1-8b-int8-neuron | grep "ready"
-
-# Monitor request queue
-curl http://localhost:8000/metrics | grep vllm_pending_requests
-```
-:::
-
-:::tab{label="Out of Memory"}
-```bash
-# Reduce batch size
-kubectl edit deployment -n vllm llama-3-1-8b-int8-neuron
-# Change: --max-num-seqs=2
-
-# Or reduce context length
-# Change: --max-model-len=4096
-```
-:::
-
 ::::
 
 ## Key Takeaways
@@ -336,7 +293,7 @@ kubectl edit deployment -n vllm llama-3-1-8b-int8-neuron
 
 ## What's Next?
 
-You've seen how to self-host models on EKS with vLLM. While powerful, this approach requires managing infrastructure and has performance limitations with small hardware. 
+You've seen how to self-host models on EKS with vLLM. 
 
 In the next section, we'll explore AWS Bedrock - a fully managed alternative that provides instant access to high-performance models without infrastructure overhead.
 

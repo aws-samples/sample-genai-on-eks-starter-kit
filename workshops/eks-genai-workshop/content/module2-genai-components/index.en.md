@@ -3,16 +3,14 @@ title: "Module 2: GenAI Platform Components"
 weight: 30
 ---
 
-# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
-
-Welcome to Module 2! In this module, you'll explore the core platform components that enable production-ready GenAI applications on EKS. You'll learn how LiteLLM provides a unified API gateway for multiple model providers and how Langfuse enables comprehensive observability for your AI workloads.
+You've just experienced individual AI models - now let's transform them into a unified platform! In this module, you'll build the infrastructure that powers enterprise GenAI applications by connecting LiteLLM as a unified API gateway and Langfuse for comprehensive observability.
 
 ## Learning Objectives
 
 By the end of this module, you will:
 
-- 🔄 **Deploy and configure LiteLLM** as a unified API gateway
-- 📊 **Set up Langfuse** for LLM observability and tracing
+- 🔄 **Explore and configure LiteLLM** as a unified API gateway
+- 📊 **Understand and use Langfuse** for LLM observability and tracing
 - 🔧 **Add new models** to LiteLLM through Helm upgrades
 - 🔍 **Explore observability features** in the Langfuse UI
 - 🏗️ **Understand the integration** between all platform components
@@ -22,7 +20,7 @@ By the end of this module, you will:
 Here's how the platform components work together:
 
 ```mermaid
-graph TB
+graph LR
     subgraph "User Interface"
         OW[Open WebUI]
     end
@@ -72,22 +70,16 @@ This module focuses on **real-world deployment patterns** using Helm charts and 
 ## Module Sections
 
 ### 1. [LiteLLM - Unified API Gateway](./ai-gateway/)
-Deploy LiteLLM to provide a single API endpoint for multiple LLM providers. Learn how to:
+Explore LiteLLM, which provides a single API endpoint for multiple LLM providers. Learn how to:
 - Configure model routing
 - Add new Bedrock models through Helm
 - Understand the integration templating system
 
 ### 2. [Langfuse - Observability Platform](./observability/)
-Set up comprehensive observability for your GenAI applications. Explore:
+Discover comprehensive observability for your GenAI applications. Explore:
 - Tracing and monitoring capabilities
 - Cost tracking and analytics
 - The complete observability stack
-
-### 3. [Platform Integration](./integration/)
-Understand how all components work together:
-- Request flow through the system
-- Observability data collection
-- Best practices for production deployments
 
 ## Prerequisites Check
 
@@ -106,46 +98,9 @@ aws bedrock list-foundation-models --query "modelSummaries[?contains(modelId, 'c
 
 ::alert[If any components are missing, please complete Module 1 first or notify your instructor.]{type="warning"}
 
-## Time Allocation
-
-- **LiteLLM Setup & Exercise**: 30 minutes
-- **Langfuse Deployment & Exploration**: 30 minutes
-- **Integration Understanding**: 20 minutes
-
-Total estimated time: **80 minutes**
-
-## Key Concepts We'll Cover
-
-### Helm Templating
-You'll see how Helm templates enable dynamic configuration:
-```yaml
-{{#each integration.bedrock.llm}}
-- model_name: bedrock/{{{name}}}
-  litellm_params:
-    model: bedrock/{{{model}}}
-{{/each}}
-```
-
-### Component Discovery
-Learn how services find each other in Kubernetes:
-```yaml
-LANGFUSE_HOST: http://langfuse-web.langfuse:3000
-api_base: http://vllm-service.vllm:8000/v1
-```
-
-### Observability Integration
-Understand how tracing flows through the system:
-```yaml
-callbacks: ["langfuse"]
-success_callback: ["langfuse"]
-failure_callback: ["langfuse"]
-```
-
 ## Let's Get Started!
 
-Ready to build a production-ready GenAI platform? Let's begin with deploying LiteLLM as our unified API gateway.
-
-::alert[**Tip**: Keep the terminal open alongside this guide - you'll be running commands throughout the module.]{type="info"}
+Ready to explore your GenAI platform on EKS? Let's begin by examining LiteLLM, your unified API gateway that's already running and connecting all your models.
 
 ---
 
