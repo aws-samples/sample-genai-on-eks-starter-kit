@@ -32,7 +32,7 @@ https://catalog.workshops.aws/join
 
 You'll see the Workshop Studio landing page:
 
-![Workshop Studio Event Page](/static/workshopstudio-event1.jpg)
+![Workshop Studio Event Page](/static/images/introduction/workshopstudio-event1.jpg)
 
 ### 1.2 Sign In with Email OTP
 
@@ -52,7 +52,7 @@ After signing in, you'll see the event access page:
 
 1. The **Event access code** should be pre-filled. Click **Next**.
 2. Check ✅ **"I agree with the Terms and Conditions"**
-   ![Workshop Studio Event Page](/static/workshopstudio-event3.jpg)
+   ![Workshop Studio Event Page](/static/images/introduction/workshopstudio-event3.jpg)
 3. Click **Join event**
 
 You're now in your workshop environment!

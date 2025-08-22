@@ -60,33 +60,6 @@ We use real enterprise patterns from day one. The techniques you learn here are 
 ### 3. **Progressive Complexity** 📈
 We start with simple model deployment and gradually build to sophisticated multi-agent systems. Each module prepares you for the next level of complexity.
 
-## 🗺️ Your GenAI Journey Map
-
-```mermaid
-journey
-    title Your GenAI Learning Path
-    section Foundation
-      Deploy First Model: 5: Module 1
-      Interact via Chat UI: 5: Module 1
-      Compare Model Types: 4: Module 1
-    section Platform
-      Build API Gateway: 4: Module 2
-      Add Observability: 4: Module 2
-      Integrate Components: 3: Module 2
-    section Applications
-      Create Agents: 3: Module 3
-      Implement Memory: 3: Module 3
-      Build RAG System: 2: Module 3
-    section Enterprise
-      Scale Systems: 2: Module 4
-      Secure Access: 2: Module 4
-      Optimize Costs: 2: Module 4
-    section Mastery
-      Advanced Tuning: 1: Module 5
-      Performance Optimization: 1: Module 5
-```
-
-
 ## 🏗️ What We're Building
 
 Throughout this workshop, you'll construct a complete GenAI platform with these capabilities:

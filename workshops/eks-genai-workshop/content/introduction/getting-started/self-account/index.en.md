@@ -3,6 +3,8 @@ title: "Using Your Own Account"
 weight: 16
 ---
 
+# THIS IS NOT VALIDATED - GENAI SLOP | Will rewrite later!
+
 # Using Your Own Account
 
 Running this workshop in your own AWS account gives you complete control over the environment and the ability to experiment beyond the workshop timeline. Let's deploy the GenAI infrastructure stack and get you ready for an incredible learning journey!
