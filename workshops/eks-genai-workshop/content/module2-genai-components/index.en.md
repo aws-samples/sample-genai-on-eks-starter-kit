@@ -69,13 +69,13 @@ This module focuses on **real-world deployment patterns** using Helm charts and 
 
 ## Module Sections
 
-### 1. [LiteLLM - Unified API Gateway](./ai-gateway/)
+#### 1. [LiteLLM - Unified API Gateway](./ai-gateway/)
 Explore LiteLLM, which provides a single API endpoint for multiple LLM providers. Learn how to:
 - Configure model routing
 - Add new Bedrock models through Helm
 - Understand the integration templating system
 
-### 2. [Langfuse - Observability Platform](./observability/)
+#### 2. [Langfuse - Observability Platform](./observability/)
 Discover comprehensive observability for your GenAI applications. Explore:
 - Tracing and monitoring capabilities
 - Cost tracking and analytics
@@ -96,7 +96,7 @@ kubectl get pods -n langfuse
 aws bedrock list-foundation-models --query "modelSummaries[?contains(modelId, 'claude')].modelId" --output table
 :::
 
-::alert[If any components are missing, please complete Module 1 first or notify your instructor.]{type="warning"}
+::alert[If any components are missing, please complete Module 1 first.]{type="warning"}
 
 ## Let's Get Started!
 

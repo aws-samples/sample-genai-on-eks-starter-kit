@@ -172,7 +172,7 @@ Once logged in, you'll see the model selection dropdown at the top:
 Now for the exciting part - let's chat with the AI!
 
 1. **Click "New Chat"** (if not already in a new chat)
-2. **Type your first message** in the "Send a Message" box at the bottom
+2. **Type your first message** in the "How can I help you today?" box
 3. **Try this example**: "What is the strongest creature relative to body size?"
 4. **Press Enter** or click the send button
 

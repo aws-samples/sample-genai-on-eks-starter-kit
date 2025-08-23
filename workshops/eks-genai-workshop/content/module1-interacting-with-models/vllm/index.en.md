@@ -279,6 +279,8 @@ spec:
 ::::
 :::::
 
+---
+
 ## Key Takeaways
 
 ✅ **Kubernetes Native**: vLLM deployed using standard K8s resources (Deployment, Service, PVC)

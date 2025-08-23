@@ -103,7 +103,7 @@ Now let's experience Claude's capabilities with some practical examples.
 Ask Claude this question to see its technical depth:
 
 :::code{language=markdown showCopyAction=true}
-"Explain the concept of Kubernetes operators and provide a simple example of when you would create a custom operator."
+Explain the concept of Kubernetes operators and provide a simple example of when you would create a custom operator.
 :::
 
 **Expected Response**: Claude provides a comprehensive explanation with clear structure:
@@ -120,7 +120,7 @@ Ask Claude this question to see its technical depth:
 Try this for code generation capabilities:
 
 :::code{language=markdown showCopyAction=true}
-"Write a Python class that implements a simple LRU cache with get and put methods. Explain the time complexity of each operation."
+Write a Python class that implements a simple LRU cache with get and put methods. Explain the time complexity of each operation.
 :::
 
 #### Test 3: Long-Form Analysis (Optional)
@@ -128,7 +128,7 @@ Try this for code generation capabilities:
 For complex analysis tasks:
 
 :::code{language=markdown showCopyAction=true}
-"Analyze the benefits and challenges of running AI workloads on Kubernetes. Consider aspects like scalability, resource management, and operational complexity."
+Analyze the benefits and challenges of running AI workloads on Kubernetes. Consider aspects like scalability, resource management, and operational complexity.
 :::
 
 **Key Observation**: Claude provides detailed, well-structured responses that are ideal for the learning exercises in the upcoming modules.
@@ -219,6 +219,7 @@ Now let's set up the knowledge base in OpenWebUI:
 
 4. **Create and Upload**:
    - Click **"Create Knowledge"**
+   - Click on the **+**
    - Click **"Upload files"**
    - Select your downloaded `super-secret.txt` file
    - Wait for the upload to complete
@@ -307,4 +308,4 @@ Congratulations! You've now experienced three different approaches to model depl
 
 ---
 
-**[Back to Module Overview](../) | [Continue to Module 2 →](../../module2-genai-platform-components)**
+**[Back to Module Overview](../) | [Continue to Module 2 →](../../module2-genai-components)**
