@@ -35,7 +35,7 @@ Before using Bedrock models, you need to enable access in your AWS account. Foll
 
 Navigate directly to the [Bedrock Model Access Page](https://us-west-2.console.aws.amazon.com/bedrock/home?region=us-west-2#/modelaccess) in the AWS Console.
 
-![Bedrock Model Access Page](/static/images/module-1/image.png)
+![Bedrock Model Access Page](/static/images/module-1/bedrock-model-access-page.png)
 
 **Verify your access**: Ensure you see "WSParticipantRole/Participant" in the top right corner.
 
@@ -45,17 +45,17 @@ Navigate directly to the [Bedrock Model Access Page](https://us-west-2.console.a
 2. Scroll down to find the **Anthropic** section
 3. Check the box next to **Claude 3.7 Sonnet**
 
-![Select Claude 3.7 Sonnet](/static/images/module-1/image-1.png)
+![Select Claude 3.7 Sonnet](/static/images/module-1/bedrock-select-claude-sonnet.png)
 
 ### Step 3: Submit Your Request
 
 1. Scroll down and click **"Next"**
 
-![Click Next](/static/images/module-1/image-2.png)
+![Click Next](/static/images/module-1/bedrock-model-access-next.png)
 
 2. On the **"Review and submit"** page, review your selection and click **"Submit"**
 
-![Review and Submit](/static/images/module-1/image-3.png)
+![Review and Submit](/static/images/module-1/bedrock-review-submit.png)
 
 ::alert[**Cross-Region Requirement**: Claude 3.7 Sonnet requires cross-region inference. You will need to repeat these steps in the us-east-1 region as well. Use the region selector in the top right corner of the AWS Console.]{type="warning"}
 
@@ -108,7 +108,7 @@ Ask Claude this question to see its technical depth:
 
 **Expected Response**: Claude provides a comprehensive explanation with clear structure:
 
-![Claude's Kubernetes Operators Response](/static/images/module-1/image-4.png)
+![Claude's Kubernetes Operators Response](/static/images/module-1/claude-kubernetes-operators-response.png)
 
 **What to Notice**:
 - **Structured Response**: Clear headings and logical flow
@@ -150,7 +150,7 @@ Try this mathematical question with both models:
 
 **Test Question**: "What is squareroot of 144 divided by 29 multiplied by pi"
 
-![Model Comparison: Side-by-Side Results](/static/images/module-1/image-5.png)
+![Model Comparison: Side-by-Side Results](/static/images/module-1/model-comparison-claude-vs-llama.png)
 
 ### What You'll Observe
 
@@ -206,7 +206,7 @@ Now let's set up the knowledge base in OpenWebUI:
 
 1. **Access Workspace**: Click on **"Workspace"** and then **"Knowledge"**
 
-![Knowledge Tab](/static/images/module-1/image-6.png)
+![Knowledge Tab](/static/images/module-1/openwebui-knowledge-workspace.png)
 
 2. **Create New Knowledge Base**: Click the **"+"** button on the right side
 
@@ -215,7 +215,7 @@ Now let's set up the knowledge base in OpenWebUI:
    - **Description**: `Store secret info in knowledge base`
    - **Visibility**: Select **"Private"** 
 
-![Create Knowledge Base Form](/static/images/module-1/image-7.png)
+![Create Knowledge Base Form](/static/images/module-1/openwebui-create-knowledge-base.png)
 
 4. **Create and Upload**:
    - Click **"Create Knowledge"**
@@ -229,7 +229,7 @@ Let's first see how Claude responds without access to our document:
 
 **Ask this question**: "What is the object of project nightfall?"
 
-![Claude Without RAG Context](/static/images/module-1/image-8.png)
+![Claude Without RAG Context](/static/images/module-1/claude-without-rag-context.png)
 
 **Notice**: Claude gives a generic response about a social media platform because it has no knowledge of our secret document content.
 
@@ -240,12 +240,12 @@ Now let's see the power of RAG in action:
 1. **Start a new chat**
 2. **Type `#`** in the message box - this activates knowledge base selection
 
-![Knowledge Base Selection](/static/images/module-1/image-9.png)
+![Knowledge Base Selection](/static/images/module-1/openwebui-select-knowledge-base.png)
 
 3. **Select your knowledge base**: Click on **"super-secret.txt"**
 4. **Ask the exact same question**: "What is the object of project nightfall?"
 
-![Claude With RAG Context](/static/images/module-1/image-10.png)
+![Claude With RAG Context](/static/images/module-1/claude-with-rag-context.png)
 
 **Amazing!** Now Claude correctly references the classified document and provides the exact information: "Develop an untraceable communication device."
 

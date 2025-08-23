@@ -116,30 +116,30 @@ For those interested in the Kubernetes implementation details:
 
 ::alert[**Complete Files Available**: All the YAML manifests shown in these tabs are available in your VSC IDE at `/workshop/components/llm-model/vllm/` if you want to explore the complete configurations in detail.]{type="info"}
 
-::::tabs
+:::::tabs
 
-:::tab{label="Namespace"}
+::::tab{label="Namespace"}
 **Namespace Isolation**
 
 First, we create a dedicated namespace for vLLM workloads:
 
-::code{language=yaml showCopyAction=true}
+:::code{language=yaml showCopyAction=true}
 # namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   name: vllm
-::
 :::
+::::
 
-:::tab{label="Storage"}
+::::tab{label="Storage"}
 
 **Storage Configuration**
 
 We use Amazon EFS to cache downloaded models and compiled Neuron graphs:
 
 Cache Hugging Face Models:
-::code{language=yaml showCopyAction=true}
+:::code{language=yaml showCopyAction=true}
 # pvc-huggingface-cache.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -153,10 +153,10 @@ spec:
   resources:
     requests:
       storage: 100Gi
-::
+:::
 
 Compiled Neuron Models:
-::code{language=yaml showCopyAction=true}
+:::code{language=yaml showCopyAction=true}
 # pvc-neuron-cache.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -170,21 +170,21 @@ spec:
   resources:
     requests:
       storage: 100Gi
-::
+:::
 
 
 **Why Two Caches?**
 - **HuggingFace Cache**: Stores downloaded model weights
 - **Neuron Cache**: Stores compiled model graphs
 - **Reusability**: Cached data persists across pod restarts
-:::
+::::
 
-:::tab{label="Secret"}
+::::tab{label="Secret"}
 **Secrets Management**
 
 The HuggingFace token is stored securely:
 
-::code{language=yaml showCopyAction=true}
+:::code{language=yaml showCopyAction=true}
 # secret.template.yaml
 apiVersion: v1
 kind: Secret
@@ -194,17 +194,17 @@ metadata:
 type: Opaque
 stringData:
   token: ${HF_TOKEN}  # Injected during deployment
-::
 :::
+::::
 
-:::tab{label="Deployment"}
+::::tab{label="Deployment"}
 **Main Deployment Manifest**
 
 Here's the deployment for Llama 3.1 8B with Neuron optimization:
 
 ::alert[Shortened the deployment manifest file to only show the key details.]{type="warning"}
 
-::code{language=yaml showCopyAction=true}
+:::code{language=yaml showCopyAction=true}
 # model-llama-3-1-8b-int8-neuron.yaml (key sections)
 apiVersion: apps/v1
 kind: Deployment
@@ -239,21 +239,21 @@ spec:
               aws.amazon.com/neuroncore: 2  # Request 2 Neuron cores
             limits:
               aws.amazon.com/neuroncore: 2
-::
+:::
 
 **Key Configuration Details:**
 - **Node Selection**: Ensures pods run only on Neuron-equipped instances
 - **Neuron Cores**: Requests and limits must match for Neuron cores
 - **Tensor Parallelism**: Model split across 2 cores for faster inference
 - **Concurrency**: Handle 4 concurrent requests with 8K context window
-:::
+::::
 
-:::tab{label="Service"}
+::::tab{label="Service"}
 **Service Configuration**
 
 The Service exposes the vLLM deployment and makes it accessible to other components:
 
-::code{language=yaml showCopyAction=true}
+:::code{language=yaml showCopyAction=true}
 # model-llama-3-1-8b-int8-neuron.yaml (In same file as the deployment)
 apiVersion: v1
 kind: Service
@@ -269,15 +269,15 @@ spec:
       targetPort: 8000
       protocol: TCP
   type: ClusterIP
-::
+:::
 
 **Service Details:**
 - **Selector**: Matches pods with the `app: llama-3-1-8b-int8-neuron` label
 - **Port 8000**: Standard vLLM API port for OpenAI-compatible endpoints
 - **ClusterIP**: Internal service accessible only within the cluster
 - **Target**: Routes traffic to the vLLM container port 8000
-:::
 ::::
+:::::
 
 ## Key Takeaways
 
