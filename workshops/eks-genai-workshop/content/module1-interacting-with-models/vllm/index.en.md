@@ -51,7 +51,7 @@ That response you got from Llama 3.1? Here's exactly how it happened:
 
 Now that you've seen it in action, let's understand what makes vLLM special:
 
-vLLM is an open-source LLM inference and serving library that provides:
+[vLLM](https://docs.vllm.ai/en/latest/) is an open-source LLM inference and serving library that provides:
 
 - ⚡ **High Throughput**: Optimized for serving multiple requests efficiently
 - 🔄 **Continuous Batching**: Dynamic request batching for optimal hardware utilization
@@ -101,7 +101,7 @@ This gives you incredible insight into how your AI model actually works under th
 
 ## AWS Neuron: Purpose-Built for AI
 
-AWS Neuron is the SDK for AWS Inferentia (inf2) and Trainium (trn1) chips:
+[AWS Neuron](https://aws.amazon.com/ai/machine-learning/neuron/) is the SDK for AWS Inferentia (inf2) and Trainium (trn1) chips:
 
 - **Cost Efficiency**: Up to 50% lower cost per inference vs GPUs
 - **Optimized for LLMs**: Native support for transformer architectures
@@ -123,13 +123,13 @@ For those interested in the Kubernetes implementation details:
 
 First, we create a dedicated namespace for vLLM workloads:
 
-:::code{language=yaml showCopyAction=true}
+::code{language=yaml showCopyAction=true}
 # namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
   name: vllm
-:::
+::
 :::
 
 :::tab{label="Storage"}
@@ -139,7 +139,7 @@ metadata:
 We use Amazon EFS to cache downloaded models and compiled Neuron graphs:
 
 Cache Hugging Face Models:
-:::code{language=yaml showCopyAction=true}
+::code{language=yaml showCopyAction=true}
 # pvc-huggingface-cache.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -153,10 +153,10 @@ spec:
   resources:
     requests:
       storage: 100Gi
-:::
+::
 
 Compiled Neuron Models:
-:::code{language=yaml showCopyAction=true}
+::code{language=yaml showCopyAction=true}
 # pvc-neuron-cache.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -170,7 +170,7 @@ spec:
   resources:
     requests:
       storage: 100Gi
-:::
+::
 
 
 **Why Two Caches?**
@@ -184,7 +184,7 @@ spec:
 
 The HuggingFace token is stored securely:
 
-:::code{language=yaml showCopyAction=true}
+::code{language=yaml showCopyAction=true}
 # secret.template.yaml
 apiVersion: v1
 kind: Secret
@@ -194,7 +194,7 @@ metadata:
 type: Opaque
 stringData:
   token: ${HF_TOKEN}  # Injected during deployment
-:::
+::
 :::
 
 :::tab{label="Deployment"}
@@ -204,7 +204,7 @@ Here's the deployment for Llama 3.1 8B with Neuron optimization:
 
 ::alert[Shortened the deployment manifest file to only show the key details.]{type="warning"}
 
-:::code{language=yaml showCopyAction=true}
+::code{language=yaml showCopyAction=true}
 # model-llama-3-1-8b-int8-neuron.yaml (key sections)
 apiVersion: apps/v1
 kind: Deployment
@@ -239,7 +239,7 @@ spec:
               aws.amazon.com/neuroncore: 2  # Request 2 Neuron cores
             limits:
               aws.amazon.com/neuroncore: 2
-:::
+::
 
 **Key Configuration Details:**
 - **Node Selection**: Ensures pods run only on Neuron-equipped instances
@@ -253,7 +253,7 @@ spec:
 
 The Service exposes the vLLM deployment and makes it accessible to other components:
 
-:::code{language=yaml showCopyAction=true}
+::code{language=yaml showCopyAction=true}
 # model-llama-3-1-8b-int8-neuron.yaml (In same file as the deployment)
 apiVersion: v1
 kind: Service
@@ -269,7 +269,7 @@ spec:
       targetPort: 8000
       protocol: TCP
   type: ClusterIP
-:::
+::
 
 **Service Details:**
 - **Selector**: Matches pods with the `app: llama-3-1-8b-int8-neuron` label

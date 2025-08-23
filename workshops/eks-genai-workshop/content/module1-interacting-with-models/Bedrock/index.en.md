@@ -31,65 +31,57 @@ You've just experienced self-hosted models on our workshop infrastructure. Due t
 
 Before using Bedrock models, you need to enable access in your AWS account. Follow these steps:
 
-### Step 1: Access AWS Console
+### Step 1: Access Bedrock Model Access Page
 
+Navigate directly to the [Bedrock Model Access Page](https://us-west-2.console.aws.amazon.com/bedrock/home?region=us-west-2#/modelaccess) in the AWS Console.
 
+![Bedrock Model Access Page](/static/images/module-1/image.png)
 
-### Step 2: Navigate to Bedrock
+**Verify your access**: Ensure you see "WSParticipantRole/Participant" in the top right corner.
 
-1. In the AWS Console, search for **"Bedrock"** in the top search bar
-2. Click on **"Amazon Bedrock"** service
-3. You'll land on the Bedrock console homepage
+### Step 2: Modify Model Access
 
-### Step 3: Request Model Access
+1. Click the **"Modify model access"** button (orange button in the interface)
+2. Scroll down to find the **Anthropic** section
+3. Check the box next to **Claude 3.7 Sonnet**
 
-1. In the left sidebar, click **"Model access"** under "Bedrock configurations"
-2. You'll see a list of available model providers
-3. Find **"Anthropic"** section
-4. Click **"Manage model access"** button (top right)
+![Select Claude 3.7 Sonnet](/static/images/module-1/image-1.png)
 
-### Step 4: Enable Claude Models
+### Step 3: Submit Your Request
 
-1. In the model access page, locate **Claude 3.7 Sonnet**
-2. Check the box next to:
-   - ✅ **Claude 3.7 Sonnet** (us.anthropic.claude-3-7-sonnet-20250219-v1:0)
-3. Scroll down and click **"Request model access"**
-4. Review and click **"Submit"**
+1. Scroll down and click **"Next"**
 
-::alert[**Note**: Model access is typically granted instantly. You should see "Access granted" status within seconds.]{type="info"}
+![Click Next](/static/images/module-1/image-2.png)
 
-### Step 5: Verify Access
+2. On the **"Review and submit"** page, review your selection and click **"Submit"**
 
-:::code{language=bash showCopyAction=true}
-# List available Bedrock models
-aws bedrock list-foundation-models \
-  --query "modelSummaries[?contains(modelId, 'claude')].{ID:modelId, Name:modelName}" \
-  --output table
+![Review and Submit](/static/images/module-1/image-3.png)
 
-# Test Claude 3.7 Sonnet directly
-aws bedrock-runtime invoke-model \
-  --model-id us.anthropic.claude-3-7-sonnet-20250219-v1:0 \
-  --content-type application/json \
-  --accept application/json \
-  --body '{
-    "anthropic_version": "bedrock-2023-05-31",
-    "max_tokens": 100,
-    "messages": [
-      {
-        "role": "user",
-        "content": "Hello! Please respond with a brief greeting."
-      }
-    ]
-  }' \
-  response.json
+::alert[**Cross-Region Requirement**: Claude 3.7 Sonnet requires cross-region inference. You will need to repeat these steps in the us-east-1 region as well. Use the region selector in the top right corner of the AWS Console.]{type="warning"}
 
-# View the response
-cat response.json | jq -r '.content[0].text'
-:::
+### Step 4: Enable Access in Second Region (Do It Yourself)
+
+Claude 3.7 Sonnet requires cross-region inference, so you need to enable access in both regions:
+
+1. **Switch to us-east-1 region**:
+   - Click the region selector in the top right corner of the AWS Console
+   - Select **"US East (N. Virginia) us-east-1"**
+
+2. **Repeat the model access process**:
+   - Navigate to the [Bedrock Model Access Page in us-east-1](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess)
+   - Click **"Modify model access"**
+   - Find the **Anthropic** section and check **Claude 3.7 Sonnet**
+   - Click **"Next"** → **"Submit"**
+
+3. **Verify access in both regions**:
+   - You should now have Claude 3.7 Sonnet access in both us-west-2 and us-east-1
+   - This enables cross-region inference for optimal performance
+
+::alert[**Access Granted**: Model access is typically granted instantly. You should see "Access granted" status within seconds of submitting your request.]{type="success"}
 
 ## Using Bedrock Models in Open WebUI
 
-Once model access is enabled, Bedrock models automatically appear in Open WebUI through LiteLLM:
+Once model access is enabled, we can interact with our Bedrock models via Open WebUI through LiteLLM:
 
 ### Step 1: Access Open WebUI
 
@@ -104,186 +96,178 @@ Once model access is enabled, Bedrock models automatically appear in Open WebUI 
 
 ### Step 3: Test Claude 3.7 Sonnet
 
-Let's experience Claude's capabilities with some practical examples:
+Now let's experience Claude's capabilities with some practical examples.
 
-#### Try Advanced Reasoning
+#### Test 1: Advanced Technical Reasoning
+
+Ask Claude this question to see its technical depth:
 
 :::code{language=markdown showCopyAction=true}
 "Explain the concept of Kubernetes operators and provide a simple example of when you would create a custom operator."
 :::
 
-#### Test Code Generation
+**Expected Response**: Claude provides a comprehensive explanation with clear structure:
+
+![Claude's Kubernetes Operators Response](/static/images/module-1/image-4.png)
+
+**What to Notice**:
+- **Structured Response**: Clear headings and logical flow
+- **Technical Depth**: Explains control loops, CRDs, and practical examples
+- **Real-World Context**: Provides concrete use cases
+
+#### Test 2: Code Generation (Optional)
+
+Try this for code generation capabilities:
 
 :::code{language=markdown showCopyAction=true}
 "Write a Python class that implements a simple LRU cache with get and put methods. Explain the time complexity of each operation."
 :::
 
-#### Test Long-Form Analysis
+#### Test 3: Long-Form Analysis (Optional)
+
+For complex analysis tasks:
 
 :::code{language=markdown showCopyAction=true}
 "Analyze the benefits and challenges of running AI workloads on Kubernetes. Consider aspects like scalability, resource management, and operational complexity."
 :::
 
-Notice how Claude provides detailed, well-structured responses that are ideal for the learning exercises in the upcoming modules.
+**Key Observation**: Claude provides detailed, well-structured responses that are ideal for the learning exercises in the upcoming modules.
+
+## Model Comparison: Exploring Different Approaches
+
+Open WebUI's powerful feature allows you to compare responses from different models side-by-side. This helps you understand how different models approach the same problem and choose the right model for specific tasks.
+
+### How to Compare Models
+
+1. **Select your first model** (e.g., Claude 3.7 Sonnet)
+2. **Click the "+" button** next to the model name to add a second model
+3. **Choose a second model** (e.g., vLLM Llama 3.1)
+4. **Ask the same question** to both models simultaneously
+
+### Example Comparison
+
+Try this mathematical question with both models:
+
+**Test Question**: "What is squareroot of 144 divided by 29 multiplied by pi"
+
+![Model Comparison: Side-by-Side Results](/static/images/module-1/image-5.png)
+
+### What You'll Observe
+
+**Different Response Styles**: Each model has its own approach to problem-solving:
+- Some models provide step-by-step explanations
+- Others give direct, concise answers
+- Response formatting and detail levels vary
+
+**Learning Opportunity**: This comparison feature helps you:
+- Understand model characteristics
+- Choose appropriate models for different use cases
+- Evaluate response quality and style preferences
+- Learn from different problem-solving approaches
 
 ## Advanced Features: RAG in Open WebUI
 
-Open WebUI includes basic RAG (Retrieval Augmented Generation) capabilities. Let's try it:
+Open WebUI includes basic RAG (Retrieval Augmented Generation) capabilities. Let's demonstrate how RAG can dramatically transform AI responses by providing specific context from your documents.
 
-### Step 1: Enable RAG
+### Step 1: Create a Test Document
 
-1. In Open WebUI, click the **"+"** button next to the message input
-2. Select **"Upload Files"**
-3. You can upload PDF, TXT, or MD files
-
-### Step 2: Test Document Q&A
-
-1. Create a test document locally:
+First, create a sample document in your VSC IDE terminal:
 
 :::code{language=bash showCopyAction=true}
-cat > kubernetes-basics.txt << 'EOF'
-Kubernetes Components:
+# Create the test file in your VSC IDE terminal
+cat > super-secret.txt << 'EOF'
+Super Secret Document
 
-Master Node Components:
-- API Server: Central management point, exposes Kubernetes API
-- etcd: Distributed key-value store for cluster data
-- Scheduler: Assigns pods to nodes based on resource requirements
-- Controller Manager: Runs controller processes
+This document contains classified information about the secret project.
+Only authorized personnel are allowed to access this data.
 
-Worker Node Components:
-- Kubelet: Ensures containers are running in pods
-- Container Runtime: Docker, containerd, or CRI-O
-- Kube-proxy: Maintains network rules for pod communication
+Project Codename: Nightfall
+Objective: Develop an untraceable communication device.
+Status: In progress
 
-Key Resources:
-- Pod: Smallest deployable unit, contains one or more containers
-- Service: Provides stable network endpoint for pods
-- Deployment: Manages replica sets and pod updates
-- ConfigMap: Stores configuration data
-- Secret: Stores sensitive data like passwords
+Remember, this information is top secret and must not be shared with anyone.
 EOF
 :::
 
-2. Upload this file to Open WebUI
-3. Ask questions about the document:
+### Step 2: Download to Your Local Device
 
-:::code{language=markdown showCopyAction=true}
-"Based on the document, what is the role of the Kubernetes Scheduler?"
+After creating the file in VSC IDE:
 
-"What are the main components that run on a worker node?"
+1. **Locate the file** in your VSC IDE file explorer
+2. **Right-click** on `super-secret.txt`
+3. **Select "Download"** to save it to your local machine
+4. **Remember the download location** - you'll need to upload it to OpenWebUI
 
-"Explain the difference between a ConfigMap and a Secret."
-:::
+::alert[**Why Download?** OpenWebUI runs in your browser and needs files from your local machine, not from the remote VSC IDE environment.]{type="info"}
 
-### Step 3: Experience RAG with Bedrock
+### Step 3: Create Knowledge Base in OpenWebUI
 
-Try asking questions about the uploaded document - you'll notice how Claude can effectively analyze and synthesize information from the provided context.
+Now let's set up the knowledge base in OpenWebUI:
 
-## Cost Considerations for Workshop
+1. **Access Workspace**: Click on **"Workspace"** and then **"Knowledge"**
 
-### Bedrock Pricing (Claude 3.7 Sonnet)
-- **Input**: $0.003 per 1K tokens
-- **Output**: $0.015 per 1K tokens
-- **Example**: A typical workshop session (~10K tokens) costs ~$0.15
+![Knowledge Tab](/static/images/module-1/image-6.png)
 
-::alert[**Workshop Context**: Both self-hosted and managed approaches have different cost profiles depending on usage patterns, scale, and requirements. For this workshop's learning objectives, Bedrock provides the most consistent experience.]{type="info"}
+2. **Create New Knowledge Base**: Click the **"+"** button on the right side
 
-## Best Practices with Bedrock
+3. **Fill out the form**:
+   - **Name**: `super-secret-info`
+   - **Description**: `Store secret info in knowledge base`
+   - **Visibility**: Select **"Private"** 
 
-### 1. **Model Selection**
-- Use Claude 3.7 Sonnet for complex reasoning and code
-- Consider Claude 3.5 Haiku for simple, fast responses
-- Use Llama models for open-source compatibility
+![Create Knowledge Base Form](/static/images/module-1/image-7.png)
 
-### 2. **Prompt Engineering**
-Claude responds well to:
-- Clear, structured instructions
-- Examples (few-shot prompting)
-- XML tags for organization
-- Chain-of-thought reasoning
+4. **Create and Upload**:
+   - Click **"Create Knowledge"**
+   - Click **"Upload files"**
+   - Select your downloaded `super-secret.txt` file
+   - Wait for the upload to complete
 
-### 3. **Token Optimization**
-- Be concise in prompts
-- Use system prompts efficiently
-- Set appropriate max_tokens limits
+### Step 4: Test WITHOUT RAG (Baseline)
 
-## Integration Architecture
+Let's first see how Claude responds without access to our document:
 
-Here's how Bedrock integrates with our stack:
+**Ask this question**: "What is the object of project nightfall?"
 
-```mermaid
-graph TB
-    subgraph "User Layer"
-        UI[Open WebUI]
-    end
-    
-    subgraph "API Gateway"
-        LLM[LiteLLM]
-    end
-    
-    subgraph "Model Backends"
-        subgraph "Self-Hosted"
-            VLLM[vLLM<br/>8B Models]
-        end
-        subgraph "Managed"
-            BEDROCK[AWS Bedrock<br/>Claude, Llama, Mistral]
-        end
-    end
-    
-    subgraph "AWS Infrastructure"
-        IAM[IAM Roles]
-        CW[CloudWatch]
-    end
-    
-    UI --> LLM
-    LLM --> VLLM
-    LLM --> BEDROCK
-    BEDROCK --> IAM
-    BEDROCK --> CW
-    
-    style BEDROCK fill:#e8f5e9
-    style UI fill:#e1f5fe
-```
+![Claude Without RAG Context](/static/images/module-1/image-8.png)
 
-## Troubleshooting
+**Notice**: Claude gives a generic response about a social media platform because it has no knowledge of our secret document content.
 
-::::tabs
+### Step 5: Test WITH RAG (The Magic!)
 
-:::tab{label="Model Not Appearing"}
-```bash
-# Check if model access is granted
-aws bedrock list-foundation-models \
-  --query "modelSummaries[?contains(modelId, 'claude-3-7')]"
+Now let's see the power of RAG in action:
 
-# Restart LiteLLM to refresh model list
-kubectl rollout restart deployment/litellm -n litellm
+1. **Start a new chat**
+2. **Type `#`** in the message box - this activates knowledge base selection
 
-# Check LiteLLM logs
-kubectl logs -n litellm deployment/litellm --tail=50
-```
-:::
+![Knowledge Base Selection](/static/images/module-1/image-9.png)
 
-:::tab{label="Access Denied"}
-```bash
-# Verify IAM permissions
-aws sts get-caller-identity
+3. **Select your knowledge base**: Click on **"super-secret.txt"**
+4. **Ask the exact same question**: "What is the object of project nightfall?"
 
-# Check if Bedrock InvokeModel permission exists
-aws iam get-role-policy --role-name <your-role> --policy-name <policy>
+![Claude With RAG Context](/static/images/module-1/image-10.png)
 
-# Required permission:
-# bedrock:InvokeModel on resource: arn:aws:bedrock:*::foundation-model/*
-```
-:::
+**Amazing!** Now Claude correctly references the classified document and provides the exact information: "Develop an untraceable communication device."
 
-:::tab{label="Slow Responses"}
-- Check your AWS region - use the closest region
-- Verify network connectivity
-- Consider token limits in your requests
-- Check CloudWatch for throttling
-:::
+### The RAG Transformation
 
-::::
+This demonstrates the fundamental power of RAG:
+
+- **Without RAG**: Claude uses only its training data → Generic, incorrect response
+- **With RAG**: Claude uses your specific document as context → Accurate, relevant response
+
+**Same model, same question, completely different answers!**
+
+### What You Just Experienced
+
+This is OpenWebUI's built-in simple RAG capability. You've just seen how:
+
+- Documents can be uploaded and indexed
+- AI models can retrieve relevant information from your documents
+- Responses become contextually accurate and specific to your data
+
+::alert[**Simple RAG**: This is just the beginning! OpenWebUI provides basic RAG functionality. In later modules, we'll explore more sophisticated RAG implementations.]{type="success"}
+=====================
 
 ## Key Takeaways
 

@@ -135,14 +135,24 @@ Copy the URL and open it in your browser.
 
 ### Step 2: Create Your Account
 
-When you first access Open WebUI, you'll see a sign-up screen:
+When you first access Open WebUI, you'll be greeted by a landing page with some inspiring message like "Explore the cosmos wherever you are".
 
-1. **Email**: Use any email (doesn't need to be real) - e.g., `workshop@example.com`
-2. **Password**: Choose any password you'll remember for the workshop
-3. **Name**: Enter your preferred name
-4. Click **Sign Up**
+![Open WebUI Landing Page](/static/images/module-1/get-started.png)
 
-::alert[This is local authentication within your workshop environment - no external accounts are created.]{type="info"}
+**Click the "Get started" button** at the bottom of the page to proceed to account creation.
+
+This takes you to the account setup form where you'll create your admin account:
+
+![Create Admin Account](/static/images/module-1/sign-up.png)
+
+**Fill out the account creation form**:
+
+1. **Name**: Enter your preferred display name (e.g., "Workshop User")
+2. **Email**: Use any email address - it doesn't need to be real (e.g., `workshop@example.com`)
+3. **Password**: Choose any password you'll remember for the workshop
+4. **Click "Create Admin Account"** to complete the setup
+
+::alert[**Admin Account**: You're creating the first admin account for this Open WebUI instance. This gives you full control over the interface and settings.]{type="info"}
 
 ### Step 3: Select Your Model
 

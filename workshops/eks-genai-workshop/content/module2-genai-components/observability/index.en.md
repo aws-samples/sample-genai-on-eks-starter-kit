@@ -3,8 +3,6 @@ title: "Langfuse - LLM Observability"
 weight: 2
 ---
 
-# Langfuse - LLM Observability
-
 Remember all those conversations you had with vLLM and Bedrock models? Langfuse has been quietly tracking every single interaction - capturing prompts, responses, performance metrics, and costs. Let's explore the treasure trove of data it's collected about your AI usage!
 
 ## 🛠️ Hands-On: See Your AI Interactions Tracked

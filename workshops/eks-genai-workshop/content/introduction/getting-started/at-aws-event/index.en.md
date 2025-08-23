@@ -72,15 +72,38 @@ This opens the AWS Management Console in a new tab with temporary credentials al
 
 ### 3.1 Open Visual Studio Code (VSC) IDE
 
-Back in your Workshop Studio:
+Now you'll access your cloud-based development environment through Workshop Studio:
 
-1. Look for **URL** in the **Event Outputs** section
-2. Click the URL to open a VSC IDE in a new tab
-3. You now have a full development environment with:
-   - Terminal access
-   - kubectl pre-configured
-   - AWS CLI ready to use
-   - Code editor for later exercises
+1. **Navigate to the Event Page**:
+   - In your Workshop Studio interface, look at the **top left corner**
+   - Click on the **event title box** that shows "EKS GenAI Accelerator: From LLMs to Scalable Agent Systems event" (Title may be different)
+   - This takes you to the main Event page with all the workshop details
+
+2. **Find the Event Outputs Section**:
+   - Scroll down on the Event page to locate the **"Event Outputs (1)"** section
+   - You should see a table with output values from your workshop environment
+
+![Workshop Studio Event Outputs](/static/images/introduction/url.png)
+
+3. **Locate the VSC IDE URL**:
+   - In the outputs table, find the row with **Key** = "URL"
+   - This URL (highlighted in orange) points to your cloud-based Visual Studio Code environment
+   - The URL will look similar to: `https://d3fbc6117q00r.cloudfront.net/...`
+
+4. **Open Your Development Environment**:
+   - Click on the **URL link** in the Value column
+   - This opens a new browser tab with a full Visual Studio Code IDE
+   - Wait a moment for the environment to load completely
+
+5. **What You Get**:
+   Your cloud-based VSC IDE includes:
+   - 🖥️ **Full Visual Studio Code interface** with syntax highlighting and extensions
+   - 🔧 **Integrated terminal** with bash access
+   - ⚙️ **kubectl pre-configured** and connected to your EKS cluster
+   - 🔑 **AWS CLI ready to use** with temporary credentials
+   - 📝 **Code editor** for all workshop exercises and modifications
+
+::alert[**Pro Tip**: Do not close this window! You will need to return to your development environment multiple times during the workshop.]{type="info"}
 
 ### 3.2 Verify kubectl Access
 

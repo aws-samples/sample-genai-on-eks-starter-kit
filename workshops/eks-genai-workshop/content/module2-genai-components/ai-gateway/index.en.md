@@ -3,8 +3,6 @@ title: "LiteLLM - Unified AI Gateway"
 weight: 1
 ---
 
-# LiteLLM - Unified AI Gateway
-
 Remember switching between vLLM and Bedrock models in OpenWebUI? That seamless experience is powered by LiteLLM - your AI gateway that's been quietly orchestrating all your model interactions behind the scenes!
 
 ## 🛠️ Hands-On: Explore Your API Gateway

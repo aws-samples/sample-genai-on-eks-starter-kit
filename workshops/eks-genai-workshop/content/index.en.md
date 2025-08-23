@@ -10,7 +10,7 @@ Welcome to a comprehensive hands-on GenAI workshop on Amazon EKS! Over the next 
 This isn't just another "Hello World" AI tutorial. You'll work with:
 
 - **Enterprise-grade infrastructure** using EKS Auto Mode and specialized hardware
-- **Real LLMs** including Llama 3.1 and Claude 3.5 running on AWS Neuron chips
+- **Real LLMs** including Llama 3.1 running on AWS Neuron chips and Claude 3.7 via Amazon Bedrock
 - **Enterprise patterns** for observability, security, and cost optimization
 - **Cutting-edge frameworks** like LangChain, LangGraph, and Model Context Protocol
 - **Hands-on exercises** that mirror real-world GenAI deployments
