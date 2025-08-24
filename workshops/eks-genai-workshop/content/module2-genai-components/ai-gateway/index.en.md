@@ -358,12 +358,6 @@ kubectl rollout status deployment/litellm -n litellm
 - LiteLLM proxy configured with discovered models
 - Ingress/LoadBalancer exposes the service
 - Observability connections established
-
-**Production Considerations:**
-- Use proper secrets management instead of template variables
-- Configure resource limits based on expected load
-- Set up monitoring and alerting for the deployment
-- Plan for backup and disaster recovery of PostgreSQL data
 ::::
 
 :::::
@@ -400,142 +394,199 @@ sequenceDiagram
 
 ## 🎯 Explore LiteLLM Web Interface
 
-Let's explore the LiteLLM management interface to see your models and metrics:
+Let's explore the LiteLLM management interface to see your models, metrics, and test the API directly:
 
-### Step 1: Access LiteLLM UI
+### Step 1: Access LiteLLM Interface
+
+First, get the URL and credentials for your LiteLLM instance:
 
 :::code{language=bash showCopyAction=true}
 # Get LiteLLM service URL
 echo "LiteLLM URL: http://$(kubectl get ingress -n litellm litellm -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
-
-# Get the UI credentials
-echo "Username: $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.ui_username}' | base64 -d)"
-echo "Password: $(kubectl get secret -n litellm litellm-secret -o jsonpath='{.data.ui_password}' | base64 -d)"
 :::
 
-### Step 2: Login and Explore Models
+Open the URL in your browser. You'll see the LiteLLM API documentation page:
 
-1. **Open the URL** in your browser
-2. **Login** with the credentials from above
-3. **Navigate to "Models"** tab to see all configured models
+![LiteLLM API Landing Page](/static/images/module-2/litellm-api-landing-page.png)
 
-You should see:
-- **Bedrock Models**: claude-3.7-sonnet, amazon-nova-premier, etc.
-- **vLLM Models**: Any self-hosted models that were running during deployment
-- **Model Status**: Health checks and availability
+**What to notice:**
+- 🔧 **LiteLLM Admin Panel on /ui** link (highlighted in orange) - this is where we're going
+- 📊 **LiteLLM Model Cost Map** - for cost analysis
+- 🔍 **LiteLLM Model Hub** - to see available models
+- 🔐 **Authorize** button - for API authentication
 
-### Step 3: Explore Request Metrics
+### Step 2: Access the Admin Interface
 
-Click on **"Usage"** or **"Analytics"** to see:
-- **Request Volume**: How many requests each model has processed
-- **Response Times**: Latency metrics for each model
-- **Token Usage**: Input and output token consumption
-- **Cost Tracking**: Estimated costs per model and user
+Click on **"LiteLLM Admin Panel on /ui"** to access the management interface. You'll be taken to the login page:
 
-### Step 4: Test Models Through LiteLLM
+![LiteLLM Login Page](/static/images/module-2/litellm-login-page.png)
 
-You can test models directly through the LiteLLM interface:
+**Login Process:**
+1. **Username**: Enter `admin` 
+2. **Password**: Enter `Pass@123` 
+3. **Click "Login"** to access the admin interface
 
-1. **Go to "Playground"** or **"Chat"** section
-2. **Select a model** from the dropdown
-3. **Send a test message** to verify the model is working
-4. **Compare responses** from different models
+### Step 3: Explore Your Models Dashboard
 
-::alert[**Note**: The exact UI layout may vary depending on the LiteLLM version, but the core functionality (models, usage, testing) will be available.]{type="info"}
+After logging in, click on the **Models + Endpoints** to view the models configured for LiteLLM:
 
-### Step 5: Monitor Real-Time Activity
+![LiteLLM Models Dashboard](/static/images/module-2/litellm-models-dashboard.png)
 
-While the UI is open:
+**What you're seeing:**
+- 📊 **"Showing 3 results"** - Your configured models
+- 🔍 **Model Table** with columns for Model ID, Public Model Name, Provider, and LiteLLM Model Name
+
+**Your Models:**
+- ✅ **bedrock/claude-3.7-sonnet** - AWS Bedrock model (bedrock provider)
+- ✅ **vllm/llama-3-1-8b-int8-neuron** - Self-hosted model (openai provider)
+- ✅ **vllm/qwen3-8b-fp8-neuron** - Self-hosted model (openai provider)
+
+**Key Insight:** Notice how the vLLM models show "openai" as the provider - this is because LiteLLM presents them through an OpenAI-compatible API!
+
+### Step 4: Monitor Usage & Costs
+
+Click on **"Usage"** in the left sidebar to see comprehensive analytics:
+
+![LiteLLM Usage Analytics](/static/images/module-2/litellm-usage-analytics.png)
+
+**Usage Metrics Dashboard:**
+- 💰 **Total Spend**: $0.1027 (your actual workshop usage!)
+- 📈 **Total Requests**: 65 requests processed
+- ✅ **Successful Requests**: 63 (96.9% success rate)
+- ❌ **Failed Requests**: 2 (3.1% failure rate)
+- 🔢 **Total Tokens**: 32,484 tokens processed
+- 💵 **Average Cost per Request**: $0.0016
+
+**What This Tells You:**
+- Your models are performing well with high success rates
+- Cost tracking is automatic and detailed
+- You can monitor spending patterns over time
+- Token usage gives insight into conversation complexity
+
+::alert[**Cost Tracking Note**: The cost metrics shown here are primarily for Bedrock models. We did not configure cost visibility for locally hosted models (vLLM) in this workshop setup, as they don't have direct per-token pricing like managed services.]{type="info"}
+
+### Step 5: Test Models Directly
+
+Click on **"Test Key"** to access the interactive testing interface:
+
+![LiteLLM Test Interface](/static/images/module-2/litellm-test-interface.png)
+
+**Testing Features:**
+- 🎯 **Model Selection**: Dropdown showing "bedrock/claude-3.7-s..." selected
+- 💬 **Chat Interface**: Real conversation with the selected model
+- 🔧 **Configuration Options**: API Key Source, Endpoint Type, Tags, MCP Tools
+- 📝 **Sample Conversation**: Shows a question about dragon etymology with detailed response
+
+**Try This:**
+1. **Select different models** from the dropdown (try switching between Bedrock and vLLM models)
+2. **Ask a question** like "Explain Kubernetes in simple terms"
+3. **Compare responses** from different models
+
+### Step 6: Connect to Your Workshop Experience
+
+Now that you've explored the LiteLLM interface:
+
 1. **Go back to OpenWebUI** in another tab
 2. **Send some messages** to different models
-3. **Return to LiteLLM UI** and refresh to see the activity
-4. **Watch the metrics update** in real-time
+3. **Return to LiteLLM Usage page** and refresh
+4. **Watch your metrics update** - you'll see new requests, token usage, and costs appear!
 
-This gives you insight into how your AI gateway is performing!
+**Real-Time Monitoring:** Every interaction you have in OpenWebUI flows through this LiteLLM interface, and you can see the metrics update in real-time.
+
+This gives you visibility into how your AI gateway is performing and being used!
 
 ## 🚀 Hands-On: Add a New Bedrock Model to LiteLLM
 
-Now let's experience the real power of the integration system by adding a new Bedrock model! AWS recently released GPT-OSS-20B, and you already have permission to use it.
+Now let's add a new Bedrock model to LiteLLM! We'll add GPT-OSS-20B, a recently released model that you already have access to.
 
-### Step 1: Check Current Bedrock Models
+### Step 1: Discover Available GPT-OSS Models
+
+First, let's see what GPT-OSS models are available in Bedrock:
+
+:::code{language=bash showCopyAction=true}
+# Check available Bedrock models you have access to
+aws bedrock list-foundation-models --query "modelSummaries[?contains(modelId, 'gpt-oss')].{ModelId:modelId,ModelName:modelName}" --output table
+:::
+
+**You should see:**
+
+:::code{language=yaml showCopyAction=false}
+---------------------------------------------
+|           ListFoundationModels            |
++--------------------------+----------------+
+|          ModelId         |   ModelName    |
++--------------------------+----------------+
+|  openai.gpt-oss-120b-1:0 |  gpt-oss-120b  |
+|  openai.gpt-oss-20b-1:0  |  gpt-oss-20b   |
++--------------------------+----------------+
+:::
+
+We'll add the **gpt-oss-20b** model (ModelId: `openai.gpt-oss-20b-1:0`).
+
+### Step 2: Check Current LiteLLM Configuration
 
 Let's see what Bedrock models are currently configured in LiteLLM:
 
 :::code{language=bash showCopyAction=true}
-# Check current Bedrock models in the rendered configuration
-grep -A 3 -B 1 "bedrock.*gpt-oss" /workshop/components/ai-gateway/litellm/values.rendered.yaml
-
-# If not found, check all Bedrock models
+# See current Bedrock models in LiteLLM
 grep -A 3 -B 1 "model_name.*bedrock" /workshop/components/ai-gateway/litellm/values.rendered.yaml
 :::
 
-You might notice that GPT-OSS-20B is not yet configured, even though you have access to it.
+You'll notice that GPT-OSS-20B is not currently configured.
 
-### Step 2: Add GPT-OSS-20B to the Configuration
+### Step 3: Add GPT-OSS-20B to the Configuration
 
-Let's add the new model to the Bedrock configuration. First, check the current Bedrock models list:
+Now let's add the new model directly to the configuration file:
 
 :::code{language=bash showCopyAction=true}
-# Look at the Bedrock configuration in the template
-grep -A 10 -B 5 "bedrock.*llm" /workshop/components/ai-gateway/litellm/values.template.yaml
+# Open our Values yaml file:
+code /workshop/components/ai-gateway/litellm/values.rendered.yaml 
 :::
 
-### Step 3: Update the Integration Configuration
+**Add this YAML configuration** to the Bedrock models section in `values.rendered.yaml`:
 
-The Bedrock models are defined in the configuration files. Let's add GPT-OSS-20B:
-
-:::code{language=bash showCopyAction=true}
-# Navigate to the LiteLLM component directory
-cd /workshop/components/ai-gateway/litellm
-
-# Check the current Bedrock model configuration
-cat /workshop/config.yaml | grep -A 20 bedrock
+:::code{language=yaml showCopyAction=true}
+    - model_name: bedrock/gpt-oss-20b
+      litellm_params:
+        model: bedrock/openai.gpt-oss-20b-1:0
+        aws_region_name: us-west-2
 :::
 
-### Step 4: Add the New Model and Redeploy
+Should look like this:
+![Add GPT to values](/static/images/module-2/value-rendered.png)
+
+### Step 4: Apply the Configuration Changes
+
+After adding the model to the configuration file, apply the changes:
 
 :::code{language=bash showCopyAction=true}
-# Add GPT-OSS-20B to the Bedrock models configuration
-# This would typically be done by editing the config.yaml file
-# For this workshop, we'll simulate the process
+# Apply the updated configuration
+helm upgrade litellm oci://ghcr.io/berriai/litellm-helm \
+  --namespace litellm \
+  -f /workshop/components/ai-gateway/litellm/values.rendered.yaml
 
-# Trigger the integration system to pick up the new model
-node index.mjs
-:::
-
-This process:
-1. **Reads** the updated Bedrock model configuration
-2. **Adds** GPT-OSS-20B to the integration object
-3. **Re-renders** the Helm values with the new model
-4. **Upgrades** the LiteLLM deployment
-
-### Step 5: Verify the Model is Added
-
-:::code{language=bash showCopyAction=true}
-# Check that GPT-OSS-20B is now in the configuration
-grep -A 3 -B 1 "gpt-oss-20b" /workshop/components/ai-gateway/litellm/values.rendered.yaml
-
-# Verify the LiteLLM deployment is updated
+# Wait for the deployment to complete
 kubectl rollout status deployment/litellm -n litellm
 :::
 
-### Step 6: Test the New Model
+### Step 5: Verify the Model is Available
 
-1. **Refresh your LiteLLM UI** and look for "bedrock/gpt-oss-20b"
-2. **Go back to OpenWebUI** and check the model dropdown
+Once rollout has been completed, check that it has been added to LiteLLM, by going back to the **Models + Endpoints** page:
+![New Model](/static/images/module-2/new-model.png)
+
+Should see **bedrock/gpt-oss-20b** amongst the models.
+
+### Step 7: Test in OpenWebUI
+
+1. **Go back to OpenWebUI**
+2. **Check the model dropdown** - you should see "bedrock/gpt-oss-20b"
 3. **Select GPT-OSS-20B** and send a test message
 4. **Compare its responses** with other models
 
-### Step 7: Observe the Integration Magic
+![snake](/static/images/module-2/snake.png)
 
-What you just experienced:
 
-1. **Configuration Update**: Added a new Bedrock model to the configuration
-2. **Automatic Integration**: The system automatically included it in LiteLLM
-3. **Zero Downtime**: The model became available without service interruption
-4. **Unified Access**: Available immediately through both LiteLLM and OpenWebUI
-
-::alert[**Production Pattern**: This is exactly how you'd add new Bedrock models in a production environment - update the configuration and let the integration system handle the rest!]{type="success"}
+::alert[**Production Note**: In production environments, you'd typically use the automated integration system we explored earlier. This manual approach is useful for understanding the underlying configuration and for one-off model additions.]{type="success"}
 
 
 ## Key Benefits You've Experienced
