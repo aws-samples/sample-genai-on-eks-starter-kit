@@ -284,8 +284,8 @@ Open the URL in your browser. You'll see the Langfuse login page:
 ![Langfuse Login Page](/static/images/module-2/langfuse-login.png)
 
 **Login Process:**
-- **Email**: `admin@example.com` (pre-filled)
-- **Password**: `Pass@123` (pre-filled)
+- **Email**: `admin@example.com`
+- **Password**: `Pass@123`
 - **Click "Sign in"** to access the interface
 
 ### Step 2: Navigate to Your Project

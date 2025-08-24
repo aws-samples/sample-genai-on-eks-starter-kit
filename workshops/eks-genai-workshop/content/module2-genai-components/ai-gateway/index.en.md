@@ -576,7 +576,7 @@ Once rollout has been completed, check that it has been added to LiteLLM, by goi
 
 Should see **bedrock/gpt-oss-20b** amongst the models.
 
-### Step 7: Test in OpenWebUI
+### Step 6: Test in OpenWebUI
 
 1. **Go back to OpenWebUI**
 2. **Check the model dropdown** - you should see "bedrock/gpt-oss-20b"
