@@ -13,8 +13,55 @@ In the previous module, you have been working with AI Gateway (LiteLLM) and Obse
 
 You will also deploy the application components onto Amazon EKS using pods for each application component. One for the agentic module, and one each for the MCP server. The following diagram shows how they are all deployed and connected with each other. Two important things to notice here is that first, all the calls from agentic application to LLM and the MCP Servers are routed through the AI Gateway, providing consistent security and routing control. Secondly, all the eco-system components such as Agentic Application and AI Gateway are sending observability data to the LangFuse, resulting in nt only capturing metrics for individual calls but capturing end to end interaction for each workflow also.
 
+Here is the component diagram where black arrows shows the call flow while the red dotted arrows showcase the observability hooks.
+
 ![The Big Picture](../../static/images/module-3/gen-ai-on-eks.png)
 *Loan Buddy Application Components*
+
+```mermaid
+---
+title: Loan Buddy Application Components hosted on Amazon EKS
+---
+graph TD
+    User("fa:fa-user User") --> AgenticApp
+
+    subgraph "EKS"
+        direction LR
+        AgenticApp["Agentic Application"]
+        AIGateway["AI Gateway"]
+        Observability["Observability"]
+        MCP_Address["MCP Server for Address Validation"]
+        MCP_Employment["MCP Server for Employment Validation"]
+
+        AgenticApp --> AIGateway
+        AIGateway --> MCP_Address
+        AIGateway --> MCP_Employment
+        
+        style AgenticApp fill:#fff,stroke:#f60,stroke-width:2px
+        style AIGateway fill:#fff,stroke:#f60,stroke-width:2px
+        style Observability fill:#fff,stroke:#f60,stroke-width:2px
+        style MCP_Address fill:#fff,stroke:#f60,stroke-width:2px
+        style MCP_Employment fill:#fff,stroke:#f60,stroke-width:2px
+    end
+    
+    LLM["Amazon BedRock"]
+    style LLM fill:#fff,stroke:#0c9,stroke-width:2px
+
+    AIGateway --> LLM
+    
+    linkStyle 0 stroke-width:1px,fill:none,stroke:black;
+    linkStyle 1 stroke-width:1px,fill:none,stroke:black;
+    linkStyle 2 stroke-width:1px,fill:none,stroke:black;
+    linkStyle 3 stroke-width:1px,fill:none,stroke:black;
+
+    AgenticApp -.-> Observability
+    AIGateway -.-> Observability
+    
+    
+    linkStyle 4 stroke-width:1px,fill:none,stroke:black;
+    linkStyle 5 stroke-width:1px,fill:none,stroke:red,stroke-dasharray: 5 5;
+    linkStyle 6 stroke-width:1px,fill:none,stroke:red,stroke-dasharray: 5 5;
+```
 
 ## Application Components
 
