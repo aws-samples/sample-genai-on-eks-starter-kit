@@ -13,7 +13,7 @@ In the previous module, you have been working with AI Gateway (LiteLLM) and Obse
 
 You will also deploy the application components onto Amazon EKS using pods for each application component. One for the agentic module, and one each for the MCP server. The following diagram shows how they are all deployed and connected with each other. Two important things to notice here is that first, all the calls from agentic application to LLM and the MCP Servers are routed through the AI Gateway, providing consistent security and routing control. Secondly, all the eco-system components such as Agentic Application and AI Gateway are sending observability data to the LangFuse, resulting in nt only capturing metrics for individual calls but capturing end to end interaction for each workflow also.
 
-![The Big Picture](../../static/gen-ai-on-eks.png)
+![The Big Picture](../../static/images/module-3/gen-ai-on-eks.png)
 *Loan Buddy Application Components*
 
 ## Application Components
