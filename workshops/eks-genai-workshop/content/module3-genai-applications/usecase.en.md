@@ -28,6 +28,7 @@ Any GenAI app you will build, may have the following components.
 - Orchestration: How GenAI help us simplify code and write our instructions in plain english
 - Knowledge: How MCP servers improve the context for LLM for better business outcomes
 - Memory: LLMs are stateless. We will see how the orchestration layer provides memory to maintain state across sessions and effectively perform complicated tasks.
+- Validation and Measurement. We will touch base on how LangFuse help us to capture and measure the performance of our application.
 
 Let's see how our application fits the for this mould.
 
