@@ -1,7 +1,7 @@
 ---
 title: "Application Components"
 date: 2025-08-13T11:05:19-07:00
-weight: 350
+weight: 250
 draft: true
 ---
 
@@ -18,8 +18,8 @@ You will also deploy the application components onto Amazon EKS using pods for e
 
 ## Application Components
 
-- The file [`accounting-agent-demo.py`](./code/accounting-agent-demo.py) consists of the agentic workflow prompt, the list of tools to call and the observability integration. Make sure you can identify each part of the agentic application.
-- The files [`mcp-address-validator`](./code/mcp-company-validatior.py) and [`mcp-address-validator`](./code/mcp-company-validatior.py) are the MCP servers. See how they are exposing what they can do via the description of the mcp annotation.
+- The file [`accounting-agent-demo.py`](../../static/code/accounting-agent-demo.py) consists of the agentic workflow prompt, the list of tools to call and the observability integration. Make sure you can identify each part of the agentic application.
+- The files [`mcp-address-validator`](../../static/code/mcp-company-validatior.py) and [`mcp-address-validator`](../../static/code/mcp-company-validatior.py) are the MCP servers. See how they are exposing what they can do via the description of the mcp annotation.
 - The deployment files where they are deployed to Amazon EKS as pods.
 
 ### Challenge
