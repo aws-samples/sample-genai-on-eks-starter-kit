@@ -1,725 +1,623 @@
 ---
-title: "AI Gateway with LiteLLM"
-weight: 33
-duration: "30 minutes"
+title: "LiteLLM - Unified AI Gateway"
+weight: 1
 ---
 
-# AI Gateway with LiteLLM
+Remember switching between vLLM and Bedrock models in OpenWebUI? That seamless experience is powered by LiteLLM - your AI gateway that's been quietly orchestrating all your model interactions behind the scenes!
 
-In this section, you'll deploy LiteLLM as a unified AI gateway to manage multiple LLM providers with a single API interface.
+## 🛠️ Hands-On: Explore Your API Gateway
+
+Let's discover how LiteLLM has been managing all your model interactions:
+
+### Step 1: Discover Your LiteLLM Stack
+
+Run this command to see the main components:
+
+:::code{language=bash showCopyAction=true}
+# See the LiteLLM platform components
+kubectl get pods -n litellm
+:::
+
+**What to look for in your output:**
+
+:::code{language=yaml showCopyAction=false}
+# Example pattern (your specific names will vary):
+NAME                       READY   STATUS    RESTARTS   AGE
+litellm-*                  1/1     Running   0          *h     # ← Main API Gateway
+litellm-postgresql-0       1/1     Running   0          *h     # ← Configuration Database
+litellm-redis-master-0     1/1     Running   0          *h     # ← Performance Cache
+:::
+
+**Key Components:**
+- ✅ **LiteLLM Pod**: The main API gateway that routes all your model requests
+- ✅ **PostgreSQL**: Stores model configurations, usage data, and user settings
+- ✅ **Redis**: Provides caching for improved response times
+
+### Step 2: See Your Available Models
+
+Check what models LiteLLM can discover and use:
+
+:::code{language=bash showCopyAction=true}
+# See your running vLLM models
+kubectl get pods -n vllm -l app
+:::
+
+**What you should see:**
+
+:::code{language=yaml showCopyAction=false}
+# Your running models (available to LiteLLM):
+NAME                                        READY   STATUS    
+llama-3-1-8b-int8-neuron-*                  1/1     Running   # ← Llama model
+qwen3-8b-fp8-neuron-*                       1/1     Running   # ← Qwen model
+:::
+
+**Why this matters:** Our setup automatically discovers these running models and points LiteLLM to them using the Helm Chart configuration.
+
+### Step 3: See the Configuration Magic
+
+Just like with OpenWebui, we setup LiteLLM using it's [official Helm Chart](https://github.com/BerriAI/litellm/tree/main/deploy/charts/litellm-helm). Let's see how your models appear in LiteLLM's configuration:
+
+:::code{language=bash showCopyAction=true}
+# Check the model configuration
+grep -A 16 "model_list:" /workshop/components/ai-gateway/litellm/values.rendered.yaml
+:::
+
+**Example of what you'll see:**
+
+:::code{language=yaml showCopyAction=false}
+# How your models are configured in LiteLLM:
+model_list:
+  # Bedrock models (from AWS configuration)
+  - model_name: bedrock/claude-3.7-sonnet
+    litellm_params:
+      model: bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0
+      aws_region_name: us-west-2
+      
+  # vLLM models (discovered automatically from running pods)
+  - model_name: vllm/llama-3-1-8b-int8-neuron
+    litellm_params:
+      model: openai/llama-3-1-8b-int8-neuron
+      api_base: http://llama-3-1-8b-int8-neuron.vllm:8000/v1
+:::
+
+**The Magic:** Notice how your running vLLM pods automatically become API endpoints in LiteLLM!
+
+### Step 4: Understand the Integration System
+
+Let's peek at how the automatic discovery works:
+
+:::code{language=bash showCopyAction=true}
+# See the integration discovery logic
+grep -A 15 "integration.*llm-model" /workshop/components/ai-gateway/litellm/index.mjs
+:::
+
+**How it works:**
+
+:::code{language=javascript showCopyAction=false}
+// LiteLLM's model discovery process:
+for (const model of value.models) {
+  if (model.deploy) {
+    // Check if the model pod is actually running
+    const result = await kubectl get pod -n ${namespace} -l app=${model.name}
+    if (result.stdout.includes(model.name)) {
+      // Model found! Add it to the integration
+      integration["llm-model"][namespace][model.name] = true;
+    }
+  }
+}
+:::
+
+**The Process:**
+1. 🔍 **Scans** Kubernetes for running model pods
+2. ✅ **Verifies** each model is healthy and available  
+3. 🔧 **Builds** an integration object with discovered models
+4. 📝 **Renders** Helm templates with only available models
+5. 🚀 **Deploys** LiteLLM with your specific model configuration
+
+This ensures LiteLLM only tries to use models that are actually running!
+
 
 ## What is LiteLLM?
 
-LiteLLM is a unified API that allows you to call multiple LLM providers (OpenAI, Anthropic, Cohere, etc.) using the OpenAI format. It provides:
+Now that you've seen it in action, let's understand what makes LiteLLM special:
 
-- **Unified API**: Single interface for multiple LLM providers
-- **Load Balancing**: Distribute requests across multiple models
-- **Fallback**: Automatic failover between providers
-- **Rate Limiting**: Control usage and costs
-- **Caching**: Reduce latency and costs with intelligent caching
+LiteLLM is an open-source proxy that provides:
 
-## LiteLLM Architecture
+- 🔄 **Unified API**: Single OpenAI-compatible endpoint for all models
+- 🎯 **Smart Routing**: Automatically routes requests to appropriate backends
+- 💾 **Persistent Storage**: PostgreSQL for configuration, Redis for caching
+- ⚡ **Load Balancing**: Distributes requests across multiple model replicas
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Applications  │───▶│   LiteLLM       │───▶│   OpenAI API    │
-│   (Agents)      │    │   Gateway       │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ├────────────────▶┌─────────────────┐
-                                │                 │  Anthropic API  │
-                                │                 │                 │
-                                │                 └─────────────────┘
-                                │
-                                └────────────────▶┌─────────────────┐
-                                                  │   Local vLLM    │
-                                                  │                 │
-                                                  └─────────────────┘
-```
+## How LiteLLM is Deployed
 
-## Step 1: Deploy LiteLLM Gateway
+Our LiteLLM deployment uses the [official LiteLLM Helm Chart](https://github.com/BerriAI/litellm/tree/main/deploy/charts/litellm-helm) with a custom values template. The full values.template.yaml file can be found at `/workshop/components/ai-gateway/litellm/values.template.yaml`. Here's how each section of the Helm configuration works:
 
-### LiteLLM Configuration
-```yaml
-# litellm-config.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: litellm-config
-  namespace: genai-platform
-data:
-  config.yaml: |
-    model_list:
-      - model_name: gpt-3.5-turbo
-        litellm_params:
-          model: openai/gpt-3.5-turbo
-          api_key: env/OPENAI_API_KEY
-          max_tokens: 4000
-          temperature: 0.7
-      
-      - model_name: gpt-4
-        litellm_params:
-          model: openai/gpt-4
-          api_key: env/OPENAI_API_KEY
-          max_tokens: 8000
-          temperature: 0.7
-      
-      - model_name: claude-3-sonnet
-        litellm_params:
-          model: anthropic/claude-3-sonnet-20240229
-          api_key: env/ANTHROPIC_API_KEY
-          max_tokens: 4000
-          temperature: 0.7
-      
-      - model_name: llama2-7b
-        litellm_params:
-          model: vllm/meta-llama/Llama-2-7b-hf
-          api_base: http://vllm-service:8000/v1
-          temperature: 0.7
-      
-      - model_name: llama2-70b
-        litellm_params:
-          model: vllm/meta-llama/Llama-2-70b-hf
-          api_base: http://vllm-service-70b:8000/v1
-          temperature: 0.7
+:::::tabs
+
+::::tab{label="Resources & Infrastructure"}
+**Main Application Resources**
+
+The LiteLLM proxy requires adequate resources for handling multiple model requests:
+
+:::code{language=yaml showCopyAction=true}
+resources:
+  requests:
+    cpu: 1 
+    memory: 2Gi
+  limits:
+    memory: 2Gi
+:::
+
+**Supporting Infrastructure**
+
+LiteLLM runs with Redis for caching and PostgreSQL for persistence:
+
+:::code{language=yaml showCopyAction=true}
+redis:
+  enabled: true
+  master:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
+
+postgresql:
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
+:::
+
+**Why This Architecture:**
+- **Redis**: Caches model responses and reduces latency
+- **PostgreSQL**: Stores model configurations, usage data, and user settings
+- **Resource Limits**: Ensures predictable performance and prevents resource contention
+::::
+
+::::tab{label="Authentication & Security"}
+**Service Account Configuration**
+
+LiteLLM creates its own service account for secure Kubernetes operations:
+
+:::code{language=yaml showCopyAction=true}
+serviceAccount:
+  create: true
+:::
+
+**Authentication Setup**
+
+Master key and UI credentials are configured via environment variables:
+
+:::code{language=yaml showCopyAction=true}
+masterkey: {{{LITELLM_API_KEY}}}
+envVars:
+  UI_USERNAME: {{{LITELLM_UI_USERNAME}}}
+  UI_PASSWORD: {{{LITELLM_UI_PASSWORD}}}
+:::
+
+**Security Features:**
+- **Master Key**: Controls API access to the LiteLLM proxy
+- **UI Authentication**: Protects the web interface with username/password
+- **Template Variables**: Credentials injected securely during deployment
+- **Service Account**: Follows Kubernetes security best practices
+::::
+
+::::tab{label="Observability Integration"}
+**Monitoring & Tracing Setup**
+
+LiteLLM integrates with multiple observability platforms:
+
+:::code{language=yaml showCopyAction=true}
+envVars:
+  LANGFUSE_HOST: http://langfuse-web.langfuse:3000
+  LANGFUSE_PUBLIC_KEY: {{{LANGFUSE_PUBLIC_KEY}}}
+  LANGFUSE_SECRET_KEY: {{{LANGFUSE_SECRET_KEY}}}
+  PHOENIX_API_KEY: {{{PHOENIX_API_KEY}}}
+  PHOENIX_COLLECTOR_ENDPOINT: http://phoenix-svc.phoenix:4317/v1/traces
+  PHOENIX_COLLECTOR_HTTP_ENDPOINT: http://phoenix-svc.phoenix:6006/v1/traces
+:::
+
+**Automatic Observability Features:**
+- **Langfuse Integration**: Tracks every request, response, and cost
+- **Phoenix Support**: Alternative observability platform option
+- **Service Discovery**: Uses Kubernetes service names for internal communication
+- **Zero Configuration**: Observability works automatically once deployed
+
+**What Gets Tracked:**
+- Request/response pairs for debugging
+- Token usage and costs per model
+- Performance metrics and latency
+- Error rates and failure patterns
+::::
+
+::::tab{label="Networking & Ingress"}
+**Load Balancer Configuration**
+
+LiteLLM uses AWS Application Load Balancer for external access:
+
+:::code{language=yaml showCopyAction=true}
+ingress:
+  enabled: true
+  className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
+  annotations:
+    alb.ingress.kubernetes.io/target-type: ip
+    {{#if DOMAIN}}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    {{/if}}
+  hosts:
+    - paths:
+        - path: /
+          pathType: Prefix
+      {{#if DOMAIN}}
+      host: litellm.{{{DOMAIN}}}
+      {{/if}}
+:::
+
+**Networking Features:**
+- **ALB Integration**: Uses AWS Application Load Balancer
+- **IP Target Type**: Direct pod networking for better performance
+- **Conditional HTTPS**: HTTPS enabled when domain is configured
+- **Path-Based Routing**: All traffic routed to LiteLLM proxy
+- **Dynamic Configuration**: Adapts based on domain availability
+::::
+
+::::tab{label="Model Configuration"}
+**Proxy Settings**
+
+Core LiteLLM proxy configuration for model management:
+
+:::code{language=yaml showCopyAction=true}
+proxy_config:
+  general_settings:
+    master_key: os.environ/PROXY_MASTER_KEY
+    store_model_in_db: true
+    store_prompts_in_spend_logs: true
+  litellm_settings:
+    {{#with integration.o11y.config}}
+    {{#if callbacks}}    
+    callbacks: {{{callbacks}}}
+    {{/if}}
+    {{#if success_callback}}    
+    success_callback: {{{success_callback}}}
+    {{/if}}
+    {{#if failure_callback}}
+    failure_callback: {{{failure_callback}}}
+    {{/if}}
+    {{/with}}
+    redact_user_api_key_info: true
+    turn_off_message_logging: false
+:::
+
+**Dynamic Model Registration**
+
+Models are automatically discovered and registered via Handlebars templating:
+
+:::code{language=yaml showCopyAction=true}
+  model_list:
+    # Bedrock LLM Models
+    {{#each integration.bedrock.llm}}
+    - model_name: bedrock/{{{name}}}
+      litellm_params:
+        model: bedrock/{{{model}}}
+        aws_region_name: {{{@root.integration.bedrock.region}}}
+    {{/each}}
     
-    # Router settings
-    router_settings:
-      routing_strategy: "least-busy"
-      retry_policy:
-        max_retries: 3
-        backoff_factor: 2
-      
-      # Fallback configuration
-      fallbacks:
-        - ["gpt-4", "gpt-3.5-turbo"]
-        - ["claude-3-sonnet", "gpt-4"]
-        - ["llama2-70b", "llama2-7b"]
-      
-      # Load balancing
-      load_balancing:
-        - model_name: "balanced-gpt"
-          models: ["gpt-3.5-turbo", "gpt-4"]
-          weights: [0.7, 0.3]
-        - model_name: "balanced-local"
-          models: ["llama2-7b", "llama2-70b"]
-          weights: [0.8, 0.2]
-    
-    # General settings
-    general_settings:
-      master_key: env/LITELLM_MASTER_KEY
-      database_url: env/LITELLM_DATABASE_URL
-      
-      # Logging
-      langfuse_public_key: env/LANGFUSE_PUBLIC_KEY
-      langfuse_secret_key: env/LANGFUSE_SECRET_KEY
-      langfuse_host: env/LANGFUSE_HOST
-      
-      # Caching
-      redis_host: env/REDIS_HOST
-      redis_port: 6379
-      cache_responses: true
-      cache_ttl: 3600
-      
-      # Rate limiting
-      rpm_limit: 1000
-      tpm_limit: 100000
-      
-      # Cost tracking
-      track_cost_callback: true
-      
-      # Security
-      allowed_ips: ["0.0.0.0/0"]
-      disable_spend_logs: false
+    # vLLM Models (discovered from running pods)
+    {{#each integration.llm-model.vllm}}
+    - model_name: vllm/{{@key}}
+      litellm_params:
+        model: openai/{{@key}}
+        api_key: fake-key
+        api_base: http://{{@key}}.vllm:8000/v1
+    {{/each}}
+:::
+
+**Supported Model Types:**
+- **Bedrock**: AWS managed models (Claude, Llama, etc.)
+- **vLLM**: Self-hosted models on Kubernetes
+- **SGlang, TGI, Ollama**: Additional inference engines
+- **TEI**: Text Embedding Inference models
+::::
+
+::::tab{label="Deployment Commands"}
+**Helm Deployment Process**
+
+::alert[**⚠️ WARNING**: These commands have already been executed in your workshop environment. **DO NOT run these commands** as they will interfere with your existing setup.]{type="warning"}
+
+The LiteLLM deployment uses these Helm commands:
+
+:::code{language=bash showCopyAction=true}
+# Add the LiteLLM Helm repository
+helm repo add litellm oci://ghcr.io/berriai/litellm-helm
+helm repo update
+
+# Deploy LiteLLM with custom values
+helm upgrade --install litellm litellm/litellm-helm \
+  --namespace litellm \
+  --create-namespace \
+  -f values.rendered.yaml
+
+# Check deployment status
+kubectl rollout status deployment/litellm -n litellm
+:::
+
+**Deployment Process:**
+1. **Template Rendering**: `values.template.yaml` → `values.rendered.yaml`
+2. **Integration Discovery**: System scans for running models
+3. **Helm Installation**: Chart deployed with rendered values
+4. **Service Startup**: LiteLLM proxy starts with discovered models
+
+**What Happens During Deployment:**
+- Service account and RBAC permissions created
+- PostgreSQL and Redis deployed as dependencies
+- LiteLLM proxy configured with discovered models
+- Ingress/LoadBalancer exposes the service
+- Observability connections established
+::::
+
+:::::
+
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: litellm-secrets
-  namespace: genai-platform
-type: Opaque
-data:
-  OPENAI_API_KEY: <base64-encoded-key>
-  ANTHROPIC_API_KEY: <base64-encoded-key>
-  LITELLM_MASTER_KEY: <base64-encoded-key>
-  LITELLM_DATABASE_URL: cG9zdGdyZXNxbDovL2dlbmFpX3VzZXI6Z2VuYWlfcGFzc3dvcmRAcG9zdGdyZXMtc2VydmljZTo1NDMyL2dlbmFpX3BsYXRmb3Jt
-  LANGFUSE_PUBLIC_KEY: <base64-encoded-key>
-  LANGFUSE_SECRET_KEY: <base64-encoded-key>
-  LANGFUSE_HOST: aHR0cDovL2xhbmdmdXNlLXNlcnZpY2U6MzAwMA==
-  REDIS_HOST: cmVkaXMtc2VydmljZQ==
+
+## How LiteLLM Powers Your Experience
+
+Here's what happened every time you switched models in OpenWebUI:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant OpenWebUI
+    participant LiteLLM
+    participant vLLM
+    participant Bedrock
+    
+    User->>OpenWebUI: Select model & send message
+    OpenWebUI->>LiteLLM: POST /v1/chat/completions
+    
+    alt vLLM Model Selected
+        LiteLLM->>vLLM: Route to vLLM endpoint
+        vLLM-->>LiteLLM: Model response
+    else Bedrock Model Selected
+        LiteLLM->>Bedrock: Route to Bedrock API
+        Bedrock-->>LiteLLM: Model response
+    end
+    
+    LiteLLM-->>OpenWebUI: Unified response format
+    OpenWebUI-->>User: Display in chat
 ```
 
-### LiteLLM Deployment
-```yaml
-# litellm-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: litellm-gateway
-  namespace: genai-platform
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: litellm-gateway
-  template:
-    metadata:
-      labels:
-        app: litellm-gateway
-    spec:
-      containers:
-      - name: litellm
-        image: ghcr.io/berriai/litellm:main-latest
-        ports:
-        - containerPort: 4000
-        envFrom:
-        - secretRef:
-            name: litellm-secrets
-        env:
-        - name: CONFIG_FILE_PATH
-          value: /config/config.yaml
-        - name: PORT
-          value: "4000"
-        - name: STORE_MODEL_IN_DB
-          value: "true"
-        volumeMounts:
-        - name: config-volume
-          mountPath: /config
-        resources:
-          requests:
-            cpu: 500m
-            memory: 1Gi
-          limits:
-            cpu: 1000m
-            memory: 2Gi
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 4000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 4000
-          initialDelaySeconds: 10
-          periodSeconds: 5
-      volumes:
-      - name: config-volume
-        configMap:
-          name: litellm-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: litellm-service
-  namespace: genai-platform
-spec:
-  selector:
-    app: litellm-gateway
-  ports:
-  - port: 4000
-    targetPort: 4000
-  type: ClusterIP
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: litellm-hpa
-  namespace: genai-platform
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: litellm-gateway
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-```
 
-## Step 2: Advanced Configuration
+## 🎯 Explore LiteLLM Web Interface
 
-### User Management and API Keys
-```yaml
-# user-management.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: user-config
-  namespace: genai-platform
-data:
-  users.yaml: |
-    users:
-      - user_id: "agent-user-1"
-        user_email: "agent1@example.com"
-        models: ["gpt-3.5-turbo", "llama2-7b"]
-        spend_limit: 100.0
-        duration: "1mo"
-        aliases: {}
-        config: {}
-        
-      - user_id: "agent-user-2"
-        user_email: "agent2@example.com"
-        models: ["gpt-4", "claude-3-sonnet"]
-        spend_limit: 500.0
-        duration: "1mo"
-        aliases: {}
-        config: {}
-      
-      - user_id: "admin-user"
-        user_email: "admin@example.com"
-        models: ["*"]
-        spend_limit: 10000.0
-        duration: "1mo"
-        aliases: {}
-        config: {}
-    
-    # Team configurations
-    teams:
-      - team_id: "development-team"
-        team_alias: "dev"
-        members: ["agent-user-1", "agent-user-2"]
-        spend_limit: 1000.0
-        duration: "1mo"
-        
-      - team_id: "production-team"
-        team_alias: "prod"
-        members: ["admin-user"]
-        spend_limit: 5000.0
-        duration: "1mo"
-```
+Let's explore the LiteLLM management interface to see your models, metrics, and test the API directly:
 
-### Custom Middleware
-```python
-# custom_middleware.py
-from litellm import completion, acompletion
-from litellm.integrations.custom_logger import CustomLogger
-import time
-import asyncio
-from typing import Dict, Any
+### Step 1: Access LiteLLM Interface
 
-class CustomLiteLLMLogger(CustomLogger):
-    def __init__(self):
-        super().__init__()
-        self.start_time = {}
-    
-    def log_pre_api_call(self, model, messages, kwargs):
-        """Log before API call"""
-        request_id = kwargs.get('request_id', 'unknown')
-        self.start_time[request_id] = time.time()
-        
-        print(f"[PRE-CALL] Model: {model}, Request ID: {request_id}")
-        print(f"[PRE-CALL] Messages: {len(messages)} messages")
-        print(f"[PRE-CALL] Kwargs: {kwargs}")
-    
-    def log_post_api_call(self, kwargs, response_obj, start_time, end_time):
-        """Log after API call"""
-        request_id = kwargs.get('request_id', 'unknown')
-        duration = end_time - start_time
-        
-        print(f"[POST-CALL] Request ID: {request_id}")
-        print(f"[POST-CALL] Duration: {duration:.2f}s")
-        print(f"[POST-CALL] Response: {response_obj}")
-        
-        # Custom metrics collection
-        self.collect_custom_metrics(kwargs, response_obj, duration)
-    
-    def log_success_event(self, kwargs, response_obj, start_time, end_time):
-        """Log successful completion"""
-        request_id = kwargs.get('request_id', 'unknown')
-        print(f"[SUCCESS] Request {request_id} completed successfully")
-    
-    def log_failure_event(self, kwargs, response_obj, start_time, end_time):
-        """Log failed completion"""
-        request_id = kwargs.get('request_id', 'unknown')
-        print(f"[FAILURE] Request {request_id} failed: {response_obj}")
-    
-    def collect_custom_metrics(self, kwargs, response_obj, duration):
-        """Collect custom metrics"""
-        # Implement custom metrics collection
-        pass
+First, get the URL and credentials for your LiteLLM instance:
 
-# Initialize custom logger
-custom_logger = CustomLiteLLMLogger()
+:::code{language=bash showCopyAction=true}
+# Get LiteLLM service URL
+echo "LiteLLM URL: http://$(kubectl get ingress -n litellm litellm -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+:::
 
-# Example usage with custom routing
-class SmartRouter:
-    def __init__(self):
-        self.model_performance = {}
-        self.load_balancer = {}
-    
-    def route_request(self, messages: list, model_preferences: list = None, 
-                     performance_threshold: float = 2.0) -> str:
-        """Smart routing based on performance and availability"""
-        
-        # Default to fastest performing model
-        if not model_preferences:
-            model_preferences = ["gpt-3.5-turbo", "llama2-7b", "gpt-4"]
-        
-        for model in model_preferences:
-            avg_performance = self.model_performance.get(model, 0)
-            
-            if avg_performance < performance_threshold:
-                return model
-        
-        # Fallback to first available model
-        return model_preferences[0]
-    
-    def update_performance_metrics(self, model: str, duration: float):
-        """Update performance metrics for routing decisions"""
-        if model not in self.model_performance:
-            self.model_performance[model] = []
-        
-        self.model_performance[model].append(duration)
-        
-        # Keep only last 100 measurements
-        if len(self.model_performance[model]) > 100:
-            self.model_performance[model] = self.model_performance[model][-100:]
-    
-    def get_model_stats(self) -> Dict[str, Any]:
-        """Get performance statistics for all models"""
-        stats = {}
-        for model, durations in self.model_performance.items():
-            if durations:
-                stats[model] = {
-                    "avg_duration": sum(durations) / len(durations),
-                    "min_duration": min(durations),
-                    "max_duration": max(durations),
-                    "request_count": len(durations)
-                }
-        return stats
+Open the URL in your browser. You'll see the LiteLLM API documentation page:
 
-# Initialize smart router
-router = SmartRouter()
-```
+![LiteLLM API Landing Page](/static/images/module-2/litellm-api-landing-page.png)
 
-## Step 3: Client Integration
+**What to notice:**
+- 🔧 **LiteLLM Admin Panel on /ui** link (highlighted in orange) - this is where we're going
+- 📊 **LiteLLM Model Cost Map** - for cost analysis
+- 🔍 **LiteLLM Model Hub** - to see available models
+- 🔐 **Authorize** button - for API authentication
 
-### Python Client
-```python
-# litellm_client.py
-import openai
-import asyncio
-from typing import Dict, Any, List
-import json
+### Step 2: Access the Admin Interface
 
-class LiteLLMClient:
-    def __init__(self, base_url: str = "http://litellm-service:4000", 
-                 api_key: str = None):
-        self.client = openai.OpenAI(
-            base_url=base_url,
-            api_key=api_key or "sk-1234"  # Use actual API key in production
-        )
-    
-    def completion(self, messages: List[Dict[str, str]], model: str = "gpt-3.5-turbo", 
-                  **kwargs) -> Dict[str, Any]:
-        """Synchronous completion"""
-        try:
-            response = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                **kwargs
-            )
-            return {
-                "content": response.choices[0].message.content,
-                "model": response.model,
-                "usage": response.usage.dict() if response.usage else None,
-                "finish_reason": response.choices[0].finish_reason
-            }
-        except Exception as e:
-            return {"error": str(e)}
-    
-    async def acompletion(self, messages: List[Dict[str, str]], 
-                         model: str = "gpt-3.5-turbo", **kwargs) -> Dict[str, Any]:
-        """Asynchronous completion"""
-        try:
-            response = await self.client.chat.completions.acreate(
-                model=model,
-                messages=messages,
-                **kwargs
-            )
-            return {
-                "content": response.choices[0].message.content,
-                "model": response.model,
-                "usage": response.usage.dict() if response.usage else None,
-                "finish_reason": response.choices[0].finish_reason
-            }
-        except Exception as e:
-            return {"error": str(e)}
-    
-    def stream_completion(self, messages: List[Dict[str, str]], 
-                         model: str = "gpt-3.5-turbo", **kwargs):
-        """Streaming completion"""
-        try:
-            stream = self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                stream=True,
-                **kwargs
-            )
-            
-            for chunk in stream:
-                if chunk.choices[0].delta.content is not None:
-                    yield chunk.choices[0].delta.content
-        except Exception as e:
-            yield f"Error: {str(e)}"
-    
-    def get_available_models(self) -> List[str]:
-        """Get list of available models"""
-        try:
-            models = self.client.models.list()
-            return [model.id for model in models.data]
-        except Exception as e:
-            return []
-    
-    def health_check(self) -> Dict[str, Any]:
-        """Check gateway health"""
-        try:
-            response = self.client.get("/health")
-            return response.json()
-        except Exception as e:
-            return {"status": "unhealthy", "error": str(e)}
+Click on **"LiteLLM Admin Panel on /ui"** to access the management interface. You'll be taken to the login page:
 
-# Usage examples
-client = LiteLLMClient(base_url="http://localhost:4000")
+![LiteLLM Login Page](/static/images/module-2/litellm-login-page.png)
 
-# Simple completion
-response = client.completion(
-    messages=[{"role": "user", "content": "Hello, how are you?"}],
-    model="gpt-3.5-turbo"
-)
-print(response)
+**Login Process:**
+1. **Username**: Enter `admin` 
+2. **Password**: Enter `Pass@123` 
+3. **Click "Login"** to access the admin interface
 
-# Async completion
-async def async_example():
-    response = await client.acompletion(
-        messages=[{"role": "user", "content": "What is AI?"}],
-        model="claude-3-sonnet"
-    )
-    print(response)
+### Step 3: Explore Your Models Dashboard
 
-# Streaming completion
-print("Streaming response:")
-for chunk in client.stream_completion(
-    messages=[{"role": "user", "content": "Tell me a story"}],
-    model="llama2-7b"
-):
-    print(chunk, end="")
-```
+After logging in, click on the **Models + Endpoints** to view the models configured for LiteLLM:
 
-## Step 4: Load Testing and Monitoring
+![LiteLLM Models Dashboard](/static/images/module-2/litellm-models-dashboard.png)
 
-### Load Testing Script
-```python
-# load_test.py
-import asyncio
-import aiohttp
-import time
-from concurrent.futures import ThreadPoolExecutor
-import json
-import statistics
+**What you're seeing:**
+- 📊 **"Showing 3 results"** - Your configured models
+- 🔍 **Model Table** with columns for Model ID, Public Model Name, Provider, and LiteLLM Model Name
 
-class LoadTester:
-    def __init__(self, base_url: str = "http://localhost:4000"):
-        self.base_url = base_url
-        self.results = []
-    
-    async def single_request(self, session, model: str, test_id: int):
-        """Single request for load testing"""
-        start_time = time.time()
-        
-        payload = {
-            "model": model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": f"Test request {test_id}: Please respond with a brief greeting."
-                }
-            ],
-            "max_tokens": 50
-        }
-        
-        try:
-            async with session.post(
-                f"{self.base_url}/chat/completions",
-                json=payload,
-                headers={"Authorization": "Bearer sk-1234"}
-            ) as response:
-                result = await response.json()
-                end_time = time.time()
-                
-                return {
-                    "test_id": test_id,
-                    "model": model,
-                    "duration": end_time - start_time,
-                    "status": response.status,
-                    "success": response.status == 200,
-                    "response": result
-                }
-        except Exception as e:
-            end_time = time.time()
-            return {
-                "test_id": test_id,
-                "model": model,
-                "duration": end_time - start_time,
-                "status": 0,
-                "success": False,
-                "error": str(e)
-            }
-    
-    async def run_load_test(self, models: list, requests_per_model: int = 100, 
-                           concurrent_requests: int = 10):
-        """Run load test across multiple models"""
-        
-        connector = aiohttp.TCPConnector(limit=concurrent_requests)
-        timeout = aiohttp.ClientTimeout(total=30)
-        
-        async with aiohttp.ClientSession(
-            connector=connector, 
-            timeout=timeout
-        ) as session:
-            
-            tasks = []
-            test_id = 0
-            
-            for model in models:
-                for _ in range(requests_per_model):
-                    task = self.single_request(session, model, test_id)
-                    tasks.append(task)
-                    test_id += 1
-            
-            print(f"Starting load test with {len(tasks)} total requests...")
-            start_time = time.time()
-            
-            results = await asyncio.gather(*tasks)
-            
-            end_time = time.time()
-            total_duration = end_time - start_time
-            
-            self.results = results
-            self.analyze_results(total_duration)
-    
-    def analyze_results(self, total_duration: float):
-        """Analyze load test results"""
-        successful_requests = [r for r in self.results if r["success"]]
-        failed_requests = [r for r in self.results if not r["success"]]
-        
-        print(f"\n=== LOAD TEST RESULTS ===")
-        print(f"Total requests: {len(self.results)}")
-        print(f"Successful requests: {len(successful_requests)}")
-        print(f"Failed requests: {len(failed_requests)}")
-        print(f"Success rate: {len(successful_requests)/len(self.results)*100:.2f}%")
-        print(f"Total duration: {total_duration:.2f}s")
-        print(f"Requests per second: {len(self.results)/total_duration:.2f}")
-        
-        if successful_requests:
-            durations = [r["duration"] for r in successful_requests]
-            print(f"\nLatency Statistics:")
-            print(f"Average: {statistics.mean(durations):.2f}s")
-            print(f"Median: {statistics.median(durations):.2f}s")
-            print(f"Min: {min(durations):.2f}s")
-            print(f"Max: {max(durations):.2f}s")
-            print(f"P95: {statistics.quantiles(durations, n=20)[18]:.2f}s")
-            print(f"P99: {statistics.quantiles(durations, n=100)[98]:.2f}s")
-        
-        # Per-model analysis
-        model_stats = {}
-        for result in successful_requests:
-            model = result["model"]
-            if model not in model_stats:
-                model_stats[model] = []
-            model_stats[model].append(result["duration"])
-        
-        print(f"\nPer-Model Statistics:")
-        for model, durations in model_stats.items():
-            print(f"{model}:")
-            print(f"  Requests: {len(durations)}")
-            print(f"  Avg Duration: {statistics.mean(durations):.2f}s")
-            print(f"  P95: {statistics.quantiles(durations, n=20)[18]:.2f}s")
+**Your Models:**
+- ✅ **bedrock/claude-3.7-sonnet** - AWS Bedrock model (bedrock provider)
+- ✅ **vllm/llama-3-1-8b-int8-neuron** - Self-hosted model (openai provider)
+- ✅ **vllm/qwen3-8b-fp8-neuron** - Self-hosted model (openai provider)
 
-# Run load test
-async def main():
-    tester = LoadTester()
-    await tester.run_load_test(
-        models=["gpt-3.5-turbo", "llama2-7b", "balanced-local"],
-        requests_per_model=50,
-        concurrent_requests=20
-    )
+**Key Insight:** Notice how the vLLM models show "openai" as the provider - this is because LiteLLM presents them through an OpenAI-compatible API!
 
-if __name__ == "__main__":
-    asyncio.run(main())
-```
+### Step 4: Monitor Usage & Costs
 
-## Step 5: Deployment and Testing
+Click on **"Usage"** in the left sidebar to see comprehensive analytics:
 
-### Deploy LiteLLM
-```bash
-# Deploy secrets (update with actual API keys)
-kubectl apply -f litellm-secrets.yaml
+![LiteLLM Usage Analytics](/static/images/module-2/litellm-usage-analytics.png)
 
-# Deploy configuration
-kubectl apply -f litellm-config.yaml
+**Usage Metrics Dashboard:**
+- 💰 **Total Spend**: $0.1027 (your actual workshop usage!)
+- 📈 **Total Requests**: 65 requests processed
+- ✅ **Successful Requests**: 63 (96.9% success rate)
+- ❌ **Failed Requests**: 2 (3.1% failure rate)
+- 🔢 **Total Tokens**: 32,484 tokens processed
+- 💵 **Average Cost per Request**: $0.0016
 
-# Deploy LiteLLM gateway
-kubectl apply -f litellm-deployment.yaml
+**What This Tells You:**
+- Your models are performing well with high success rates
+- Cost tracking is automatic and detailed
+- You can monitor spending patterns over time
+- Token usage gives insight into conversation complexity
 
-# Wait for deployment
-kubectl wait --for=condition=ready pod -l app=litellm-gateway -n genai-platform --timeout=300s
+::alert[**Cost Tracking Note**: The cost metrics shown here are primarily for Bedrock models. We did not configure cost visibility for locally hosted models (vLLM) in this workshop setup, as they don't have direct per-token pricing like managed services.]{type="info"}
 
-# Check deployment
-kubectl get pods -l app=litellm-gateway -n genai-platform
-kubectl logs deployment/litellm-gateway -n genai-platform
-```
+### Step 5: Test Models Directly
 
-### Test Gateway
-```bash
-# Port forward for testing
-kubectl port-forward svc/litellm-service 4000:4000 -n genai-platform
+Click on **"Test Key"** to access the interactive testing interface:
 
-# Test health endpoint
-curl http://localhost:4000/health
+![LiteLLM Test Interface](/static/images/module-2/litellm-test-interface.png)
 
-# Test completion endpoint
-curl -X POST http://localhost:4000/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer sk-1234" \
-  -d '{
-    "model": "gpt-3.5-turbo",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "max_tokens": 50
-  }'
+**Testing Features:**
+- 🎯 **Model Selection**: Dropdown showing "bedrock/claude-3.7-s..." selected
+- 💬 **Chat Interface**: Real conversation with the selected model
+- 🔧 **Configuration Options**: API Key Source, Endpoint Type, Tags, MCP Tools
+- 📝 **Sample Conversation**: Shows a question about dragon etymology with detailed response
 
-# Test model listing
-curl http://localhost:4000/models \
-  -H "Authorization: Bearer sk-1234"
-```
+**Try This:**
+1. **Select different models** from the dropdown (try switching between Bedrock and vLLM models)
+2. **Ask a question** like "Explain Kubernetes in simple terms"
+3. **Compare responses** from different models
 
-## Best Practices
+### Step 6: Connect to Your Workshop Experience
 
-1. **API Key Management**: Use Kubernetes secrets for API keys
-2. **Rate Limiting**: Configure appropriate rate limits for different users
-3. **Monitoring**: Set up comprehensive monitoring and alerting
-4. **Caching**: Enable response caching for frequently used prompts
-5. **Cost Control**: Implement spend limits and usage tracking
-6. **Security**: Use proper authentication and authorization
+Now that you've explored the LiteLLM interface:
+
+1. **Go back to OpenWebUI** in another tab
+2. **Send some messages** to different models
+3. **Return to LiteLLM Usage page** and refresh
+4. **Watch your metrics update** - you'll see new requests, token usage, and costs appear!
+
+**Real-Time Monitoring:** Every interaction you have in OpenWebUI flows through this LiteLLM interface, and you can see the metrics update in real-time.
+
+This gives you visibility into how your AI gateway is performing and being used!
+
+## 🚀 Hands-On: Add a New Bedrock Model to LiteLLM
+
+Now let's add a new Bedrock model to LiteLLM! We'll add GPT-OSS-20B, a recently released model that you already have access to.
+
+### Step 1: Discover Available GPT-OSS Models
+
+First, let's see what GPT-OSS models are available in Bedrock:
+
+:::code{language=bash showCopyAction=true}
+# Check available Bedrock models you have access to
+aws bedrock list-foundation-models --query "modelSummaries[?contains(modelId, 'gpt-oss')].{ModelId:modelId,ModelName:modelName}" --output table
+:::
+
+**You should see:**
+
+:::code{language=yaml showCopyAction=false}
+---------------------------------------------
+|           ListFoundationModels            |
++--------------------------+----------------+
+|          ModelId         |   ModelName    |
++--------------------------+----------------+
+|  openai.gpt-oss-120b-1:0 |  gpt-oss-120b  |
+|  openai.gpt-oss-20b-1:0  |  gpt-oss-20b   |
++--------------------------+----------------+
+:::
+
+We'll add the **gpt-oss-20b** model (ModelId: `openai.gpt-oss-20b-1:0`).
+
+### Step 2: Check Current LiteLLM Configuration
+
+Let's see what Bedrock models are currently configured in LiteLLM:
+
+:::code{language=bash showCopyAction=true}
+# See current Bedrock models in LiteLLM
+grep -A 3 -B 1 "model_name.*bedrock" /workshop/components/ai-gateway/litellm/values.rendered.yaml
+:::
+
+You'll notice that GPT-OSS-20B is not currently configured.
+
+### Step 3: Add GPT-OSS-20B to the Configuration
+
+Now let's add the new model directly to the configuration file:
+
+:::code{language=bash showCopyAction=true}
+# Open our Values yaml file:
+code /workshop/components/ai-gateway/litellm/values.rendered.yaml 
+:::
+
+**Add this YAML configuration** to the Bedrock models section in `values.rendered.yaml`:
+
+:::code{language=yaml showCopyAction=true}
+    - model_name: bedrock/gpt-oss-20b
+      litellm_params:
+        model: bedrock/openai.gpt-oss-20b-1:0
+        aws_region_name: us-west-2
+:::
+
+Should look like this:
+![Add GPT to values](/static/images/module-2/value-rendered.png)
+
+### Step 4: Apply the Configuration Changes
+
+After adding the model to the configuration file, apply the changes:
+
+:::code{language=bash showCopyAction=true}
+# Apply the updated configuration
+helm upgrade litellm oci://ghcr.io/berriai/litellm-helm \
+  --namespace litellm \
+  -f /workshop/components/ai-gateway/litellm/values.rendered.yaml
+
+# Wait for the deployment to complete
+kubectl rollout status deployment/litellm -n litellm
+:::
+
+### Step 5: Verify the Model is Available
+
+Once rollout has been completed, check that it has been added to LiteLLM, by going back to the **Models + Endpoints** page:
+![New Model](/static/images/module-2/new-model.png)
+
+Should see **bedrock/gpt-oss-20b** amongst the models.
+
+### Step 6: Test in OpenWebUI
+
+1. **Go back to OpenWebUI**
+2. **Check the model dropdown** - you should see "bedrock/gpt-oss-20b"
+3. **Select GPT-OSS-20B** and send a test message
+4. **Compare its responses** with other models
+
+![snake](/static/images/module-2/snake.png)
+
+
+::alert[**Production Note**: In production environments, you'd typically use the automated integration system we explored earlier. This manual approach is useful for understanding the underlying configuration and for one-off model additions.]{type="success"}
+
+
+## Key Benefits You've Experienced
+
+Through your hands-on exploration, you've experienced the power of a unified AI gateway:
+
+✅ **Seamless Model Switching**: Switch between any model without changing your application
+
+✅ **Automatic Discovery**: New models appear automatically when deployed or configured
+
+✅ **Built-in Observability**: Every request is tracked in Langfuse without additional setup
+
+✅ **Load Balancing**: Requests distributed across available model replicas
+
+✅ **Fallback Support**: Automatic failover if a model becomes unavailable
+
+✅ **Dynamic Configuration**: Add new models through configuration updates, not code changes
+
+✅ **Production-Ready**: Enterprise features like authentication, caching, and persistence
+
+✅ **Zero-Downtime Updates**: Add models without service interruption
 
 ## What's Next?
 
-Congratulations! You've completed Module 2. You now have a complete GenAI platform with:
-- Core infrastructure components
-- Comprehensive observability with LangFuse
-- Unified API gateway with LiteLLM
+You've now mastered LiteLLM as your unified AI gateway! You've seen how it:
+- Automatically discovers and integrates models
+- Provides a single API for all your AI services
+- Enables easy model management and monitoring
 
-Ready to build GenAI applications? Continue with [Module 3: GenAI Applications](/module3-genai-applications/). 
+Next, let's explore Langfuse - the observability platform that's been silently tracking every one of your interactions, providing insights into performance, costs, and usage patterns!
+
+---
+
+**[Next: Langfuse - Observability Platform →](../observability/)**

@@ -1,627 +1,456 @@
 ---
-title: "Observability with LangFuse"
-weight: 32
-duration: "45 minutes"
+title: "Langfuse - LLM Observability"
+weight: 2
 ---
 
-# Observability with LangFuse
+Remember all those conversations you had with vLLM and Bedrock models? Langfuse has been quietly tracking every single interaction - capturing prompts, responses, performance metrics, and costs. Let's explore the treasure trove of data it's collected about your AI usage!
 
-In this section, you'll integrate LangFuse for comprehensive observability and tracing of your GenAI applications.
+## 🛠️ Hands-On: See Your AI Interactions Tracked
 
-## What is LangFuse?
+Let's discover what Langfuse has been learning about your AI usage:
 
-LangFuse is an open-source observability platform specifically designed for LLM applications. It provides:
+### Step 1: Explore Your Observability Stack
 
-- **Tracing**: End-to-end visibility into LLM calls and agent workflows
-- **Monitoring**: Performance metrics, latency, and error tracking
-- **Analytics**: Token usage, cost tracking, and quality metrics
-- **Debugging**: Detailed logs and request/response inspection
+:::code{language=bash showCopyAction=true}
+# See the complete observability stack
+kubectl get all -n langfuse
+:::
 
-## LangFuse Architecture
+You should see a comprehensive observability platform:
+- **langfuse-clickhouse-0**: Analytics database for performance data
+- **langfuse-postgresql-0**: Database for trace metadata
+- **langfuse-redis-master-0**: Caching layer
+- **langfuse-s3-xxx**: Object storage for large data
+- **langfuse-web-xxx**: Main Langfuse application
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Application   │───▶│   LangFuse      │───▶│   PostgreSQL    │
-│   (Agents)      │    │   Server        │    │   Database      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   LangFuse      │
-                       │   Web UI        │
-                       └─────────────────┘
-```
+### Step 2: Explore the Real Configuration
 
-## Step 1: Deploy LangFuse
+In your VSC IDE, let's examine the actual configuration:
 
-### LangFuse Server Configuration
-```yaml
-# langfuse-deployment.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: langfuse-config
-  namespace: genai-platform
-data:
-  DATABASE_URL: "postgresql://genai_user:genai_password@postgres-service:5432/genai_platform"
-  NEXTAUTH_URL: "http://localhost:3000"
-  NEXTAUTH_SECRET: "your-secret-key-here"
-  SALT: "your-salt-here"
-  ENCRYPTION_KEY: "your-encryption-key-here"
+:::code{language=bash showCopyAction=true}
+# Look at the actual Langfuse Helm values
+cat /workshop/components/o11y/langfuse/values.template.yaml
+
+# See the complete stack configuration
+grep -A 5 "postgresql:\|clickhouse:\|redis:" /workshop/components/o11y/langfuse/values.template.yaml
+:::
+
+Notice how Langfuse is pre-configured with your project settings and automatically initialized!
+
+## What is Langfuse?
+
+Langfuse is an open-source LLM observability platform that provides:
+
+- 📊 **Comprehensive Tracing**: Every LLM interaction captured with full context
+- 💰 **Cost Tracking**: Token usage and costs across all models
+- ⚡ **Performance Analytics**: Latency, throughput, and quality metrics
+- 🔍 **Debugging Tools**: Detailed request/response inspection
+- 📈 **Usage Analytics**: Patterns, trends, and optimization insights
+- 🏗️ **Multi-Database Architecture**: PostgreSQL + ClickHouse + Redis for scale
+
+## How Langfuse is Deployed
+
+Our Langfuse deployment uses the [official Langfuse Helm Chart](https://langfuse.com/self-hosting/deployment/kubernetes-helm) with a comprehensive observability stack. The full values.template.yaml file can be found at `/workshop/components/o11y/langfuse/values.template.yaml`. Here's how each section of the Helm configuration works:
+
+:::::tabs
+
+::::tab{label="Resources & Architecture"}
+**Main Application Resources**
+
+Langfuse requires adequate resources for processing and analyzing LLM traces:
+
+:::code{language=yaml showCopyAction=true}
+langfuse:
+  resources:
+    requests:
+      cpu: 1 
+      memory: 2Gi
+    limits:
+      memory: 2Gi
+:::
+
+**Multi-Database Architecture**
+
+Langfuse uses a sophisticated multi-database setup for optimal performance:
+
+:::code{language=yaml showCopyAction=true}
+postgresql:  # Metadata and user data
+  auth:
+    username: admin
+    password: password123
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+
+clickhouse:  # Analytics and time-series data
+  auth:
+    password: password123
+  resources:
+    requests:
+      cpu: 1    
+      memory: 3Gi
+
+redis:  # Caching and sessions
+  auth:
+    password: password123
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+
+s3:  # Object storage for large traces
+  auth:
+    rootPassword: password123
+  resources:
+    requests:
+      cpu: 250m    
+      memory: 256Mi
+:::
+
+**Why This Architecture:**
+- **PostgreSQL**: Fast queries for recent traces and user management
+- **ClickHouse**: Optimized for analytics and large-scale aggregations
+- **Redis**: High-speed caching for UI responsiveness
+- **S3**: Cost-effective storage for historical trace data
+::::
+
+::::tab{label="Authentication & Initialization"}
+**Automatic Project Setup**
+
+Langfuse is pre-configured with your workshop project and user account:
+
+:::code{language=yaml showCopyAction=true}
+langfuse:
+  additionalEnv:
+    - name: LANGFUSE_INIT_ORG_ID
+      value: my-org
+    - name: LANGFUSE_INIT_PROJECT_ID
+      value: my-project
+    - name: LANGFUSE_INIT_PROJECT_PUBLIC_KEY
+      value: {{{LANGFUSE_PUBLIC_KEY}}}
+    - name: LANGFUSE_INIT_PROJECT_SECRET_KEY
+      value: {{{LANGFUSE_SECRET_KEY}}}
+    - name: LANGFUSE_INIT_USER_EMAIL
+      value: {{{LANGFUSE_USERNAME}}}
+    - name: LANGFUSE_INIT_USER_PASSWORD
+      value: {{{LANGFUSE_PASSWORD}}}
+:::
+
+**Initialization Features:**
+- **Organization**: Automatically creates "my-org" organization
+- **Project**: Sets up "my-project" with API keys
+- **User Account**: Creates admin user with workshop credentials
+- **API Keys**: Generates keys for LiteLLM integration
+- **Zero Setup**: Everything ready to use immediately
+::::
+
+::::tab{label="Security Configuration"}
+**Authentication & Security**
+
+Langfuse security configuration:
+
+:::code{language=yaml showCopyAction=true}
+langfuse:
+  salt:
+    value: salt
+  nextauth:
+    secret:
+      value: secret
+:::
+
+**Database Security**
+
+All databases are configured with authentication:
+
+:::code{language=yaml showCopyAction=true}
+postgresql:
+  auth:
+    username: admin
+    password: password123
+
+clickhouse:
+  auth:
+    password: password123
+
+redis:
+  auth:
+    password: password123
+
+s3:
+  auth:
+    rootPassword: password123
+:::
+
+**Security Features:**
+- **Password Protection**: All database components secured
+- **NextAuth Integration**: Secure session management
+- **Salt Configuration**: Password hashing security
+- **API Key Management**: Secure key generation and storage
+::::
+
+::::tab{label="Networking & Ingress"}
+**Load Balancer Configuration**
+
+Langfuse uses AWS Application Load Balancer for external access:
+
+:::code{language=yaml showCopyAction=true}
+langfuse:
+  ingress:
+    enabled: true
+    annotations:
+      alb.ingress.kubernetes.io/target-type: ip
+      {{#if DOMAIN}}
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      {{/if}}
+    hosts:
+      - paths:
+          - path: /
+            pathType: Prefix
+        {{#if DOMAIN}}
+        host: langfuse.{{{DOMAIN}}}
+        {{/if}}
+:::
+
+**Networking Features:**
+- **ALB Integration**: Uses AWS Application Load Balancer
+- **IP Target Type**: Direct pod networking for better performance
+- **Conditional HTTPS**: HTTPS enabled when domain is configured
+- **Path-Based Routing**: All traffic routed to Langfuse web interface
+- **Dynamic Configuration**: Adapts based on domain availability
+::::
+
+::::tab{label="Deployment Commands"}
+**Helm Deployment Process**
+
+::alert[**⚠️ WARNING**: These commands have already been executed in your workshop environment. **DO NOT run these commands** as they will interfere with your existing setup.]{type="warning"}
+
+The Langfuse deployment uses these Helm commands:
+
+:::code{language=bash showCopyAction=true}
+# Add the Langfuse Helm repository
+helm repo add langfuse https://langfuse.github.io/langfuse-k8s
+helm repo update
+
+# Deploy Langfuse with custom values
+helm upgrade --install langfuse langfuse/langfuse \
+  --namespace langfuse \
+  --create-namespace \
+  -f values.rendered.yaml
+
+# Check deployment status
+kubectl rollout status deployment/langfuse-web -n langfuse
+:::
+
+**Deployment Process:**
+1. **Template Rendering**: `values.template.yaml` → `values.rendered.yaml`
+2. **Helm Installation**: Chart deployed with rendered values
+3. **Database Initialization**: PostgreSQL, ClickHouse, Redis, S3 setup
+4. **Project Setup**: Organization and project automatically created
+5. **Integration Ready**: API keys configured for LiteLLM connection
+
+**What Happens During Deployment:**
+- Multi-database stack deployed (PostgreSQL, ClickHouse, Redis, S3)
+- Langfuse web application started
+- Organization and project automatically initialized
+- User account created with workshop credentials
+- Ingress/LoadBalancer exposes the service
+- LiteLLM integration configured automatically
+::::
+
+:::::
+
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: langfuse-server
-  namespace: genai-platform
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: langfuse-server
-  template:
-    metadata:
-      labels:
-        app: langfuse-server
-    spec:
-      containers:
-      - name: langfuse
-        image: langfuse/langfuse:latest
-        ports:
-        - containerPort: 3000
-        envFrom:
-        - configMapRef:
-            name: langfuse-config
-        resources:
-          requests:
-            cpu: 500m
-            memory: 1Gi
-          limits:
-            cpu: 1000m
-            memory: 2Gi
-        livenessProbe:
-          httpGet:
-            path: /api/public/health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /api/public/health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+
+
+
+## 🎯 Explore Langfuse Interface
+
+Let's explore the Langfuse observability interface to see your AI interactions, metrics, and detailed traces:
+
+### Step 1: Access Langfuse
+
+Get the URL for your Langfuse instance:
+
+:::code{language=bash showCopyAction=true}
+# Get Langfuse URL
+echo "Langfuse URL: http://$(kubectl get ingress -n langfuse langfuse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+:::
+
+Open the URL in your browser. You'll see the Langfuse login page:
+
+![Langfuse Login Page](/static/images/module-2/langfuse-login.png)
+
+**Login Process:**
+- **Email**: `admin@example.com`
+- **Password**: `Pass@123`
+- **Click "Sign in"** to access the interface
+
+### Step 2: Navigate to Your Project
+
+After logging in, you'll see the organizations page:
+
+![Langfuse Project Selection](/static/images/module-2/go-to-project.png)
+
+**What to do:**
+- **Click "Go to project"** button for the "Provisioned Project"
+- This takes you to your workshop project with all your AI interaction data
+
+### Step 3: Explore Your AI Usage Dashboard
+
+You'll now see the main Langfuse dashboard with comprehensive analytics:
+
+![Langfuse Main Dashboard](/static/images/module-2/langfuse.png)
+
+**Key Metrics You'll See:**
+- 📊 **71 Total traces tracked** - Every AI interaction from your workshop
+- 💰 **$0.10957 Total cost** - Your actual workshop spending
+- 🔍 **Model Breakdown**:
+  - `us.anthropic.claude-3-7-sonnet`: 20.63K tokens, $0.106486
+  - `openai.gpt-oss-20b-1:0`: 7.52K tokens, $0.001084  
+  - `llama-3-1-8b-int8-neuron`: 12.86K tokens, $0 (self-hosted)
+- 📈 **Usage Timeline**: Chart showing your interaction patterns over time
+
+**What This Tells You:**
+- Most of your cost comes from Claude 3.7 Sonnet
+- GPT-OSS-20B is very cost-effective
+- Self-hosted models have no per-token costs
+- Your usage has clear patterns over time
+
+### Step 4: Browse Your Traces
+
+Click on **"Tracing"** in the left sidebar to see all your interactions:
+
+![Langfuse Traces List](/static/images/module-2/traces.png)
+
+**What you're seeing:**
+- 📋 **Complete trace history** - Every AI conversation you've had
+- 🕐 **Timestamps** - When each interaction occurred
+- 💬 **Input/Output preview** - Snippets of your conversations
+- 🔍 **Search and filter** capabilities for finding specific interactions
+
+**Your Actual Conversations:**
+You can see traces of questions like:
+- "Did snakes or sea snakes come first?"
+- "Where did the word dragon come from?"
+- "Generate 1-3 broad tags..."
+
+### Step 5: Examine Individual Traces
+
+Click on any trace to see detailed information:
+
+![Individual Trace View](/static/images/module-2/trace.png)
+
+**Trace Details:**
+- 🎯 **Trace ID**: Unique identifier for this interaction
+- ⏱️ **Latency**: 5.91s response time
+- 💰 **Total Cost**: $0.000459 for this specific interaction
+- 🔢 **Token Usage**: 63 input → 1,514 output tokens (1,577 total)
+- 💬 **Full Conversation**: Complete user question and AI response
+
+**Click the expand button** (orange icon in top right) to see more details.
+
+### Step 6: Deep Dive into Trace Analytics
+
+The expanded view shows comprehensive trace information:
+
+![Detailed Trace Analysis](/static/images/module-2/specific-trace.png)
+
+**Advanced Metrics:**
+- 📊 **Performance Details**: Environment, latency breakdown
+- 💰 **Cost Analysis**: Exact cost calculation
+- 🔢 **Token Breakdown**: Input vs output token usage
+- 📝 **Full Context**: Complete conversation with formatting
+
+### Step 7: Analyze Generation Details
+
+Click on the generation section to see the deepest level of detail:
+
+![Generation Details](/static/images/module-2/generation.png)
+
+**Generation Analytics:**
+- ⚡ **Latency**: 5.91s total, 5.90s time to first token
+- 🎯 **Model**: openai.gpt-oss-20b-1:0 (the exact model used)
+- 💰 **Cost**: $0.000459 for this generation
+- 🔢 **Tokens**: 63 prompt → 1,514 completion tokens
+- 📊 **Additional Parameters**: Stream settings, region, retry configuration
+
+**What You Learn:**
+- Exact model performance characteristics
+- Cost breakdown per interaction
+- Token efficiency patterns
+- Response quality and speed trade-offs
+
+### Step 8: Watch New Traces Appear
+
+Now go back to your OpenWebUI tab and send a message to any model. Watch the trace appear in Langfuse in real-time!
+
+### Step 9: Advanced Features
+
+Langfuse also supports advanced evaluation capabilities like:
+
+**LLM-as-a-Judge**: Langfuse can automatically evaluate response quality using AI models as judges. This powerful feature allows you to:
+
+- 🎯 **Automated Scoring**: Let AI models rate response quality, accuracy, and helpfulness
+- 📊 **Consistency Evaluation**: Compare responses across different models objectively
+- 📈 **Quality Benchmarking**: Track improvement over time with standardized metrics
+- 🔄 **Continuous Evaluation**: Automatically assess every interaction for quality patterns
+
+**Use Cases:**
+- **Model Comparison**: Which model gives better responses for specific tasks?
+- **Prompt Optimization**: Which prompts generate higher-quality responses?
+- **Quality Monitoring**: Detect when model performance degrades
+- **A/B Testing**: Compare different model configurations objectively
+
+[Learn more about LLM-as-a-Judge →](https://langfuse.com/docs/evaluation/evaluation-methods/llm-as-a-judge)
+
+
+## How Langfuse Powers Your Insights
+
+Here's what happens every time you send a message:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant OpenWebUI
+    participant LiteLLM
+    participant Model
+    participant Langfuse
+    
+    User->>OpenWebUI: Send message
+    OpenWebUI->>LiteLLM: API request
+    LiteLLM->>Model: Route to model
+    LiteLLM->>Langfuse: Start trace
+    Model-->>LiteLLM: Response
+    LiteLLM->>Langfuse: Complete trace with metrics
+    LiteLLM-->>OpenWebUI: Response
+    OpenWebUI-->>User: Display response
+    
+    Note over Langfuse: Stores: prompt, response,<br/>tokens, cost, latency
+```
+
+
+## Key Insights You Can Discover
+
+✅ **Model Performance**: Compare response times between your models
+
+✅ **Cost Analysis**: See exactly how much each interaction cost
+
+✅ **Usage Patterns**: Understand your AI interaction habits
+
+✅ **Quality Tracking**: Identify which models gave better responses
+
+✅ **Token Efficiency**: See which prompts were most effective
+
+
+## What's Next?
+
+Now that you've explored both LiteLLM (your API gateway) and Langfuse (your observability platform), you have a complete GenAI platform running on EKS! 
+
+In the next module, we'll use this platform foundation to build sophisticated AI applications with agents, memory, and advanced reasoning capabilities.
+
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: langfuse-service
-  namespace: genai-platform
-spec:
-  selector:
-    app: langfuse-server
-  ports:
-  - port: 3000
-    targetPort: 3000
-```
 
-### Deploy LangFuse
-```bash
-# Deploy LangFuse
-kubectl apply -f langfuse-deployment.yaml
-
-# Wait for deployment
-kubectl wait --for=condition=ready pod -l app=langfuse-server -n genai-platform --timeout=300s
-
-# Check deployment
-kubectl get pods -l app=langfuse-server -n genai-platform
-kubectl logs deployment/langfuse-server -n genai-platform
-```
-
-## Step 2: Configure LangFuse Integration
-
-### Python SDK Integration
-```python
-# langfuse_client.py
-import os
-from langfuse import Langfuse
-from langfuse.decorators import observe
-from langfuse.openai import openai
-import asyncio
-from typing import Dict, Any
-
-class LangFuseClient:
-    def __init__(self):
-        self.langfuse = Langfuse(
-            host=os.getenv("LANGFUSE_HOST", "http://langfuse-service:3000"),
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY")
-        )
-    
-    @observe(as_type="generation")
-    def llm_call(self, prompt: str, model: str, **kwargs) -> Dict[str, Any]:
-        """Traced LLM call with automatic observability"""
-        
-        # This will be automatically traced by LangFuse
-        response = openai.Completion.create(
-            model=model,
-            prompt=prompt,
-            **kwargs
-        )
-        
-        return {
-            "response": response.choices[0].text,
-            "model": model,
-            "usage": response.usage._asdict(),
-            "prompt": prompt
-        }
-    
-    @observe(as_type="span")
-    def agent_workflow(self, task: str, agent_id: str) -> Dict[str, Any]:
-        """Traced agent workflow execution"""
-        
-        # Simulate agent workflow steps
-        with self.langfuse.trace(name="agent_workflow", user_id=agent_id) as trace:
-            # Step 1: Planning
-            with trace.span(name="planning") as planning_span:
-                planning_span.update(input={"task": task})
-                plan = self.llm_call(
-                    prompt=f"Create a plan for: {task}",
-                    model="gpt-3.5-turbo",
-                    max_tokens=200
-                )
-                planning_span.update(output=plan)
-            
-            # Step 2: Execution
-            with trace.span(name="execution") as execution_span:
-                execution_span.update(input={"plan": plan})
-                result = self.llm_call(
-                    prompt=f"Execute this plan: {plan['response']}",
-                    model="gpt-3.5-turbo",
-                    max_tokens=500
-                )
-                execution_span.update(output=result)
-            
-            # Step 3: Validation
-            with trace.span(name="validation") as validation_span:
-                validation_span.update(input={"result": result})
-                validation = self.llm_call(
-                    prompt=f"Validate this result: {result['response']}",
-                    model="gpt-3.5-turbo",
-                    max_tokens=100
-                )
-                validation_span.update(output=validation)
-            
-            trace.update(
-                output={"final_result": result, "validation": validation},
-                metadata={"agent_id": agent_id, "task_type": "general"}
-            )
-        
-        return {
-            "result": result,
-            "validation": validation,
-            "trace_id": trace.id
-        }
-    
-    def create_custom_trace(self, name: str, user_id: str = None) -> Any:
-        """Create custom trace for complex workflows"""
-        return self.langfuse.trace(name=name, user_id=user_id)
-    
-    def log_event(self, name: str, data: Dict[str, Any], level: str = "INFO"):
-        """Log custom events"""
-        self.langfuse.event(
-            name=name,
-            level=level,
-            data=data
-        )
-    
-    def flush(self):
-        """Ensure all traces are sent"""
-        self.langfuse.flush()
-
-# Usage example
-client = LangFuseClient()
-```
-
-### LangChain Integration
-```python
-# langchain_integration.py
-from langchain.llms import OpenAI
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langfuse.callback import CallbackHandler
-import os
-
-class TracedLangChain:
-    def __init__(self):
-        self.callback_handler = CallbackHandler(
-            host=os.getenv("LANGFUSE_HOST", "http://langfuse-service:3000"),
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY")
-        )
-    
-    def create_traced_chain(self, template: str, llm_model: str = "gpt-3.5-turbo"):
-        """Create a LangChain with LangFuse tracing"""
-        
-        prompt = PromptTemplate(
-            input_variables=["input"],
-            template=template
-        )
-        
-        llm = OpenAI(
-            model_name=llm_model,
-            callbacks=[self.callback_handler]
-        )
-        
-        return LLMChain(
-            llm=llm,
-            prompt=prompt,
-            callbacks=[self.callback_handler]
-        )
-    
-    def run_traced_chain(self, chain: LLMChain, input_data: str, 
-                        session_id: str = None, user_id: str = None):
-        """Run chain with tracing context"""
-        
-        # Update callback handler with session context
-        self.callback_handler.set_trace_params(
-            session_id=session_id,
-            user_id=user_id
-        )
-        
-        return chain.run(input_data)
-
-# Example usage
-traced_chain = TracedLangChain()
-qa_chain = traced_chain.create_traced_chain(
-    template="Answer the following question: {input}"
-)
-```
-
-## Step 3: Custom Metrics and Analytics
-
-### Metrics Collection
-```python
-# metrics_collector.py
-import time
-from typing import Dict, Any, Optional
-from langfuse import Langfuse
-import json
-
-class MetricsCollector:
-    def __init__(self, langfuse_client: Langfuse):
-        self.langfuse = langfuse_client
-        self.metrics = {}
-    
-    def track_latency(self, operation: str, duration: float, metadata: Dict = None):
-        """Track operation latency"""
-        self.langfuse.event(
-            name="latency_metric",
-            data={
-                "operation": operation,
-                "duration_ms": duration * 1000,
-                "metadata": metadata or {}
-            }
-        )
-    
-    def track_cost(self, model: str, prompt_tokens: int, completion_tokens: int, 
-                   cost_per_token: float = 0.0001):
-        """Track token usage and cost"""
-        total_cost = (prompt_tokens + completion_tokens) * cost_per_token
-        
-        self.langfuse.event(
-            name="cost_metric",
-            data={
-                "model": model,
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": prompt_tokens + completion_tokens,
-                "total_cost": total_cost
-            }
-        )
-    
-    def track_quality_score(self, response_id: str, score: float, 
-                           criteria: str, evaluator: str = "human"):
-        """Track response quality scores"""
-        self.langfuse.score(
-            trace_id=response_id,
-            name=f"quality_{criteria}",
-            value=score,
-            comment=f"Evaluated by {evaluator}"
-        )
-    
-    def track_user_feedback(self, trace_id: str, rating: int, 
-                           comment: str = None):
-        """Track user feedback"""
-        self.langfuse.score(
-            trace_id=trace_id,
-            name="user_satisfaction",
-            value=rating,
-            comment=comment
-        )
-
-# Context manager for automatic timing
-class TimedOperation:
-    def __init__(self, collector: MetricsCollector, operation_name: str, 
-                 metadata: Dict = None):
-        self.collector = collector
-        self.operation_name = operation_name
-        self.metadata = metadata or {}
-        self.start_time = None
-    
-    def __enter__(self):
-        self.start_time = time.time()
-        return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.start_time:
-            duration = time.time() - self.start_time
-            self.collector.track_latency(
-                self.operation_name, 
-                duration, 
-                self.metadata
-            )
-```
-
-## Step 4: Dashboard and Monitoring
-
-### Deploy Monitoring Dashboard
-```yaml
-# monitoring-dashboard.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: dashboard-config
-  namespace: genai-platform
-data:
-  dashboard.py: |
-    import streamlit as st
-    import pandas as pd
-    import plotly.express as px
-    import plotly.graph_objects as go
-    from langfuse import Langfuse
-    import os
-    from datetime import datetime, timedelta
-    
-    # Initialize LangFuse client
-    langfuse = Langfuse(
-        host=os.getenv("LANGFUSE_HOST", "http://langfuse-service:3000"),
-        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-        secret_key=os.getenv("LANGFUSE_SECRET_KEY")
-    )
-    
-    st.title("GenAI Platform Observability Dashboard")
-    
-    # Sidebar for filters
-    st.sidebar.header("Filters")
-    time_range = st.sidebar.selectbox(
-        "Time Range",
-        ["Last Hour", "Last 24 Hours", "Last 7 Days", "Last 30 Days"]
-    )
-    
-    # Convert time range to datetime
-    now = datetime.now()
-    if time_range == "Last Hour":
-        start_time = now - timedelta(hours=1)
-    elif time_range == "Last 24 Hours":
-        start_time = now - timedelta(days=1)
-    elif time_range == "Last 7 Days":
-        start_time = now - timedelta(days=7)
-    else:
-        start_time = now - timedelta(days=30)
-    
-    # Fetch traces
-    traces = langfuse.get_traces(
-        from_timestamp=start_time,
-        to_timestamp=now
-    )
-    
-    # Display metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Traces", len(traces.data))
-    
-    with col2:
-        avg_latency = sum(t.latency for t in traces.data if t.latency) / len(traces.data)
-        st.metric("Avg Latency", f"{avg_latency:.2f}ms")
-    
-    with col3:
-        total_cost = sum(t.cost for t in traces.data if t.cost)
-        st.metric("Total Cost", f"${total_cost:.4f}")
-    
-    with col4:
-        error_rate = len([t for t in traces.data if t.level == "ERROR"]) / len(traces.data)
-        st.metric("Error Rate", f"{error_rate:.2%}")
-    
-    # Latency over time chart
-    st.subheader("Latency Over Time")
-    latency_data = pd.DataFrame([
-        {"timestamp": t.timestamp, "latency": t.latency}
-        for t in traces.data if t.latency
-    ])
-    
-    if not latency_data.empty:
-        fig = px.line(latency_data, x="timestamp", y="latency", 
-                     title="Response Latency Over Time")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Cost breakdown chart
-    st.subheader("Cost Breakdown by Model")
-    cost_data = pd.DataFrame([
-        {"model": t.model, "cost": t.cost}
-        for t in traces.data if t.cost and t.model
-    ])
-    
-    if not cost_data.empty:
-        cost_summary = cost_data.groupby("model")["cost"].sum().reset_index()
-        fig = px.pie(cost_summary, values="cost", names="model", 
-                    title="Cost Distribution by Model")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Recent traces table
-    st.subheader("Recent Traces")
-    recent_traces = traces.data[:10]
-    trace_df = pd.DataFrame([
-        {
-            "Trace ID": t.id,
-            "Name": t.name,
-            "Latency": f"{t.latency:.2f}ms" if t.latency else "N/A",
-            "Cost": f"${t.cost:.4f}" if t.cost else "N/A",
-            "Status": t.level,
-            "Timestamp": t.timestamp
-        }
-        for t in recent_traces
-    ])
-    
-    st.dataframe(trace_df, use_container_width=True)
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: monitoring-dashboard
-  namespace: genai-platform
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: monitoring-dashboard
-  template:
-    metadata:
-      labels:
-        app: monitoring-dashboard
-    spec:
-      containers:
-      - name: dashboard
-        image: python:3.11-slim
-        ports:
-        - containerPort: 8501
-        env:
-        - name: LANGFUSE_HOST
-          value: "http://langfuse-service:3000"
-        - name: LANGFUSE_PUBLIC_KEY
-          valueFrom:
-            secretKeyRef:
-              name: langfuse-secrets
-              key: public_key
-        - name: LANGFUSE_SECRET_KEY
-          valueFrom:
-            secretKeyRef:
-              name: langfuse-secrets
-              key: secret_key
-        command:
-        - sh
-        - -c
-        - |
-          pip install streamlit pandas plotly langfuse
-          streamlit run /config/dashboard.py --server.port=8501 --server.address=0.0.0.0
-        volumeMounts:
-        - name: dashboard-config
-          mountPath: /config
-      volumes:
-      - name: dashboard-config
-        configMap:
-          name: dashboard-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: monitoring-dashboard-service
-  namespace: genai-platform
-spec:
-  selector:
-    app: monitoring-dashboard
-  ports:
-  - port: 8501
-    targetPort: 8501
-```
-
-## Step 5: Lab Exercise
-
-### Create Sample Traced Application
-```python
-# sample_traced_app.py
-import asyncio
-import random
-from langfuse_client import LangFuseClient
-from metrics_collector import MetricsCollector, TimedOperation
-
-async def main():
-    # Initialize clients
-    langfuse_client = LangFuseClient()
-    metrics_collector = MetricsCollector(langfuse_client.langfuse)
-    
-    # Simulate different types of operations
-    operations = [
-        "question_answering",
-        "code_generation",
-        "summarization",
-        "translation",
-        "creative_writing"
-    ]
-    
-    for i in range(50):
-        operation = random.choice(operations)
-        user_id = f"user_{random.randint(1, 10)}"
-        
-        # Simulate traced workflow
-        with TimedOperation(metrics_collector, operation, {"user_id": user_id}):
-            result = langfuse_client.agent_workflow(
-                task=f"Perform {operation} task #{i}",
-                agent_id=f"agent_{random.randint(1, 3)}"
-            )
-            
-            # Simulate cost tracking
-            prompt_tokens = random.randint(50, 200)
-            completion_tokens = random.randint(100, 500)
-            metrics_collector.track_cost(
-                model="gpt-3.5-turbo",
-                prompt_tokens=prompt_tokens,
-                completion_tokens=completion_tokens
-            )
-            
-            # Simulate quality scoring
-            quality_score = random.uniform(0.6, 1.0)
-            metrics_collector.track_quality_score(
-                response_id=result["trace_id"],
-                score=quality_score,
-                criteria="overall_quality"
-            )
-        
-        print(f"Completed operation {i+1}/50: {operation}")
-        await asyncio.sleep(0.1)  # Small delay to avoid overwhelming
-    
-    # Flush all traces
-    langfuse_client.flush()
-    print("All traces sent to LangFuse!")
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### Deploy and Test
-```bash
-# Deploy monitoring dashboard
-kubectl apply -f monitoring-dashboard.yaml
-
-# Run sample traced application
-python3 sample_traced_app.py
-
-# Access LangFuse UI
-kubectl port-forward svc/langfuse-service 3000:3000 -n genai-platform
-
-# Access monitoring dashboard
-kubectl port-forward svc/monitoring-dashboard-service 8501:8501 -n genai-platform
-```
-
-## Best Practices
-
-1. **Structured Tracing**: Use consistent naming conventions for traces and spans
-2. **Metadata Enrichment**: Add relevant metadata to traces for better analysis
-3. **Cost Tracking**: Always track token usage and associated costs
-4. **Performance Monitoring**: Set up alerts for latency and error rate thresholds
-5. **Privacy Considerations**: Be mindful of sensitive data in traces
-
-## Next Steps
-
-With observability in place, you're ready to set up the AI Gateway with [LiteLLM](/module2-genai-components/ai-gateway/). 
+**[Continue to Module 3: Building GenAI Applications →](../../module3-genai-applications/)**
