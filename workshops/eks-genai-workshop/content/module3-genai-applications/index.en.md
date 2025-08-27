@@ -9,5 +9,4 @@ draft: true
 
 So you have seen the platform components in the previous chapter. In this chapter you will build a complete GenAI applications using the platform component that you have just deployed.
 
-The aim for this section is to help you building GenAI applications, fast, with the help of platform components and get ready for production. You will also deploy this application on the EJS GenAI platform.
-
+The aim for this section is to help you building GenAI applications, fast, with the help of platform components and get ready for production. You will also deploy this application on the EKS GenAI platform.
