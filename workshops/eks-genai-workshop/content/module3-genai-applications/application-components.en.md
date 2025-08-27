@@ -15,8 +15,8 @@ You will also deploy the application components onto Amazon EKS using pods for e
 
 Here is the component diagram where black arrows shows the call flow while the red dotted arrows showcase the observability hooks.
 
-![The Big Picture](../../static/images/module-3/gen-ai-on-eks.png)
-*Loan Buddy Application Components*
+<!-- ![The Big Picture](../../static/images/module-3/gen-ai-on-eks.png)
+*Loan Buddy Application Components* -->
 
 ```mermaid
 ---
