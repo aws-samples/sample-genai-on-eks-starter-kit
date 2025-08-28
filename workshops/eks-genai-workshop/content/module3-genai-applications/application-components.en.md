@@ -65,8 +65,9 @@ graph TD
 
 ## Application Components
 
-- The file [`accounting-agent-demo.py`](../../static/code/accounting-agent-demo.py) consists of the agentic workflow prompt, the list of tools to call and the observability integration. Make sure you can identify each part of the agentic application.
-- The files [`mcp-address-validator`](../../static/code/mcp-company-validatior.py) and [`mcp-address-validator`](../../static/code/mcp-company-validatior.py) are the MCP servers. See how they are exposing what they can do via the description of the mcp annotation.
+- The file [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py) consists of the agentic workflow prompt, the list of tools to call and the observability integration. Make sure you can identify each part of the agentic application.
+- The files [`mcp-address-validator`](../../static/code/module3/credit-validation/mcp-address-validator.py) and [`mcp-income-employment-validator`](../../static/code/module3/credit-validation/mcp-income-employment-validator.py) are the MCP servers. See how they are exposing what they can do via the description of the mcp annotation.
+- Since we are using image of a loan application as part of our agentic flow. Adding the full image to every call will cost more in terms of input tokens to the model. So our agent will upload the file to S3 and the [`mcp-image-processor.py`](../../static/code/module3/credit-validation/mcp-image-processor.py) mcp server will download the file and send the image data to LLM to be extracted. Resulting in reducing the overall number of tokens (cost savings) and gives us flexibility to use a different model to extract information from an image.
 - The deployment files where they are deployed to Amazon EKS as pods.
 
 ### Challenge
