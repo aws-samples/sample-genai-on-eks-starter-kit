@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: loan-buddy-agent
+  namespace: workshop
 spec:
   replicas: 1
   selector:
@@ -19,15 +20,17 @@ spec:
         command: ["python", "/app/credit-underwriting-agent.py"]
         env:
         - name: LANGFUSE_URL
-          value: "http://langfuse"
+          value: "http://langfuse-lb-730705963.ap-southeast-2.elb.amazonaws.com"
         - name: LANGFUSE_PUBLIC_KEY
-          value: ""
+          value: "pk-XXXXXXX"
         - name: LANGFUSE_SECRET_KEY  
-          value: ""
+          value: "sk-XXXXXXX"
         - name: GATEWAY_URL
-          value: "http://litellm"  
+          value: "http://llama-cpp-cpu-lb-656392498.ap-southeast-2.elb.amazonaws.com"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: ""  
+          value: "sk-XXXXXXX"
+        - name: S3_BUCKET_NAME
+          value: "your-s3-bucket-name"
         resources:
           requests:
             memory: "8Gi"
@@ -47,6 +50,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mcp-address-validator
+  namespace: workshop
 spec:
   replicas: 1
   selector:
@@ -80,6 +84,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mcp-employment-validator
+  namespace: workshop
 spec:
   replicas: 1
   selector:
@@ -113,6 +118,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mcp-image-processor
+  namespace: workshop
 spec:
   replicas: 1
   selector:
@@ -129,9 +135,11 @@ spec:
         command: ["python", "/app/mcp-image-processor.py"]
         env:
         - name: GATEWAY_URL
-          value: "http://litellm"  
+          value: "http://llama-cpp-cpu-lb-656392498.ap-southeast-2.elb.amazonaws.com"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: ""  
+          value: "sk-XXXXXXX"  
+        - name: S3_BUCKET_NAME
+          value: "your-s3-bucket-name"
 
         resources:
           requests:
