@@ -1,0 +1,38 @@
+# Credit Underwriting System Dependencies
+
+# Core MCP and LangChain dependencies
+langchain-mcp-adapters>=0.1.0
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+
+# MCP Server framework
+mcp>=1.0.0
+
+# Web framework and server
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# HTTP client for testing
+aiohttp>=3.9.0
+
+# Monitoring and tracing
+langfuse>=2.0.0
+
+# Image processing and encoding
+Pillow>=10.0.0
+
+# AWS SDK for S3 operations
+boto3>=1.34.0
+botocore>=1.34.0
+
+# Async context management
+contextlib2>=21.6.0
+
+# Additional utilities
+python-multipart>=0.0.6
+pydantic>=2.0.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0

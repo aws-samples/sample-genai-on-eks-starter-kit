@@ -1,0 +1,12 @@
+# Python libraries and virtual environments
+venv/
+env/
+lib/
+bin/
+include/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
