@@ -80,9 +80,9 @@ model = ChatOpenAI(
 )
 
 # MCP Servers configuration for credit underwriting with image processing
-mcp_address_validator = os.getenv("mcp_address_validator", "http://mcp-address-validator:8000")
-mcp_employment_validator = os.getenv("mcp_employment_validator", "http://mcp-employment-validator:8000")
-mcp_image_processor = os.getenv("mcp_image_processor", "http://mcp-image-processor:8000")
+mcp_address_validator = os.getenv("MCP_ADDRESS_VALIDATOR", "http://mcp-address-validator:8000")
+mcp_employment_validator = os.getenv("MCP_EMPLOYMENT_VALIDATOR", "http://mcp-employment-validator:8000")
+mcp_image_processor = os.getenv("MCP_IMAGE_PROCESSOR", "http://mcp-image-processor:8000")
 
 mcp_servers = {
     "image_processor": {

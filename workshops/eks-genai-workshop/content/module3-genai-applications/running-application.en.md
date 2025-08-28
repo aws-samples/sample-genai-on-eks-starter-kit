@@ -39,9 +39,12 @@ Before calling the application, tail the log from application pod in a separate 
 kubectl logs -f <POD_NAME>
 ```
 
-The [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application. You will use this file to make a call to the agentic application. Use the following command.
+The [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application. You will use this file to make a call to the agentic application. Use the following command to expose the running agentic application on the local port and make a cURL call to start the process.
 
 ```bash
+
+kubectl port-forward svc/loan-buddy-agent 8080:8080 &
+
 curl -X POST -F "file=@../../static/code/module3/credit-validation/example1.png" http://<YOUR APPLICATION URL>/loan
 ```
 
