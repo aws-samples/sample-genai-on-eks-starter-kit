@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Model configuration
-model_key = os.environ.get("LLAMA_VISION_MODEL_KEY", "")
+model_key = os.environ.get("GATEWAY_MODEL_ACCESS_KEY", "")
 api_gateway_url = os.environ.get("GATEWAY_URL", "")
 
 # Initialize Langfuse CallbackHandler for Langchain (tracing) - optional

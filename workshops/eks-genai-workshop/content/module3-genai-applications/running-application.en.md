@@ -13,6 +13,12 @@ From module 2, validate that you can access your AI Gateway and the LangFuse obs
 
 ### Deploy Application Components
 
+We are going to store the application code files in ConfigMaps. First create the configmaps for the application code by running the following scripts. You can see this script at ['create-configmaps.sh'](../../static/code/module3/credit-validation/create-configmaps.sh)
+
+```bash
+./create-configmaps.sh
+```
+
 Using the file ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) to deploy the application components onto the EKS. You can use the following command.
 
 ```bash

@@ -85,7 +85,7 @@ sample_image_id = generate_256_bit_hex_key()
 store_object(credit_app_doc, sample_image_id)
 
 # Model configuration
-model_key = os.environ.get("LLAMA_VISION_MODEL_KEY", "")
+model_key = os.environ.get("GATEWAY_MODEL_ACCESS_KEY", "")
 api_gateway_url = os.environ.get("GATEWAY_URL", "")
 
 # Initialize Langfuse CallbackHandler for Langchain (tracing) - optional
@@ -124,17 +124,21 @@ model = ChatOpenAI(
 )
 
 # MCP Servers configuration for credit underwriting with image processing
+mcp_address_validator = os.getenv("mcp_address_validator", "http://mcp-address-validator:8000")
+mcp_employment_validator = os.getenv("mcp_employment_validator", "http://mcp-employment-validator:8000")
+mcp_image_processor = os.getenv("mcp_image_processor", "http://mcp-image-processor:8000")
+
 mcp_servers = {
     "image_processor": {
-        "url": "http://localhost:8400/sse",  # Image processing server
+        "url": mcp_address_validator + "/sse",  # Image processing server
         "transport": "sse",
     },
     "income_employment_validation_service": {
-        "url": "http://localhost:5200/sse",  # Income and employment validation server
+        "url": mcp_employment_validator + "/sse",  # Income and employment validation server
         "transport": "sse",
     },
     "address_validation_service": {
-        "url": "http://localhost:5300/sse",  # Address validation server
+        "url": mcp_image_processor + "/sse",  # Address validation server
         "transport": "sse",
     }
 }

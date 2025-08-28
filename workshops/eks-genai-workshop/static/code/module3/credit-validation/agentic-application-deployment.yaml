@@ -1,0 +1,149 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-buddy-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-buddy-agent
+  template:
+    metadata:
+      labels:
+        app: loan-buddy-agent
+    spec:
+      containers:
+      - name: loan-buddy-agent
+        image: python:3.12-slim
+        command: ["python", "/app/credit-underwriting-agent.py"]
+        env:
+        - name: LANGFUSE_URL
+          value: "http://langfuse"
+        - name: LANGFUSE_PUBLIC_KEY
+          value: ""
+        - name: LANGFUSE_SECRET_KEY  
+          value: ""
+        - name: GATEWAY_URL
+          value: "http://litellm"  
+        - name: GATEWAY_MODEL_ACCESS_KEY
+          value: ""  
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "1"
+          limits:
+            memory: "16Gi"
+            cpu: "2"
+        volumeMounts:
+        - name: script-volume
+          mountPath: /app
+      volumes:
+      - name: script-volume
+        configMap:
+          name: loan-buddy-agent
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-address-validator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-address-validator
+  template:
+    metadata:
+      labels:
+        app: mcp-address-validator
+    spec:
+      containers:
+      - name: mcp-address-validator
+        image: python:3.12-slim
+        command: ["python", "/app/mcp-address-validator.py"]
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "1"
+          limits:
+            memory: "16Gi"
+            cpu: "2"
+        volumeMounts:
+        - name: script-volume
+          mountPath: /app
+      volumes:
+      - name: script-volume
+        configMap:
+          name: mcp-address-validator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-employment-validator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-employment-validator
+  template:
+    metadata:
+      labels:
+        app: mcp-employment-validator
+    spec:
+      containers:
+      - name: mcp-employment-validator
+        image: python:3.12-slim
+        command: ["python", "/app/mcp-income-employment-validator.py"]
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "1"
+          limits:
+            memory: "16Gi"
+            cpu: "2"
+        volumeMounts:
+        - name: script-volume
+          mountPath: /app
+      volumes:
+      - name: script-volume
+        configMap:
+          name: mcp-employment-validator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-image-processor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-image-processor
+  template:
+    metadata:
+      labels:
+        app: mcp-image-processor
+    spec:
+      containers:
+      - name: mcp-image-processor
+        image: python:3.12-slim
+        command: ["python", "/app/mcp-image-processor.py"]
+        env:
+        - name: GATEWAY_URL
+          value: "http://litellm"  
+        - name: GATEWAY_MODEL_ACCESS_KEY
+          value: ""  
+
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "1"
+          limits:
+            memory: "16Gi"
+            cpu: "2"
+        volumeMounts:
+        - name: script-volume
+          mountPath: /app
+      volumes:
+      - name: script-volume
+        configMap:
+          name: mcp-image-processor
