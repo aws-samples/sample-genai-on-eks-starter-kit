@@ -31,6 +31,12 @@ spec:
           value: "sk-XXXXXXX"
         - name: S3_BUCKET_NAME
           value: "your-s3-bucket-name"
+        - name: MCP_ADDRESS_VALIDATOR
+          value: "http://mcp-address-validator:8000"
+        - name: MCP_EMPLOYMENT_VALIDATOR
+          value: "http://mcp-employment-validator:8000"
+        - name: MCP_IMAGE_PROCESSOR
+          value: "http://mcp-image-processor:8000"
         resources:
           requests:
             memory: "8Gi"
@@ -68,7 +74,7 @@ spec:
         resources:
           requests:
             memory: "8Gi"
-            cpu: "1"
+            cpu: "500m"
           limits:
             memory: "16Gi"
             cpu: "2"
@@ -102,7 +108,7 @@ spec:
         resources:
           requests:
             memory: "8Gi"
-            cpu: "1"
+            cpu: "500m"
           limits:
             memory: "16Gi"
             cpu: "2"
@@ -144,7 +150,7 @@ spec:
         resources:
           requests:
             memory: "8Gi"
-            cpu: "1"
+            cpu: "500m"
           limits:
             memory: "16Gi"
             cpu: "2"
