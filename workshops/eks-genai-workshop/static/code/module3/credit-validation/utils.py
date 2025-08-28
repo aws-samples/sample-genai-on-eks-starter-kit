@@ -4,6 +4,10 @@ import os
 import json
 from botocore.exceptions import ClientError
 from typing import Optional, Dict, Any, Union
+from PIL import Image
+import io
+import base64
+import secrets
 
 bucket_name = os.getenv('S3_BUCKET_NAME', '')
 
@@ -146,3 +150,97 @@ def load_image_bytes(object_key: str) -> Optional[bytes]:
     except Exception as e:
         logger.error(f"Unexpected error loading image bytes from S3: {e}")
         return None
+
+
+
+def encode_image_from_bytes(image_bytes: bytes) -> str:
+    """
+    Encode image bytes to base64 string
+    
+    Args:
+        image_bytes: Raw image bytes
+        
+    Returns:
+        str: Base64 encoded image string
+    """
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
+        if image.mode in ('RGBA', 'LA'):
+            # Create a white background
+            background = Image.new('RGB', image.size, (255, 255, 255))
+            # Paste the image on the white background
+            if image.mode == 'RGBA':
+                background.paste(image, mask=image.split()[-1])  # Use alpha channel as mask
+            else:
+                background.paste(image)
+            image = background
+        elif image.mode not in ('RGB', 'L'):
+            # Convert other modes to RGB
+            image = image.convert('RGB')
+        
+        # Resize image for better processing
+        image = image.resize((2400, 1600), Image.Resampling.LANCZOS)
+        
+        # Save to bytes buffer
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG")
+        buffer.seek(0)
+        
+        # Convert to base64
+        return base64.b64encode(buffer.read()).decode("utf-8")
+    except Exception as e:
+        logger.error(f"Error encoding image from bytes: {e}")
+        raise
+    
+    
+def generate_256_bit_hex_key():
+    """
+    Generates a cryptographically strong 256-bit random key 
+    and returns it as a hexadecimal string.
+    """
+    # 256 bits is 32 bytes (256 / 8 = 32)
+    key_bytes = secrets.token_bytes(32)
+    # Convert bytes to a hexadecimal string
+    key_hex = key_bytes.hex()
+    return key_hex    
+
+
+
+def encode_image(image_source):
+    """Encode image to base64 string"""
+    if isinstance(image_source, bytes):
+        image = Image.open(io.BytesIO(image_source))
+    elif isinstance(image_source, str):
+        # File path
+        with open(image_source, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8")
+    else:
+        image = Image.open(image_source)
+    
+    # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
+    if image.mode in ('RGBA', 'LA'):
+        # Create a white background
+        background = Image.new('RGB', image.size, (255, 255, 255))
+        # Paste the image on the white background
+        if image.mode == 'RGBA':
+            background.paste(image, mask=image.split()[-1])  # Use alpha channel as mask
+        else:
+            background.paste(image)
+        image = background
+    elif image.mode not in ('RGB', 'L'):
+        # Convert other modes to RGB
+        image = image.convert('RGB')
+    
+    # Resize image for better processing
+    image = image.resize((2400, 1600), Image.Resampling.LANCZOS)
+    
+    # Save to bytes buffer
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG")
+    buffer.seek(0)
+    
+    # Convert to base64
+    return base64.b64encode(buffer.read()).decode("utf-8")
+

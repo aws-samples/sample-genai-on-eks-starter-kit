@@ -20,20 +20,12 @@ from langchain_openai import ChatOpenAI
 import json
 import secrets
 
-# Try to import langfuse, but make it optional
-try:
-    from langfuse.callback import CallbackHandler
-    LANGFUSE_AVAILABLE = True
-except ImportError:
-    print("Warning: Langfuse not available. Tracing will be disabled.")
-    LANGFUSE_AVAILABLE = False
-    CallbackHandler = None
 
 from mcp.server.fastmcp import FastMCP
-from utils import load_object, load_image_bytes
+from utils import load_object, load_image_bytes, encode_image_from_bytes
 
 # Initialize MCP server
-mcp = FastMCP("Image-Processor", host="0.0.0.0", port=8400)
+mcp = FastMCP("Image-Processor", host="0.0.0.0", port=8000)
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -43,29 +35,6 @@ logger = logging.getLogger(__name__)
 model_key = os.environ.get("GATEWAY_MODEL_ACCESS_KEY", "")
 api_gateway_url = os.environ.get("GATEWAY_URL", "")
 
-# Initialize Langfuse CallbackHandler for Langchain (tracing) - optional
-langfuse_handler = None
-if LANGFUSE_AVAILABLE:
-    langfuse_url = os.environ.get("LANGFUSE_URL", "")
-    local_public_key = os.environ.get("LANGFUSE_PUBLIC_KEY", "")
-    local_secret_key = os.environ.get("LANGFUSE_SECRET_KEY", "")
-
-    if langfuse_url and local_public_key and local_secret_key:
-        os.environ["LANGFUSE_SECRET_KEY"] = local_secret_key
-        os.environ["LANGFUSE_HOST"] = langfuse_url
-        os.environ["LANGFUSE_PUBLIC_KEY"] = local_public_key
-        
-        try:
-            langfuse_handler = CallbackHandler()
-            print("Langfuse tracing enabled for image processor")
-        except Exception as e:
-            print(f"Warning: Could not initialize Langfuse: {e}")
-            langfuse_handler = None
-    else:
-        print("Langfuse configuration incomplete - tracing disabled")
-else:
-    print("Langfuse tracing disabled - module not available")
-
 # Vision model configuration
 vision_model = "bedrock-llama-32"
 client = openai.OpenAI(
@@ -73,57 +42,9 @@ client = openai.OpenAI(
     base_url=api_gateway_url 
 )
 
-def encode_image_from_bytes(image_bytes: bytes) -> str:
-    """
-    Encode image bytes to base64 string
-    
-    Args:
-        image_bytes: Raw image bytes
-        
-    Returns:
-        str: Base64 encoded image string
-    """
-    try:
-        image = Image.open(io.BytesIO(image_bytes))
-        
-        # Convert RGBA to RGB if necessary (JPEG doesn't support transparency)
-        if image.mode in ('RGBA', 'LA'):
-            # Create a white background
-            background = Image.new('RGB', image.size, (255, 255, 255))
-            # Paste the image on the white background
-            if image.mode == 'RGBA':
-                background.paste(image, mask=image.split()[-1])  # Use alpha channel as mask
-            else:
-                background.paste(image)
-            image = background
-        elif image.mode not in ('RGB', 'L'):
-            # Convert other modes to RGB
-            image = image.convert('RGB')
-        
-        # Resize image for better processing
-        image = image.resize((2400, 1600), Image.Resampling.LANCZOS)
-        
-        # Save to bytes buffer
-        buffer = io.BytesIO()
-        image.save(buffer, format="JPEG")
-        buffer.seek(0)
-        
-        # Convert to base64
-        return base64.b64encode(buffer.read()).decode("utf-8")
-    except Exception as e:
-        logger.error(f"Error encoding image from bytes: {e}")
-        raise
 
-def generate_256_bit_hex_key():
-    """
-    Generates a cryptographically strong 256-bit random key 
-    and returns it as a hexadecimal string.
-    """
-    # 256 bits is 32 bytes (256 / 8 = 32)
-    key_bytes = secrets.token_bytes(32)
-    # Convert bytes to a hexadecimal string
-    key_hex = key_bytes.hex()
-    return key_hex
+
+
 
 @mcp.tool(
     name="extract_credit_application_data",
@@ -370,5 +291,5 @@ async def validate_document_authenticity(image_id: str) -> str:
         })
 
 if __name__ == "__main__":
-    print("Starting Image Processor MCP Server on port 8400...")
+    print("Starting Image Processor MCP Server on port 8000...")
     mcp.run(transport="sse")
