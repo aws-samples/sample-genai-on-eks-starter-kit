@@ -20,6 +20,8 @@ We are going to store the application code files in ConfigMaps. First create the
 ```
 
 Using the file ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) to deploy the application components onto the EKS. You can use the following command.
+> **Important**
+> Before running this deployment yaml file, edit the file and replace the keys for `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` and `GATEWAY_MODEL_ACCESS_KEY` as per your environment.
 
 ```bash
 kubectl create -f deployment.yaml
