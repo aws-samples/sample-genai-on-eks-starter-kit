@@ -1,3 +1,5 @@
+kubectl create namespace workshop
+
 kubectl config set-context --current --namespace=workshop
 
 kubectl create configmap loan-buddy-agent --from-file=./credit-underwriting-agent.py 
