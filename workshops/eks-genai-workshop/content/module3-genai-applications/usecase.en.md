@@ -34,7 +34,7 @@ Let's see how our application fits the for this mould.
 
 #### Orchestration
 
-We are using LangGraph to build the workflow. As you will see in the code file [`accounting-agent-demo.py`](../../static/code/accounting-agent-demo.py) that the workflow instructions are passed in plain English Language. One of te top benefits of agentic applications that it is becoming easier to instruct resulting in better adoption of business requirements.
+We are using LangGraph to build the workflow. As you will see in variables `system_prompt` and the `user_prompt` in the code file [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py) that the workflow instructions are passed in plain English Language. One of te top benefits of agentic applications that it is becoming easier to instruct resulting in better adoption of business requirements.
 
 Examine the prompt and see how does it fits to our requirements mentioned above.
 
@@ -45,9 +45,9 @@ The LLM we use not only drive the workflow but decide when to call the external 
 The foundation model will not have the relevant data to validate addresses or perform employment validation as per our business requirements.
 
 However, the prompt in the agents is instructing the model to call the relevant tools for such tasks. These tools have been developed using MCP protocol.
-You mention all the tools available to the agent in the [`accounting-agent-demo.py`](../../static/code/accounting-agent-demo.py). From there, based on your prompts, the agent will decide when to call the right tool. How does the agent decides what tool to call?
+You mention all the tools available to the agent in the [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py). From there, based on your prompts, the agent will decide when to call the right tool. How does the agent decides what tool to call?
 
-You can find the tool that validate the address at [`mcp-address-validator`](../../static/code/mcp-company-validatior.py). Notice that using the `mcp` annotation bring on the functionality to support MCP protocol. You also mention what the tool does and this information will be used by the agent to select the right tool specific steps in your workflow. Here you are describing functionality using plain english. Talk about easy to code.
+You can find the tool that validate the address at [`mcp-address-validator`](../../static/code/module3/credit-validation/mcp-address-validator.py). Notice that using the `mcp` annotation bring on the functionality to support MCP protocol. You also mention what the tool does and this information will be used by the agent to select the right tool specific steps in your workflow. Here you are describing functionality using plain english. Talk about easy to code.
 
 #### Memory
 
@@ -55,4 +55,4 @@ LLMs are stateless. Your workflow needs to make multiple calls to run the workfl
 
 ### Observability
 
-Last but not the least, think about how are you going to collect the data across multiple calls for debugging and/or security and compliance reasons. LangFuse provides a way to capture the trace of your workflow with tight integration with the agent. You will find that in the [`accounting-agent-demo.py`](../../static/code/accounting-agent-demo.py) file.
+Last but not the least, think about how are you going to collect the data across multiple calls for debugging and/or security and compliance reasons. LangFuse provides a way to capture the trace of your workflow with tight integration with the agent. Look for the string `run_name` in the [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py) file and you will see how LangFuse has been configured.
