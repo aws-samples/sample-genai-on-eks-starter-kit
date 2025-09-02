@@ -1,5 +1,8 @@
 # Credit Underwriting System Dependencies
 
+# Environment variables
+python-dotenv>=1.0.0
+
 # Core MCP and LangChain dependencies
 langchain-mcp-adapters>=0.1.0
 langgraph>=0.2.0

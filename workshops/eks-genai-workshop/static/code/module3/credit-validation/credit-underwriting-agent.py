@@ -1,5 +1,8 @@
 # Credit Underwriting Agent for Credit Score Validation - Updated with Image ID Support
 # https://python.langchain.com/docs/how_to/migrate_agent/
+from dotenv import load_dotenv
+load_dotenv()
+
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
@@ -80,9 +83,9 @@ model = ChatOpenAI(
 )
 
 # MCP Servers configuration for credit underwriting with image processing
-mcp_address_validator = os.getenv("MCP_ADDRESS_VALIDATOR", "http://mcp-address-validator:8000")
-mcp_employment_validator = os.getenv("MCP_EMPLOYMENT_VALIDATOR", "http://mcp-employment-validator:8000")
-mcp_image_processor = os.getenv("MCP_IMAGE_PROCESSOR", "http://mcp-image-processor:8000")
+mcp_address_validator = os.getenv("MCP_ADDRESS_VALIDATOR", "http://mcp-address-validator:5300")
+mcp_employment_validator = os.getenv("MCP_EMPLOYMENT_VALIDATOR", "http://mcp-employment-validator:5200")
+mcp_image_processor = os.getenv("MCP_IMAGE_PROCESSOR", "http://mcp-image-processor:8400")
 
 mcp_servers = {
     "image_processor": {

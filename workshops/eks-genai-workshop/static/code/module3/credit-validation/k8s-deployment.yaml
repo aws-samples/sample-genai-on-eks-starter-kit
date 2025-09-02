@@ -1,0 +1,188 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-processor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-processor
+  template:
+    metadata:
+      labels:
+        app: image-processor
+    spec:
+      containers:
+      - name: image-processor
+        image: image-processor:latest
+        ports:
+        - containerPort: 8400
+        env:
+        - name: AWS_DEFAULT_REGION
+          value: "us-west-2"
+        - name: S3_BUCKET_NAME
+          value: "your-s3-bucket"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-image-processor
+spec:
+  selector:
+    app: image-processor
+  ports:
+  - port: 8400
+    targetPort: 8400
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: income-validator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: income-validator
+  template:
+    metadata:
+      labels:
+        app: income-validator
+    spec:
+      containers:
+      - name: income-validator
+        image: income-validator:latest
+        ports:
+        - containerPort: 5200
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-employment-validator
+spec:
+  selector:
+    app: income-validator
+  ports:
+  - port: 5200
+    targetPort: 5200
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: address-validator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: address-validator
+  template:
+    metadata:
+      labels:
+        app: address-validator
+    spec:
+      containers:
+      - name: address-validator
+        image: address-validator:latest
+        ports:
+        - containerPort: 5300
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-address-validator
+spec:
+  selector:
+    app: address-validator
+  ports:
+  - port: 5300
+    targetPort: 5300
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credit-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credit-agent
+  template:
+    metadata:
+      labels:
+        app: credit-agent
+    spec:
+      containers:
+      - name: credit-agent
+        image: credit-agent:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: GATEWAY_MODEL_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: credit-secrets
+              key: gateway-key
+        - name: GATEWAY_URL
+          value: "http://litellm-service:4000"
+        - name: AWS_DEFAULT_REGION
+          value: "us-west-2"
+        - name: S3_BUCKET_NAME
+          value: "your-s3-bucket"
+        - name: LANGFUSE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: credit-secrets
+              key: langfuse-secret-key
+        - name: LANGFUSE_PUBLIC_KEY
+          valueFrom:
+            secretKeyRef:
+              name: credit-secrets
+              key: langfuse-public-key
+        - name: LANGFUSE_HOST
+          value: "http://langfuse-service:3000"
+        - name: MCP_ADDRESS_VALIDATOR
+          value: "http://mcp-address-validator:5300"
+        - name: MCP_EMPLOYMENT_VALIDATOR
+          value: "http://mcp-employment-validator:5200"
+        - name: MCP_IMAGE_PROCESSOR
+          value: "http://mcp-image-processor:8400"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credit-agent-service
+spec:
+  selector:
+    app: credit-agent
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: credit-secrets
+type: Opaque
+stringData:
+  gateway-key: ""  # Plain text value
+  langfuse-secret-key: ""  # Plain text value
+  langfuse-public-key: ""  # Plain text value
