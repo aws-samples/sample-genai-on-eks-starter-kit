@@ -9,11 +9,46 @@ import io
 import base64
 import secrets
 
-bucket_name = os.getenv('S3_BUCKET_NAME', '')
+
+S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL')  # e.g., 'http://minio.minio.svc.cluster.local:9000'
+S3_ACCESS_KEY = os.getenv('S3_ACCESS_KEY')
+S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'loan-buddy-bucket')
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# --- S3 Client Initialization ---
+s3_client = None
+if S3_ENDPOINT_URL and S3_ACCESS_KEY and S3_SECRET_KEY:
+    try:
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=S3_ENDPOINT_URL,
+            aws_access_key_id=S3_ACCESS_KEY,
+            aws_secret_access_key=S3_SECRET_KEY,
+            config=boto3.session.Config(signature_version='s3v4')
+        )
+        logger.info(f"Successfully created S3 client for endpoint {S3_ENDPOINT_URL}")
+
+        # Check if bucket exists, and create if it doesn't
+        try:
+            s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                logger.info(f"Bucket '{S3_BUCKET_NAME}' does not exist. Creating it now.")
+                s3_client.create_bucket(Bucket=S3_BUCKET_NAME)
+            else:
+                raise  # Re-raise other client errors
+    except Exception as e:
+        logger.error(f"Failed to initialize S3 client or create bucket: {e}")
+        s3_client = None
+else:
+    logger.warning("S3/MinIO environment variables not set. S3 functions will not work.")
+
+
 
 def store_object(content: str, object_key: str) -> bool:
     """
@@ -26,19 +61,21 @@ def store_object(content: str, object_key: str) -> bool:
     Returns:
         bool: True if successful, False otherwise
     """
+
+    if not s3_client:
+        logger.error("S3 client not initialized. Cannot store object.")
+        return False
+
     try:
-        # Create S3 client with optional region
-        s3_client = boto3.client('s3')
-        
         # Upload the string content directly
         s3_client.put_object(
-            Bucket=bucket_name,
+            Bucket=S3_BUCKET_NAME,
             Key=object_key,
             Body=content,
             ContentType='text/plain'
         )
-        
-        logger.info(f"Successfully stored content to s3://{bucket_name}/{object_key}")
+
+        logger.info(f"Successfully stored content to s3://{S3_BUCKET_NAME}/{object_key}")
         return True
         
     except ClientError as e:
@@ -58,13 +95,16 @@ def load_object(object_key: str) -> Optional[str]:
     Returns:
         str: Base64 encoded image string if successful, None otherwise
     """
+    
+    if not s3_client:
+        logger.error("S3 client not initialized. Cannot load object.")
+        return None
+        
     try:
-        # Create S3 client with optional region
-        s3_client = boto3.client('s3')
         
         # Get the object
         response = s3_client.get_object(
-            Bucket=bucket_name,
+            Bucket=S3_BUCKET_NAME,
             Key=object_key
         )
         
@@ -75,7 +115,7 @@ def load_object(object_key: str) -> Optional[str]:
         
     except ClientError as e:
         if e.response['Error']['Code'] == 'NoSuchKey':
-            logger.warning(f"The object s3://{bucket_name}/{object_key} does not exist.")
+            logger.warning(f"The object s3://{S3_BUCKET_NAME}/{object_key} does not exist.")
         else:
             logger.error(f"Error loading content from S3: {e}")
         return None
@@ -94,19 +134,22 @@ def store_image_bytes(image_bytes: bytes, object_key: str) -> bool:
     Returns:
         bool: True if successful, False otherwise
     """
+    
+    if not s3_client:
+        logger.error("S3 client not initialized. Cannot load object.")
+        return False
+    
     try:
-        # Create S3 client
-        s3_client = boto3.client('s3')
         
         # Upload the image bytes directly
         s3_client.put_object(
-            Bucket=bucket_name,
+            Bucket=S3_BUCKET_NAME,
             Key=object_key,
             Body=image_bytes,
             ContentType='image/jpeg'
         )
-        
-        logger.info(f"Successfully stored image bytes to s3://{bucket_name}/{object_key}")
+
+        logger.info(f"Successfully stored image bytes to s3://{S3_BUCKET_NAME}/{object_key}")
         return True
         
     except ClientError as e:
@@ -126,24 +169,28 @@ def load_image_bytes(object_key: str) -> Optional[bytes]:
     Returns:
         bytes: Image bytes if successful, None otherwise
     """
+    
+    if not s3_client:
+        logger.error("S3 client not initialized. Cannot load object.")
+        return None
+    
     try:
         # Create S3 client
-        s3_client = boto3.client('s3')
         
         # Get the object
         response = s3_client.get_object(
-            Bucket=bucket_name,
+            Bucket=S3_BUCKET_NAME,
             Key=object_key
         )
         
         # Read and return the content as bytes
         content = response['Body'].read()
-        logger.info(f"Successfully loaded image bytes from s3://{bucket_name}/{object_key}")
+        logger.info(f"Successfully loaded image bytes from s3://{S3_BUCKET_NAME}/{object_key}")
         return content
         
     except ClientError as e:
         if e.response['Error']['Code'] == 'NoSuchKey':
-            logger.warning(f"The object s3://{bucket_name}/{object_key} does not exist.")
+            logger.warning(f"The object s3://{S3_BUCKET_NAME}/{object_key} does not exist.")
         else:
             logger.error(f"Error loading image bytes from S3: {e}")
         return None
