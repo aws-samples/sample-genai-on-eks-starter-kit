@@ -55,13 +55,13 @@ Before calling the application, tail the log from application pod in a separate 
 kubectl logs -f <POD_NAME> -n workshop
 ```
 
-The [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application. You will use this file to make a call to the agentic application. Use the following command to expose the running agentic application on the local port and make a cURL call to start the process.
+The [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application. You will use this file to make a call to the agentic application. Use the following command to expose the running agentic application on the local port and make a cURL call to start the process. Before running the cURL call, make sure that you are in the credit-validation folder where the example1.png exists.
 
 ```bash
 
-kubectl port-forward svc/loan-buddy-agent 8080:8080 &
+kubectl port-forward svc/loan-buddy-agent 8080:8080 -n workshop &
 
-curl -X POST -F "file=@../../static/code/module3/credit-validation/example1.png" http://localhost:8080/api/process_credit_application_with_upload
+curl -X POST -F "file=@./example1.png" http://localhost:8080/api/process_credit_application_with_upload
 ```
 
 Track the logs from the application pod and see how the LLM is executing the workflow. Remember that you have not coded any workflow or calls to MCP servers. All is done for you by the LLM using the prompt that you have provided.
