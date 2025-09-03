@@ -5,7 +5,7 @@ from mcp.server.fastmcp import FastMCP
 import random
 import re
 
-mcp = FastMCP("address_validation_service", host="0.0.0.0", port=8000)
+mcp = FastMCP("address_validation_service", host="0.0.0.0", port=5300)
 
 # Mock address database with validation results
 mock_address_database = {
@@ -309,5 +309,5 @@ def _get_ownership_recommendation(ownership_status: str, residency_months: int) 
         return "Limited residency verification. Consider additional stability checks."
 
 if __name__ == "__main__":
-    print("Starting Address Validator MCP Server on port 8000...")
+    print("Starting Address Validator MCP Server on port 5300...")
     mcp.run(transport="sse")

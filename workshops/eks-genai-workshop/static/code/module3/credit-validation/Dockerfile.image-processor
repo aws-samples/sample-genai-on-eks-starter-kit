@@ -1,0 +1,15 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY mcp-image-processor.py .
+COPY utils.py .
+
+EXPOSE 8400
+
+ENV PYTHONUNBUFFERED=1
+
+CMD ["python", "mcp-image-processor.py"]
