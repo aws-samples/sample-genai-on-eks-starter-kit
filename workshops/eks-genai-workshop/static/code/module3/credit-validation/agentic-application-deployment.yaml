@@ -17,6 +17,7 @@ spec:
       containers:
       - name: loan-buddy-agent
         image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.0
+        imagePullPolicy: Always
         command: ["python", "/app/credit-underwriting-agent.py"]
         env:
         - name: LANGFUSE_URL

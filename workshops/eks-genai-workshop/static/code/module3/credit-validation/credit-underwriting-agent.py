@@ -37,11 +37,6 @@ from utils import store_object, encode_image
 
 
 
-# Sample credit application image (you can replace with actual credit application image)
-credit_app_doc = encode_image("example1.png")  # Replace with actual credit application image
-# Store sample image in S3 and get image ID
-sample_image_id = generate_256_bit_hex_key()
-store_object(credit_app_doc, sample_image_id)
 
 # Model configuration
 model_key = os.environ.get("GATEWAY_MODEL_ACCESS_KEY", "")
