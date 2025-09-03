@@ -50,13 +50,6 @@ spec:
           limits:
             memory: "16Gi"
             cpu: "2"
-        volumeMounts:
-        - name: script-volume
-          mountPath: /app
-      volumes:
-      - name: script-volume
-        configMap:
-          name: loan-buddy-agent
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -84,13 +77,6 @@ spec:
           limits:
             memory: "16Gi"
             cpu: "2"
-        volumeMounts:
-        - name: script-volume
-          mountPath: /app
-      volumes:
-      - name: script-volume
-        configMap:
-          name: mcp-address-validator
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -118,13 +104,6 @@ spec:
           limits:
             memory: "16Gi"
             cpu: "2"
-        volumeMounts:
-        - name: script-volume
-          mountPath: /app
-      volumes:
-      - name: script-volume
-        configMap:
-          name: mcp-employment-validator
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -166,13 +145,6 @@ spec:
           limits:
             memory: "16Gi"
             cpu: "2"
-        volumeMounts:
-        - name: script-volume
-          mountPath: /app
-      volumes:
-      - name: script-volume
-        configMap:
-          name: mcp-image-processor
 ---
 apiVersion: v1
 kind: Service
