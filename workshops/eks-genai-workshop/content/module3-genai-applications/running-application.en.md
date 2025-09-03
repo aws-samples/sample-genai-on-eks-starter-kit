@@ -11,13 +11,21 @@ All is left to deploy this application and test it out.
 
 From module 2, validate that you can access your AI Gateway and the LangFuse observability dashboard.
 
+### Preparing the deployment
+
+Go to your vscode and open a local file named `.env`. This file contains the location and the access keys for your LiteLLM andd the LangFuse components. The agentic application needs these information to connect and validate the platform components you have created in the earlier module.
+
+Note down the values for `LITELLM_API_KEY`, `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY`.
+
+In the next step you will add these values in the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file so the application can connect to your platform components.
+
 ### Deploy Application Components
 
-We are going to store the application code files in ConfigMaps. First create the configmaps for the application code by running the following scripts. You can see this script at ['create-configmaps.sh'](../../static/code/module3/credit-validation/create-configmaps.sh)
+Open the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file and locate the env variable named `GATEWAY_MODEL_ACCESS_KEY` variable and replace its value with the value of `LITELLM_API_KEY`.
 
-```bash
-./create-configmaps.sh
-```
+Similary locate the `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY` in the yaml file and replace their values as per your .env file.
+
+Save your ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml).
 
 Using the file ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) to deploy the application components onto the EKS. You can use the following command.
 > **Important**

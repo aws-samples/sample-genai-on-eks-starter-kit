@@ -16,17 +16,17 @@ spec:
     spec:
       containers:
       - name: loan-buddy-agent
-        image: python:3.12-slim
+        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.0
         command: ["python", "/app/credit-underwriting-agent.py"]
         env:
         - name: LANGFUSE_URL
-          value: "http://langfuse-lb-730705963.ap-southeast-2.elb.amazonaws.com"
+          value: "http://langfuse-web.langfuse.svc.cluster.local:3000"
         - name: LANGFUSE_PUBLIC_KEY
           value: "pk-XXXXXXX"
         - name: LANGFUSE_SECRET_KEY  
           value: "sk-XXXXXXX"
         - name: GATEWAY_URL
-          value: "http://llama-cpp-cpu-lb-656392498.ap-southeast-2.elb.amazonaws.com"  
+          value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
           value: "sk-XXXXXXX"
         - name: S3_BUCKET_NAME
@@ -69,7 +69,7 @@ spec:
     spec:
       containers:
       - name: mcp-address-validator
-        image: python:3.12-slim
+        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.0
         command: ["python", "/app/mcp-address-validator.py"]
         resources:
           requests:
@@ -103,7 +103,7 @@ spec:
     spec:
       containers:
       - name: mcp-employment-validator
-        image: python:3.12-slim
+        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.0
         command: ["python", "/app/mcp-income-employment-validator.py"]
         resources:
           requests:
@@ -137,11 +137,11 @@ spec:
     spec:
       containers:
       - name: mcp-image-processor
-        image: python:3.12-slim
+        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.0
         command: ["python", "/app/mcp-image-processor.py"]
         env:
         - name: GATEWAY_URL
-          value: "http://llama-cpp-cpu-lb-656392498.ap-southeast-2.elb.amazonaws.com"  
+          value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
           value: "sk-XXXXXXX"  
         - name: S3_BUCKET_NAME
@@ -218,4 +218,53 @@ spec:
       targetPort: 8000    
       name: http
 
-
+---
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: workshop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: workshop
+spec:
+  selector:
+    app: redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+      name: redis
+  type: ClusterIP
