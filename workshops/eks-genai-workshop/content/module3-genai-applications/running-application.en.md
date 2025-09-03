@@ -23,22 +23,28 @@ In the next step you will add these values in the ['agentic-application-deploy.y
 
 Open the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file and locate the env variable named `GATEWAY_MODEL_ACCESS_KEY` variable and replace its value with the value of `LITELLM_API_KEY`.
 
-Similary locate the `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY` in the yaml file and replace their values as per your .env file.
+Similarly locate the `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY` in the yaml file and replace their values as per your .env file.
 
 Save your ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml).
+
+Create the namespace named `workshop` where the loan-buddy app will be deployed.
+
+```bash
+kubectl create ns workshop
+```
 
 Using the file ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) to deploy the application components onto the EKS. You can use the following command.
 > **Important**
 > Before running this deployment yaml file, edit the file and replace the keys for `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` and `GATEWAY_MODEL_ACCESS_KEY` as per your environment.
 
 ```bash
-kubectl create -f deployment.yaml
+kubectl create -f agentic-application-deploy.yaml -n workshop
 ```
 
 Check of all the components are deployed and in the running state using the list of pods following command.
 
 ```bash
-kubectl get pods
+kubectl get pods -n workshop
 ```
 
 ### Calling the application
@@ -46,7 +52,7 @@ kubectl get pods
 Before calling the application, tail the log from application pod in a separate terminal using the following command.
 
 ```bash
-kubectl logs -f <POD_NAME>
+kubectl logs -f <POD_NAME> -n workshop
 ```
 
 The [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application. You will use this file to make a call to the agentic application. Use the following command to expose the running agentic application on the local port and make a cURL call to start the process.
