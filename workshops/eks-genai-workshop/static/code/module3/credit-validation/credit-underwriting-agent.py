@@ -249,7 +249,6 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
             "recommendation": "Please check the image format and try again"
         }
 
-
 @app.get("/api/tools")
 async def list_available_tools():
     """List all available MCP tools"""
