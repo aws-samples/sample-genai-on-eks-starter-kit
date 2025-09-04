@@ -33,15 +33,15 @@ if S3_ENDPOINT_URL and S3_ACCESS_KEY and S3_SECRET_KEY:
         )
         logger.info(f"Successfully created S3 client for endpoint {S3_ENDPOINT_URL}")
 
-        # Check if bucket exists, and create if it doesn't
-        try:
-            s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
-        except ClientError as e:
-            if e.response['Error']['Code'] == '404':
-                logger.info(f"Bucket '{S3_BUCKET_NAME}' does not exist. Creating it now.")
-                s3_client.create_bucket(Bucket=S3_BUCKET_NAME)
-            else:
-                raise  # Re-raise other client errors
+        # # Check if bucket exists, and create if it doesn't
+        # try:
+        #     s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
+        # except ClientError as e:
+        #     if e.response['Error']['Code'] == '404':
+        #         logger.info(f"Bucket '{S3_BUCKET_NAME}' does not exist. Creating it now.")
+        #         s3_client.create_bucket(Bucket=S3_BUCKET_NAME)
+        #     else:
+        #         raise  # Re-raise other client errors
     except Exception as e:
         logger.error(f"Failed to initialize S3 client or create bucket: {e}")
         s3_client = None

@@ -23,19 +23,19 @@ spec:
         - name: LANGFUSE_URL
           value: "http://langfuse-web.langfuse.svc.cluster.local:3000"
         - name: LANGFUSE_PUBLIC_KEY
-          value: "pk-XXXXXXX"
+          value: "lf_pk_1234567890"
         - name: LANGFUSE_SECRET_KEY  
-          value: "sk-XXXXXXX"
+          value: "lf_sk_1234567890"
         - name: GATEWAY_URL
           value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: "sk-XXXXXXX"
+          value: "sk-1234"
         - name: S3_BUCKET_NAME
-          value: "loan-buddy-bucket"
+          value: "langfuse"
         - name: S3_ENDPOINT_URL
           value: "http://langfuse-s3.langfuse.svc.cluster.local:9000"
         - name: S3_ACCESS_KEY
-          value: "admin"
+          value: "minio"
         - name: S3_SECRET_KEY
           value: "password123"
         - name: MCP_ADDRESS_VALIDATOR
@@ -129,13 +129,13 @@ spec:
         - name: GATEWAY_URL
           value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: "sk-XXXXXXX"  
+          value: "sk-1234"  
         - name: S3_BUCKET_NAME
-          value: "loan-buddy-bucket"
+          value: "langfuse"
         - name: S3_ENDPOINT_URL
           value: "http://langfuse-s3.langfuse.svc.cluster.local:9000"
         - name: S3_ACCESS_KEY
-          value: "admin"
+          value: "minio"
         - name: S3_SECRET_KEY
           value: "password123"
 
