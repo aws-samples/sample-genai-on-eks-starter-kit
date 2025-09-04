@@ -1,8 +1,7 @@
 ---
 title: "Understanding the agentic use-case"
 date: 2025-08-13T11:05:19-07:00
-weight: 150
-draft: true
+weight: 10
 ---
 
 Let's start with a use-case.

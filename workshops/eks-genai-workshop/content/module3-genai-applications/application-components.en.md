@@ -1,8 +1,7 @@
 ---
 title: "Application Components"
 date: 2025-08-13T11:05:19-07:00
-weight: 250
-draft: true
+weight: 20
 ---
 
 Now you understand the use-case, let's understand a little bit how the application components are connected.

@@ -1,8 +1,7 @@
 ---
-title: "Building GenAI Application"
+title: "Module 3: Building GenAI Application"
 date: 2025-08-13T11:05:19-07:00
-weight: 40
-draft: true
+weight: 5
 ---
 
 ### Building GenAI Applications

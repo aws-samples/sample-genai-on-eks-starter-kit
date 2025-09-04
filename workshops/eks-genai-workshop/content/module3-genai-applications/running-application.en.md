@@ -1,8 +1,7 @@
 ---
 title: "Running the Application"
 date: 2025-08-13T11:05:19-07:00
-weight: 350
-draft: true
+weight: 30
 ---
 
 All is left to deploy this application and test it out.
@@ -15,15 +14,16 @@ From module 2, validate that you can access your AI Gateway and the LangFuse obs
 
 Go to your vscode and open a local file named `.env`. This file contains the location and the access keys for your LiteLLM andd the LangFuse components. The agentic application needs these information to connect and validate the platform components you have created in the earlier module.
 
-Note down the values for `LITELLM_API_KEY`, `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY`.
+Note down the values for `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY`.
 
 In the next step you will add these values in the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file so the application can connect to your platform components.
 
 ### Deploy Application Components
 
-Open the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file and locate the env variable named `GATEWAY_MODEL_ACCESS_KEY` variable and replace its value with the value of `LITELLM_API_KEY`.
+Open the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file and locate the env variable named  `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY` in the yaml file and replace their values as per your .env file.
 
-Similarly locate the `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY` in the yaml file and replace their values as per your .env file.
+For the `GATEWAY_MODEL_ACCESS_KEY` variable , replace it with the Virtual Key you have created in the LiteLLM config section in the previous module.
+
 
 Save your ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml).
 
