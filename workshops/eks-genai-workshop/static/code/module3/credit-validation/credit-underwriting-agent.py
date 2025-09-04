@@ -23,6 +23,12 @@ import json
 from PIL import Image
 import io
 from utils import generate_256_bit_hex_key
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 
 # Try to import langfuse, but make it optional
 try:
@@ -126,12 +132,6 @@ Always provide a clear, structured response with your final recommendation.
 user_prompt = """Process this credit application using the provided image ID. Extract key info: Name, Email, Income, Employer, Address, Loan Amount. 
 Validate employment and address using tools. Return JSON with APPROVED/REJECTED decision."""
 
-credit_app_user_prompt = HumanMessage(content=[
-    {
-        "type": "text",
-        "text": f"Please process this credit application document. Image ID: {sample_image_id}. {user_prompt}",
-    }
-])
 
 @app.post("/api/process_credit_application_with_upload")
 async def process_credit_application_with_upload(image_file: UploadFile = File(...)):
@@ -279,13 +279,13 @@ async def health_check():
     return {"status": "healthy", "service": "credit_underwriting_agent_with_image_id"}
 
 if __name__ == "__main__":
-    print("Starting Credit Underwriting Agent with Image ID Support...")
-    print("Available endpoints:")
-    print("- POST /api/process_credit_application_with_upload - Upload and process new image")
-    print("- POST /api/process_credit_application_by_id - Process existing image by ID")
-    print("- POST /api/extract_data_only - Extract data without full processing")
-    print("- POST /api/process_credit_application - Process sample image (legacy)")
-    print("- GET /api/tools - List available MCP tools")
-    print("- GET /api/health - Health check")
-    
+    logger.info("Starting Credit Underwriting Agent with Image ID Support...")
+    logger.info("Available endpoints:")
+    logger.info("- POST /api/process_credit_application_with_upload - Upload and process new image")
+    logger.info("- POST /api/process_credit_application_by_id - Process existing image by ID")
+    logger.info("- POST /api/extract_data_only - Extract data without full processing")
+    logger.info("- POST /api/process_credit_application - Process sample image (legacy)")
+    logger.info("- GET /api/tools - List available MCP tools")
+    logger.info("- GET /api/health - Health check")
+
     uvicorn.run("credit-underwriting-agent:app", host="0.0.0.0", port=8080, reload=True)

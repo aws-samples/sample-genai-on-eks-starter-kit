@@ -5,7 +5,7 @@ from mcp.server.fastmcp import FastMCP
 import random
 from datetime import datetime, timedelta
 
-mcp = FastMCP("income_employment_validation_service", host="0.0.0.0", port=5200)
+mcp = FastMCP("income_employment_validation_service", host="0.0.0.0", port=8000)
 
 # Mock employment database
 mock_employment_database = {
@@ -179,5 +179,5 @@ def _get_stability_recommendation(stability_status: str) -> str:
         return "Unstable employment history. High risk - consider rejection or require co-signer."
 
 if __name__ == "__main__":
-    print("Starting Income Validator MCP Server on port 5200...")
+    print("Starting Income Validator MCP Server on port 8000...")
     mcp.run(transport="sse")
