@@ -68,7 +68,7 @@ if LANGFUSE_AVAILABLE:
         os.environ["LANGFUSE_PUBLIC_KEY"] = local_public_key
         
         try:
-            langfuse_handler = CallbackHandler(request_timeout=10)
+            langfuse_handler = CallbackHandler()
             logger.info("Langfuse tracing enabled")
         except Exception as e:
             logger.info(f"Warning: Could not initialize Langfuse: {e}")
