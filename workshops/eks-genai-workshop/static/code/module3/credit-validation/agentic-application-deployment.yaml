@@ -70,6 +70,7 @@ spec:
       containers:
       - name: mcp-address-validator
         image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
+        imagePullPolicy: Always
         command: ["python", "/app/mcp-address-validator.py"]
         resources:
           requests:
@@ -98,6 +99,7 @@ spec:
       - name: mcp-employment-validator
         image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
         command: ["python", "/app/mcp-income-employment-validator.py"]
+        imagePullPolicy: Always        
         resources:
           requests:
             memory: "8Gi"
@@ -125,6 +127,7 @@ spec:
       - name: mcp-image-processor
         image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
         command: ["python", "/app/mcp-image-processor.py"]
+        imagePullPolicy: Always        
         env:
         - name: GATEWAY_URL
           value: "http://litellm.litellm.svc.cluster.local:4000"  

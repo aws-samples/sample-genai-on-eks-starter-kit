@@ -112,32 +112,33 @@ mcp_servers = {
 
 app = FastAPI(title="Credit Underwriting Agent with Image ID Support")
 
+# You are given a set of MCP tools to perform these tasks:
+# - Use 'extract_credit_application_data' to extract applicant information from documents
+# - Use 'validate_document_authenticity' to check document quality and authenticity
+# - Use 'validate_income_employment' to verify employment and income information
+# - Use 'validate_address' to verify address information
+
 # System prompt for the agent - updated for image ID workflow
 system_prompt = """You are a helpful AI assistant for credit underwriting and loan processing.
 
-Your task is to process credit applications by analyzing uploaded documents and validating applicant information using the tools provided.
+Your task is to process credit applications by analyzing uploaded documents and validating applicant information using the tools provided. You will not have the image, instead an image_id which you will then pass to the tools to extract information.
+
 
 Follow these instructions:
 1. First, extract credit application data from the uploaded document using the image processing tools
-2. Then validate the extracted information using employment and address validation tools
+2. Then validate the extracted information using income, employment and address validation tools
 3. Make a final credit decision based on all validation results
 4. Present a comprehensive credit assessment to the user
 
-You are given a set of MCP tools to perform these tasks:
-- Use 'extract_credit_application_data' to extract applicant information from documents
-- Use 'validate_document_authenticity' to check document quality and authenticity
-- Use 'validate_income_employment' to verify employment and income information
-- Use 'validate_address' to verify address information
-
 It is critical that you use the tools to process the document and validate the information.
-You just need to pass the image_id to the tools, they will handle fetching the image from S3.
+You just need to pass the field 'image_id' to the tools, they will handle fetching the image from S3.
 
 Always provide a clear, structured response with your final recommendation.
 """
 
 # Credit application processing prompt - SIMPLIFIED to reduce tokens
 user_prompt = """Process this credit application using the provided image ID. Extract key info: Name, Email, Income, Employer, Address, Loan Amount. 
-Validate employment and address using tools. Return JSON with APPROVED/REJECTED decision."""
+Validate income, employment and address using tools. Return JSON with APPROVED/REJECTED decision."""
 
 
 @app.post("/api/process_credit_application_with_upload")
@@ -188,21 +189,20 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
         graph = graph.with_config({
             "run_name": "credit_underwriting_agent_with_image_id",
             "callbacks": callbacks,
-            "recursion_limit": 10,
+            "recursion_limit": 20,
         })
         
         # Create user prompt with image ID
         user_prompt_with_id = HumanMessage(content=f"""
-        Please process this credit application document and provide a comprehensive credit assessment.
+        Please process this credit application and provide a comprehensive credit assessment.
         
-        Image ID: {image_id}
+        Image_Id: {image_id}
         
         Please:
-        1. Extract all applicant information from the document
-        2. Validate the document authenticity and quality
-        3. Verify employment and income information
-        4. Verify address information
-        5. Provide a final credit decision with reasoning
+        1. Extract all applicant information from the document using the tools
+        2. Verify employment and income information
+        3. Verify address information
+        4. Provide a final credit decision with reasoning
         
         Return a structured assessment with your recommendation.
         """)
@@ -225,7 +225,7 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
                     
                 if isinstance(message, AIMessage):
                     final_message = message.content
-                    logger.info("Final credit assessment:", final_message)
+                    logger.info(f"Final credit assessment: {final_message}")
                     
         except Exception as e:
             if "RateLimitError" in str(e) or "429" in str(e):
@@ -295,4 +295,4 @@ if __name__ == "__main__":
     logger.info("- GET /api/tools - List available MCP tools")
     logger.info("- GET /api/health - Health check")
 
-    uvicorn.run("credit-underwriting-agent:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("credit-underwriting-agent:app", host="0.0.0.0", port=8081, reload=True)

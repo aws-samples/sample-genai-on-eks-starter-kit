@@ -61,7 +61,7 @@ The [loan application](../../static/code/module3/credit-validation/example1.png)
 
 kubectl port-forward service/loan-buddy-agent 8080:8080 -n workshop &
 
-curl -X POST -F "image_file=@./example1.png" http://localhost:8080//api/process_credit_application_with_upload
+curl -X POST -F "image_file=@./example1.png" http://localhost:8080/api/process_credit_application_with_upload
 ```
 
 Track the logs from the application pod and see how the LLM is executing the workflow. Remember that you have not coded any workflow or calls to MCP servers. All is done for you by the LLM using the prompt that you have provided.
