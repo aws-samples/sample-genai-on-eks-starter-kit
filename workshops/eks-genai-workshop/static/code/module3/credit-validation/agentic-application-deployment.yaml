@@ -29,7 +29,7 @@ spec:
         - name: GATEWAY_URL
           value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: "sk-1234"
+          value: "sk-4qgicypE01dIhc5mPsBWDQ"
         - name: S3_BUCKET_NAME
           value: "langfuse"
         - name: S3_ENDPOINT_URL
@@ -129,7 +129,7 @@ spec:
         - name: GATEWAY_URL
           value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: "sk-1234"  
+          value: "sk-SSar1N3WA6zAmTIHzmkxIg"  
         - name: S3_BUCKET_NAME
           value: "langfuse"
         - name: S3_ENDPOINT_URL

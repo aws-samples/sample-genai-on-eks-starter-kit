@@ -110,7 +110,7 @@ def load_object(object_key: str) -> Optional[str]:
         
         # Read and return the content
         content = response['Body'].read().decode('utf-8')
-        logger.info(f"Successfully loaded content from s3://{bucket_name}/{object_key}")
+        logger.info(f"Successfully loaded content from s3://{S3_BUCKET_NAME}/{object_key}")
         return content
         
     except ClientError as e:

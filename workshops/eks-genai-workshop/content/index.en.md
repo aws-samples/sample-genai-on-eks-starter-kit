@@ -73,10 +73,10 @@ Transform individual components into a unified platform:
 Create sophisticated AI applications using modern frameworks:
 
 - 🔗 **LangChain & LangGraph** - Build chains, agents, and workflows
-- 💾 **Memory Stores** - Implement persistent memory with vector databases
-- 🔧 **Model Context Protocol** - Integrate external tools and APIs
-- 🤖 **Multi-Agent Systems** - Orchestrate teams of specialized agents
-- 🧠 **Agentic RAG** - Build intelligent retrieval-augmented generation
+- 💾 **Memory Stores** - Use Lang-* memory stores for keeping session data
+- 🔧 **Model Context Protocol** - Integrate external tools and APIs with MCP servers
+- 🤖 **Secure and Observe** - Integrate your Agent flow with platform components
+
 
 ### Module 4: Scaling and Securing Agents
 **Enterprise-Grade AI Systems**
