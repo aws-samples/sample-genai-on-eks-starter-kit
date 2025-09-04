@@ -25,20 +25,26 @@ import io
 from utils import generate_256_bit_hex_key
 import logging
 
+
 # Configure logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-
-# Try to import langfuse, but make it optional
+LANGFUSE_AVAILABLE = True
 try:
-    from langfuse.callback import CallbackHandler
+    from langfuse.langchain import CallbackHandler
     LANGFUSE_AVAILABLE = True
+    logger.info("Successfully imported Langfuse CallbackHandler from langfuse.langchain")
 except ImportError:
-    logger.info("Warning: Langfuse not available. Tracing will be disabled.")
-    LANGFUSE_AVAILABLE = False
-    CallbackHandler = None
-
+    try:
+        # Try the old import path as fallback
+        from langfuse.callback import CallbackHandler
+        LANGFUSE_AVAILABLE = True
+        logger.info("Successfully imported Langfuse CallbackHandler from langfuse.callback")
+    except ImportError:
+        logger.info("Warning: Langfuse not available. Tracing will be disabled.")
+        LANGFUSE_AVAILABLE = False
+        CallbackHandler = None
 from utils import store_object, encode_image
 
 

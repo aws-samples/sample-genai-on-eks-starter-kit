@@ -1,41 +1,86 @@
+# # Credit Underwriting System Dependencies
+
+# # Environment variables
+# python-dotenv>=1.0.0
+
+# # Core MCP and LangChain dependencies
+# langchain-mcp-adapters>=0.1.0
+# langgraph>=0.2.0
+# langchain
+# langchain-openai>=0.2.0
+
+# # MCP Server framework
+# mcp>=1.0.0
+
+# # Web framework and server
+# fastapi>=0.104.0
+# uvicorn[standard]>=0.24.0
+
+# # HTTP client for testing
+# aiohttp>=3.9.0
+
+# # Monitoring and tracing
+# langfuse>=2.60.4
+
+# # Image processing and encoding
+# Pillow>=10.0.0
+
+# # AWS SDK for S3 operations
+# boto3>=1.34.0
+# botocore>=1.34.0
+
+# # Async context management
+# contextlib2>=21.6.0
+
+# # Additional utilities
+# python-multipart>=0.0.6
+# pydantic>=2.0.0
+
+# # Development and testing
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0
+
+
 # Credit Underwriting System Dependencies
 
 # Environment variables
-python-dotenv>=1.0.0
+python-dotenv
 
 # Core MCP and LangChain dependencies
-langchain-mcp-adapters>=0.1.0
-langgraph>=0.2.0
-langchain-core>=0.3.0
-langchain-openai>=0.2.0
+langchain-mcp-adapters
+langgraph
+langchain
+langchain-openai
 
 # MCP Server framework
-mcp>=1.0.0
+mcp
+
+# fast-mcp>=2.8.1
 
 # Web framework and server
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
+fastapi
+uvicorn[standard]
 
 # HTTP client for testing
-aiohttp>=3.9.0
+aiohttp
 
 # Monitoring and tracing
-langfuse>=2.0.0
+langfuse
 
 # Image processing and encoding
-Pillow>=10.0.0
+Pillow
 
 # AWS SDK for S3 operations
-boto3>=1.34.0
-botocore>=1.34.0
+boto3
+botocore
 
 # Async context management
-contextlib2>=21.6.0
+contextlib2
 
 # Additional utilities
-python-multipart>=0.0.6
-pydantic>=2.0.0
+python-multipart
+pydantic
 
 # Development and testing
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0
