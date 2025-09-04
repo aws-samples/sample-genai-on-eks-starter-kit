@@ -35,7 +35,7 @@ try:
     from langfuse.callback import CallbackHandler
     LANGFUSE_AVAILABLE = True
 except ImportError:
-    print("Warning: Langfuse not available. Tracing will be disabled.")
+    logger.info("Warning: Langfuse not available. Tracing will be disabled.")
     LANGFUSE_AVAILABLE = False
     CallbackHandler = None
 
@@ -49,6 +49,7 @@ model_key = os.environ.get("GATEWAY_MODEL_ACCESS_KEY", "")
 api_gateway_url = os.environ.get("GATEWAY_URL", "")
 
 # Initialize Langfuse CallbackHandler for Langchain (tracing) - optional
+logger.info("Initializing Langfuse CallbackHandler...")
 langfuse_handler = None
 if LANGFUSE_AVAILABLE:
     langfuse_url = os.environ.get("LANGFUSE_URL", "")
@@ -61,15 +62,15 @@ if LANGFUSE_AVAILABLE:
         os.environ["LANGFUSE_PUBLIC_KEY"] = local_public_key
         
         try:
-            langfuse_handler = CallbackHandler()
-            print("Langfuse tracing enabled")
+            langfuse_handler = CallbackHandler(request_timeout=10)
+            logger.info("Langfuse tracing enabled")
         except Exception as e:
-            print(f"Warning: Could not initialize Langfuse: {e}")
+            logger.info(f"Warning: Could not initialize Langfuse: {e}")
             langfuse_handler = None
     else:
-        print("Langfuse configuration incomplete - tracing disabled")
+        logger.info("Langfuse configuration incomplete - tracing disabled")
 else:
-    print("Langfuse tracing disabled - module not available")
+    logger.info("Langfuse tracing disabled - module not available")
 
 # Configure LLM with token limits to avoid rate limiting
 llm_model = "bedrock-llama-32"
@@ -141,10 +142,10 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
     """
     
     try:
-        print("🔄 Starting credit application processing with uploaded image...")
+        logger.info("🔄 Starting credit application processing with uploaded image...")
         
         # Step 1: Read and process the uploaded image
-        print("📄 Processing uploaded credit application image...")
+        logger.info("📄 Processing uploaded credit application image...")
         image_bytes = await image_file.read()
         
         # Encode image to base64 for storage
@@ -161,14 +162,14 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
                 "recommendation": "Please try again"
             }
         
-        print(f"✅ Image stored in S3 with ID: {image_id}")
+        logger.info(f"✅ Image stored in S3 with ID: {image_id}")
         
         # Step 2: Use MCP client to get tools and process the application
-        print("🔧 Loading MCP tools...")
+        logger.info("🔧 Loading MCP tools...")
         client = MultiServerMCPClient(mcp_servers)
         tools = await client.get_tools()
         
-        print(f"Available tools: {[tool.name for tool in tools]}")
+        logger.info(f"Available tools: {[tool.name for tool in tools]}")
         
         # Create the agent with tools
         graph = create_react_agent(model, tools, debug=True)
@@ -205,24 +206,24 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
             "system": SystemMessage(content=system_prompt)
         }
         
-        print("🤖 Processing credit application with agent...")
+        logger.info("🤖 Processing credit application with agent...")
         
         final_message = None
         try:
             async for s in graph.astream(inputs, stream_mode="values"):
                 message = s["messages"][-1]
                 if isinstance(message, tuple):
-                    print(message)
+                    logger.info(message)
                 else:
                     message.pretty_print()
                     
                 if isinstance(message, AIMessage):
                     final_message = message.content
-                    print("Final credit assessment:", final_message)
+                    logger.info("Final credit assessment:", final_message)
                     
         except Exception as e:
             if "RateLimitError" in str(e) or "429" in str(e):
-                print(f"Rate limit encountered: {e}")
+                logger.warning(f"Rate limit encountered: {e}")
                 return {
                     "status": "RATE_LIMITED",
                     "message": "Rate limit encountered. Please try again later.",
@@ -240,7 +241,7 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
         }
         
     except Exception as e:
-        print(f"Error processing credit application: {e}")
+        logger.error(f"Error processing credit application: {e}")
         return {
             "status": "ERROR",
             "message": f"Error processing application: {str(e)}",
