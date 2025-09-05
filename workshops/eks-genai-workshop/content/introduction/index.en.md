@@ -3,28 +3,73 @@ title: "Introduction"
 weight: 10
 ---
 
-Welcome to the frontier of artificial intelligence on Kubernetes! This workshop represents the convergence of two transformative technologies: **Generative AI** and **Amazon EKS**. Together, they enable you to build scalable AI systems that can transform how organizations work.
+Welcome to a hands-on GenAI workshop where you'll build a complete AI platform on Amazon EKS! In the next few hours, you'll deploy real Large Language Models, create a unified AI gateway, and build intelligent applications - all using scalable patterns that you can take home and deploy in your own AWS account.
 
-## 🌟 Why GenAI on EKS?
+## 🎯 What You'll Build
 
-The explosion of Large Language Models has created unprecedented opportunities - and challenges. Organizations need to:
+By the end of this workshop, you'll have a fully functional GenAI platform running on EKS:
 
-- **Deploy models efficiently** while controlling costs
-- **Scale dynamically** based on demand
-- **Maintain security** and compliance
-- **Monitor performance** and quality
-- **Integrate seamlessly** with existing systems
+- **Chat with real AI models** including Llama 3.1 running on AWS Neuron and Claude 3.7 via Bedrock
+- **Unified AI gateway** that routes requests across multiple model providers
+- **Complete observability** tracking every AI interaction, cost, and performance metric
+- **Intelligent applications** that use your platform to solve real business problems
 
-Amazon EKS provides an excellent platform for these requirements, offering:
+## 🏗️ Your GenAI Platform Architecture
+
+Here's the platform you'll build together:
+
+```mermaid
+graph LR
+    subgraph "User Interface"
+        UI[Open WebUI<br/>Chat Interface]
+    end
+    
+    subgraph "API Gateway"
+        LLM[LiteLLM<br/>Unified API]
+    end
+    
+    subgraph "Model Backends"
+        VLLM[vLLM<br/>Llama 3.1 8B]
+        VLLMQ[vLLM<br/>Qwen 3 8B]
+        BEDROCK[AWS Bedrock<br/>Claude 3.7]
+    end
+    
+    subgraph "Observability"
+        LF[Langfuse<br/>Tracing & Analytics]
+    end
+    
+    UI --> LLM
+    LLM --> VLLM
+    LLM --> VLLMQ
+    LLM --> BEDROCK
+    LLM -.->|Traces| LF
+    
+    style UI fill:#e1f5fe
+    style LLM fill:#fff3e0
+    style VLLM fill:#f3e5f5
+    style VLLMQ fill:#f3e5f5
+    style BEDROCK fill:#e8f5e9
+    style LF fill:#ffebee
+```
+
+**The Flow:**
+1. **Users interact** through Open WebUI (like ChatGPT)
+2. **Requests route** through LiteLLM (your AI gateway)
+3. **Models process** on specialized hardware (Neuron chips) or managed services (Bedrock)
+4. **Everything tracked** in Langfuse for cost and performance monitoring
+
+## 🚀 Why EKS for GenAI?
+
+Through this workshop, you'll see how EKS provides an excellent foundation for AI platforms:
 
 ::::tabs
 
 :::tab{label="Scalability"}
-**Elastic Infrastructure**
-- Auto-scaling based on demand
+**Dynamic Infrastructure**
+- Auto-scaling based on AI workload demand
 - Support for specialized hardware (GPUs, Neuron)
 - Distributed inference capabilities
-- Multi-region deployment options
+- Multi-model deployment patterns
 :::
 
 :::tab{label="Flexibility"}
@@ -37,87 +82,58 @@ Amazon EKS provides an excellent platform for these requirements, offering:
 
 :::tab{label="Operations"}
 **Operational Excellence**
-- Comprehensive observability
-- Automated lifecycle management
-- Cost optimization tools
+- Comprehensive observability with Langfuse
+- Automated lifecycle management with Helm
+- Cost optimization and tracking
 - Security best practices
 :::
 
 ::::
 
-## 🎯 Workshop Philosophy
+## 📚 Your Learning Path
 
-This workshop follows three core principles:
+### **Module 1: Interacting with Models**
+**Experience AI Models on Kubernetes**
 
-### 1. **Learn by Doing** 🛠️
-Every concept is immediately reinforced with hands-on exercises. You won't just read about LLMs - you'll deploy them, optimize them, and build applications with them.
+You'll start by chatting with real AI models and see them running on EKS:
+- Deploy Open WebUI and have your first AI conversation
+- Explore vLLM serving Llama 3.1 on AWS Neuron hardware
+- Connect to Claude 3.7 via AWS Bedrock and compare capabilities
+- Watch your models process requests in real-time with kubectl
 
-### 2. **Enterprise-First** 🏭
-We use real enterprise patterns from day one. The techniques you learn here are the same ones used by leading AI companies and AWS customers worldwide.
+### **Module 2: GenAI Platform Components**
+**Build Your AI Infrastructure**
 
-### 3. **Progressive Complexity** 📈
-We start with simple model deployment and gradually build to sophisticated multi-agent systems. Each module prepares you for the next level of complexity.
+Transform individual models into a unified, observable platform:
+- Explore LiteLLM as your AI gateway routing requests across models
+- Use Langfuse to track every AI interaction with detailed metrics
+- Add new models to your platform through configuration
+- Monitor costs, performance, and usage patterns in real-time
 
-## 🏗️ What We're Building
+### **Module 3: Building GenAI Applications**
+**From Platform to Intelligent Applications**
 
-Throughout this workshop, you'll construct a complete GenAI platform with these capabilities:
+Use your platform to build real AI applications:
+- Deploy "Loan Buddy" - an intelligent loan processing application
+- See how AI agents use your platform to make business decisions
+- Watch complex workflows execute with full traceability in Langfuse
+- Experience how platforms enable rapid AI application development
 
-### **Model Serving Layer**
-- Self-hosted models on AWS Neuron hardware
-- Integration with AWS Bedrock managed services
-- Unified API access through LiteLLM
-- Automatic failover and load balancing
+## 🏗️ Built on the AWS GenAI Starter Kit
 
-### **Application Layer**
-- Intelligent agents with reasoning capabilities
-- Retrieval-Augmented Generation (RAG) systems
-- Memory stores for context persistence
-- Tool integration via Model Context Protocol
+This workshop leverages the **[AWS GenAI on EKS Starter Kit](https://github.com/aws-samples/sample-genai-on-eks-starter-kit)** - a comprehensive reference architecture that you can use to deploy similar platforms in your own AWS account.
 
-### **Operations Layer**
-- Comprehensive observability with Langfuse
-- Cost tracking and optimization
-- Performance monitoring and alerting
-- Security and compliance controls
-
-## 🚀 By the End of Today
-
-You will have:
-
-✅ **Deployed** multiple LLMs with different optimization strategies
-
-✅ **Built** a unified platform for model management
-
-✅ **Created** intelligent applications with advanced capabilities
-
-✅ **Implemented** enterprise-grade security and scaling
-
-✅ **Mastered** cost optimization for AI workloads
-
-## 💭 A Note on Innovation
-
-Generative AI is evolving at an unprecedented pace. The foundations you learn today will enable you to adapt to tomorrow's innovations. We focus on:
-
-- **Principles** that transcend specific models
-- **Patterns** that scale with your needs
-- **Practices** that ensure operational success
-
-## ⚡ Infrastructure Already Deployed
-
-::alert[**Good news!** All infrastructure has been pre-deployed. You can dive straight into the exciting parts - deploying models and building applications!]{type="success"}
-
-Your environment includes:
-- ✅ EKS cluster with Auto Mode enabled
-- ✅ Specialized node pools (GPU, Neuron)
-- ✅ GenAI platform components installed
-- ✅ Networking and security configured
-- ✅ Observability stack ready
+**What this means for you:**
+- All patterns you learn are battle-tested and scalable
+- You can deploy the same infrastructure in your own environment
+- The starter kit provides Terraform, Helm charts, and documentation
+- Your learning translates directly to real-world deployments
 
 ## 🎬 Ready to Start?
 
-The world of GenAI on Kubernetes awaits. Whether you're building the next breakthrough application or optimizing existing systems, this workshop provides the knowledge and hands-on experience you need.
+The world of GenAI on Kubernetes awaits. Whether you're building your first AI application or optimizing existing systems, this workshop provides the hands-on experience and practical patterns you need.
 
-Your journey from LLM basics to sophisticated agent systems begins now!
+Your journey from individual models to a complete AI platform begins now!
 
 ---
 

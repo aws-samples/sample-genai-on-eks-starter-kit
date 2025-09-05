@@ -164,7 +164,7 @@ Before proceeding to Module 1, confirm:
 :::tab{label="Benefits"}
 ✅ **Zero setup time** - Focus on learning, not configuration
 
-✅ **Enterprise patterns** - Same patterns used in real deployments
+✅ **Modern patterns** - Same patterns used in real deployments
 
 ✅ **Cost-optimized** - Leverages Spot instances and Neuron chips
 

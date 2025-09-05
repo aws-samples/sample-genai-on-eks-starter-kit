@@ -12,7 +12,7 @@ Amazon Bedrock offers:
 - 🚀 **Instant Access**: No infrastructure to manage or models to deploy
 - 🎯 **Top-Tier Models**: Claude (Anthropic), Llama (Meta), Mistral, Amazon Titan, and more
 - 💰 **Pay-Per-Use**: Only pay for tokens processed, no idle costs
-- 🔒 **Enterprise Security**: Data privacy, compliance, and governance built-in
+- 🔒 **Advanced Security**: Data privacy, compliance, and governance built-in
 - ⚡ **High Performance**: Optimized infrastructure with consistent low latency
 - 🛠️ **Additional Features**: Fine-tuning, RAG, agents, and guardrails
 
@@ -280,7 +280,7 @@ This is OpenWebUI's built-in simple RAG capability. You've just seen how:
 
 ✅ **Pay-Per-Use**: Cost model ideal for variable workloads
 
-✅ **Enterprise Features**: Built-in security, compliance, and governance
+✅ **Advanced Features**: Built-in security, compliance, and governance
 
 ## Module Summary
 

@@ -1,57 +1,155 @@
 ---
-title: "Understanding the agentic use-case"
-date: 2025-08-13T11:05:19-07:00
+title: "Understanding the Use Case"
 weight: 10
 ---
 
-Let's start with a use-case.
+Now that you have a complete GenAI platform running on EKS, let's put it to work! In this section, you'll explore "Loan Buddy" - an intelligent loan processing application that demonstrates how AI agents can automate complex business workflows using your platform.
 
-### Use Case for GenAI App
+## 🏦 The Business Problem
 
-When you are building a GenAI app, the first question should be what value it will deliver to your customers and the business.
-Our prototype application aims to reduce the time it takes for banks to process credit loan applications. We call it Loan Buddy :)
+Banks and financial institutions face significant challenges in loan processing:
 
-The app will do the following:
+- **Slow Processing Times**: Manual review of loan applications takes hours or days
+- **Human Errors**: Data extraction and validation mistakes are common
+- **Inconsistent Decisions**: Different reviewers may reach different conclusions
+- **High Operational Costs**: Manual processes require significant human resources
+- **Poor Customer Experience**: Long wait times frustrate applicants
 
-- Read and extract information from a loan application form. The form is presented as an image.
-- Apply basic checks on the the extracted data such as amount of loan requested cannot be greater than 10,000.
-- Use external services to validate the application address and employment history
-- Mark load as approved or move to manual processing queue.
+## 🤖 The AI Solution: Loan Buddy
 
-The business will benefit with faster loan processing resulting in improved customer satisfaction and less chances of error due to manual validation.
+**Loan Buddy** uses your GenAI platform to automate the entire loan review process:
 
-### Components of GenAI application
+### **What Loan Buddy Does:**
+1. **Extracts Information** from loan application images using vision models
+2. **Validates Data** using external services (address verification, employment checks)
+3. **Applies Business Rules** automatically (loan limits, income ratios, risk assessment)
+4. **Makes Decisions** or routes to human review with complete audit trails
+5. **Tracks Everything** in Langfuse for compliance and optimization
 
-Any GenAI app you will build, may have the following components.
+### **Business Benefits:**
+- ⚡ **Faster Processing**: Minutes instead of hours
+- 🎯 **Consistent Decisions**: Same criteria applied every time
+- 💰 **Cost Reduction**: Fewer manual review hours needed
+- 📊 **Complete Audit Trail**: Every decision tracked and explainable
+- 😊 **Better Customer Experience**: Quick responses and status updates
 
-- Orchestration: How GenAI help us simplify code and write our instructions in plain english
-- Knowledge: How MCP servers improve the context for LLM for better business outcomes
-- Memory: LLMs are stateless. We will see how the orchestration layer provides memory to maintain state across sessions and effectively perform complicated tasks.
-- Validation and Measurement. We will touch base on how LangFuse help us to capture and measure the performance of our application.
+## 🛠️ Hands-On: Explore the Application Code
 
-Let's see how our application fits the for this mould.
+Let's examine the actual code that powers Loan Buddy. This will help you understand how AI agents work and how they integrate with your platform.
 
-#### Orchestration
+### Step 1: Open the Main Agent File
 
-We are using LangGraph to build the workflow. As you will see in variables `system_prompt` and the `user_prompt` in the code file [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py) that the workflow instructions are passed in plain English Language. One of te top benefits of agentic applications that it is becoming easier to instruct resulting in better adoption of business requirements.
+In your VSC IDE, open the main agent application:
 
-Examine the prompt and see how does it fits to our requirements mentioned above.
+:::code{language=bash showCopyAction=true}
+# Open the Loan Buddy agent in VSC
+code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/credit-underwriting-agent.py
+:::
 
-The LLM we use not only drive the workflow but decide when to call the external tools to apply business rules.
+**What to look for in the code:**
+- **Line ~50**: The `system_prompt` that instructs the AI agent
+- **Line ~70**: The `user_prompt` that defines the workflow
+- **Line ~30**: LiteLLM gateway configuration (connects to your platform!)
+- **Line ~40**: Langfuse integration (uses your observability!)
 
-#### Contextual Knowledge
+### Step 2: Examine the System Prompt
 
-The foundation model will not have the relevant data to validate addresses or perform employment validation as per our business requirements.
+The system prompt is the key to understanding how the agent works. Look for this section in the code:
 
-However, the prompt in the agents is instructing the model to call the relevant tools for such tasks. These tools have been developed using MCP protocol.
-You mention all the tools available to the agent in the [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py). From there, based on your prompts, the agent will decide when to call the right tool. How does the agent decides what tool to call?
+```python
+system_prompt = """You are a helpful AI assistant for credit underwriting and loan processing.
 
-You can find the tool that validate the address at [`mcp-address-validator`](../../static/code/module3/credit-validation/mcp-address-validator.py). Notice that using the `mcp` annotation bring on the functionality to support MCP protocol. You also mention what the tool does and this information will be used by the agent to select the right tool specific steps in your workflow. Here you are describing functionality using plain english. Talk about easy to code.
+Your task is to process credit applications by analyzing uploaded documents and validating applicant information using the tools provided...
+```
 
-#### Memory
+**Key Insights:**
+- The agent receives **plain English instructions** - no complex programming needed
+- It knows about the **MCP tools** available for validation
+- It connects to your **LiteLLM gateway** from Module 2
+- Everything is **tracked in Langfuse** from Module 2
 
-LLMs are stateless. Your workflow needs to make multiple calls to run the workflow, such as deciding the workflow steps by LLM, calling MCP tools and then sending all this data back to LLM to perform validations. LangGraph provides way to save data from all of these calls and keep on adding in to the context. Think of it as a session, where all the interactions are being kept in a state memory. Using LangGraph you can seamlessly uses the application memory to hold the state. It allows you to use external systems such as PostgreSQL to maintain state, but for this use case, we are going to use the memory state.
+### Step 3: See the Platform Integration
 
-### Observability
+Notice how the agent connects to your platform:
 
-Last but not the least, think about how are you going to collect the data across multiple calls for debugging and/or security and compliance reasons. LangFuse provides a way to capture the trace of your workflow with tight integration with the agent. Look for the string `run_name` in the [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py) file and you will see how LangFuse has been configured.
+```python
+# Uses your LiteLLM gateway
+api_gateway_url = os.environ.get("GATEWAY_URL", "")
+model_key = os.environ.get("GATEWAY_MODEL_ACCESS_KEY", "")
+
+# Uses your Langfuse observability
+langfuse_handler = CallbackHandler()
+```
+
+**Platform Connection:**
+- **LiteLLM Gateway**: Routes all AI requests through your unified API
+- **Langfuse Observability**: Tracks every agent decision and interaction
+- **Claude 3.7 Sonnet**: Uses the model you configured in Module 1
+- **EKS Deployment**: Runs as pods on your Kubernetes cluster
+
+## 🔧 Understanding AI Agent Components
+
+Modern AI applications like Loan Buddy have four key components:
+
+### **1. Orchestration (LangGraph)**
+**How it works**: The agent receives instructions in plain English and decides what to do next.
+
+**In Loan Buddy**: The system prompt tells the agent to:
+- Extract data from images
+- Validate information using tools
+- Apply business rules
+- Make final decisions
+
+### **2. Knowledge (MCP Servers)**
+**How it works**: AI models don't know about your specific business data, so we give them tools.
+
+**In Loan Buddy**: Three MCP servers provide specialized capabilities:
+- **Address Validator**: Verifies addresses and checks for fraud
+- **Employment Checker**: Validates income and employment status
+- **Image Processor**: Extracts data from loan application images
+
+### **3. Memory (LangGraph State)**
+**How it works**: LLMs are stateless, but workflows need to remember previous steps.
+
+**In Loan Buddy**: LangGraph maintains state across multiple AI calls:
+- Remembers extracted data from the image
+- Keeps validation results from each MCP server
+- Builds context for the final decision
+
+### **4. Observability (Langfuse Integration)**
+**How it works**: Every agent decision is tracked for debugging and compliance.
+
+**In Loan Buddy**: Langfuse captures:
+- Complete workflow traces
+- Individual tool calls and responses
+- Token usage and costs
+- Performance metrics
+
+## 🎯 Preview: What You'll Experience
+
+When you deploy and test Loan Buddy, you'll see:
+
+1. **Upload a loan application image** → Agent extracts applicant data
+2. **Watch real-time logs** → See the agent make decisions step by step
+3. **Explore Langfuse traces** → View the complete workflow with all tool calls
+4. **See the final decision** → Approved/rejected with full reasoning
+
+## Key Takeaways
+
+✅ **AI Agents Use Your Platform**: Loan Buddy leverages your LiteLLM gateway and Langfuse observability
+
+✅ **Plain English Instructions**: Complex workflows defined through prompts, not code
+
+✅ **Tool Integration**: MCP servers extend AI capabilities with external data and services
+
+✅ **Complete Observability**: Every decision tracked and auditable in Langfuse
+
+✅ **Business Value**: Real automation that solves actual business problems
+
+## What's Next?
+
+Now that you understand the business case and how AI agents work, let's dive deeper into the technical components. You'll explore the MCP servers and see how they integrate with your GenAI platform.
+
+---
+
+**[Next: Application Components →](../application-components/)**

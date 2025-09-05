@@ -1,81 +1,150 @@
 ---
-title: "Running the Application"
-date: 2025-08-13T11:05:19-07:00
+title: "Deploy and Test Your Application"
 weight: 30
 ---
 
-All is left to deploy this application and test it out.
+Now it's time to deploy Loan Buddy and see your AI agent in action! In this section, you'll deploy the application on your EKS cluster, test it with a real loan application, and watch the complete workflow execute in Langfuse.
 
-### Pre-requisite
+## Prerequisites Check
 
-From module 2, validate that you can access your AI Gateway and the LangFuse observability dashboard.
+Before deploying, let's verify your GenAI platform from Modules 1 & 2 is ready:
 
-### Preparing the deployment
+:::code{language=bash showCopyAction=true}
+# Check your platform components are running
+kubectl get pods -n litellm
+kubectl get pods -n langfuse
 
-Go to your vscode and open a local file named `.env`. This file contains the location and the access keys for your LiteLLM andd the LangFuse components. The agentic application needs these information to connect and validate the platform components you have created in the earlier module.
+# Verify LiteLLM gateway is accessible
+echo "LiteLLM URL: http://$(kubectl get ingress -n litellm litellm -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 
-Note down the values for `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY`.
+# Check Langfuse observability
+echo "Langfuse URL: http://$(kubectl get ingress -n langfuse langfuse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+:::
 
-In the next step you will add these values in the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file so the application can connect to your platform components.
+::alert[**Platform Required**: Ensure all pods are in "Running" status before proceeding. If any components are missing, please complete Modules 1 & 2 first.]{type="warning"}
 
-### Deploy Application Components
+## 🔧 Preparing the Deployment
 
-Open the ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) file and locate the env variable named  `LANGFUSE_PUBLIC_KEY`, and `LANGFUSE_PRIVATE_KEY` in the yaml file and replace their values as per your .env file.
+### Step 1: Get Your Platform Configuration
 
-For the `GATEWAY_MODEL_ACCESS_KEY` variable , replace it with the Virtual Key you have created in the LiteLLM config section in the previous module.
+First, let's get the configuration details from your existing platform:
 
+:::code{language=bash showCopyAction=true}
+# Open the local environment file in VSC
+code .env
+:::
 
-Save your ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml).
+**Note down these values** from your `.env` file:
+- `LANGFUSE_PUBLIC_KEY`
+- `LANGFUSE_SECRET_KEY` 
+- The LiteLLM API key you created in Module 2
 
-Create the namespace named `workshop` where the loan-buddy app will be deployed.
+### Step 2: Configure the Application Deployment
 
-```bash
-kubectl create ns workshop
-```
+:::code{language=bash showCopyAction=true}
+# Open the deployment file in VSC
+code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
+:::
 
-Using the file ['agentic-application-deploy.yaml'](../../static/code/module3/credit-validation/agentic-application-deployment.yaml) to deploy the application components onto the EKS. You can use the following command.
-> **Important**
-> Before running this deployment yaml file, edit the file and replace the keys for `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` and `GATEWAY_MODEL_ACCESS_KEY` as per your environment.
+**Update the environment variables** in the deployment file:
+- Locate the `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` variables
+- Replace their values with the ones from your `.env` file
+- Update the `GATEWAY_MODEL_ACCESS_KEY` with your LiteLLM API key from Module 2
 
-```bash
-kubectl create -f agentic-application-deploy.yaml -n workshop
-```
+::alert[**Important**: Make sure to save the file after making these changes. The application needs these keys to connect to your platform components.]{type="warning"}
 
-Check of all the components are deployed and in the running state using the list of pods following command.
+## 🚀 Deploy Application Components
 
-```bash
+### Step 3: Create the Workshop Namespace
+
+:::code{language=bash showCopyAction=true}
+# Create namespace for the Loan Buddy application
+kubectl create namespace workshop
+:::
+
+### Step 4: Deploy All Components
+
+:::code{language=bash showCopyAction=true}
+# Deploy the application using your configured file
+kubectl apply -f /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
+
+# Wait for deployments to complete
+kubectl rollout status deployment/loan-buddy-agent -n workshop
+kubectl rollout status deployment/mcp-address-validator -n workshop
+kubectl rollout status deployment/mcp-employment-validator -n workshop
+kubectl rollout status deployment/mcp-image-processor -n workshop
+:::
+
+### Step 5: Verify Deployment Success
+
+:::code{language=bash showCopyAction=true}
+# Check all components are running
 kubectl get pods -n workshop
+:::
+
+**Expected output - all pods should be "Running":**
+```
+NAME                                     READY   STATUS    RESTARTS   AGE
+loan-buddy-agent-xxx                     1/1     Running   0          2m
+mcp-address-validator-xxx                1/1     Running   0          2m
+mcp-employment-validator-xxx             1/1     Running   0          2m
+mcp-image-processor-xxx                  1/1     Running   0          2m
 ```
 
-### Calling the application
+## 🧪 Test Your AI Agent
 
-Before calling the application, tail the log from application pod in a separate terminal using the following command.
+Now let's test Loan Buddy with a real loan application and watch the complete workflow!
 
-```bash
-kubectl logs -f <POD_NAME> -n workshop
-```
+### Step 6: Set Up Real-Time Monitoring
 
-The [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application. You will use this file to make a call to the agentic application. Use the following command to expose the running agentic application on the local port and make a cURL call to start the process. Before running the cURL call, make sure that you are in the credit-validation folder where the example1.png exists.
+Before testing the application, let's set up monitoring to watch the agent work:
 
-```bash
+:::code{language=bash showCopyAction=true}
+# Watch the agent logs in real-time (open in a second terminal)
+kubectl logs -f deployment/loan-buddy-agent -n workshop
+:::
 
+**Keep this terminal open** - you'll see the agent's decision-making process in real-time!
+
+### Step 7: Process a Loan Application
+
+The sample [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application document. Let's use it to test our agentic application:
+
+:::code{language=bash showCopyAction=true}
+# Expose the application on local port
 kubectl port-forward service/loan-buddy-agent 8080:8080 -n workshop &
 
+# Navigate to the test data directory
+cd /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/
+
+# Process the sample loan application
 curl -X POST -F "image_file=@./example1.png" http://localhost:8080/api/process_credit_application_with_upload
-```
+:::
 
-Study the return from curl call above and familiarise yourself with the output generate.
-Track the logs from the application pod and see how the LLM is executing the workflow. Remember that you have not coded any workflow or calls to MCP servers. All is done for you by the LLM using the prompt that you have provided.
+**Study the response** from the curl call and familiarize yourself with the output generated. Track the logs from the application pod and see how the LLM is executing the workflow. Remember that you have not coded any workflow or calls to MCP servers - all is done by the LLM using the prompt you provided.
 
-### Validating in LangFuse
+### Step 8: Explore the Workflow in Langfuse
 
-Go to LangFuse page and open the Traces section. Find our your agent call, you can get the identity of your call by opening up the [`credit-underwriting-agent.py`](../../static/code/module3/credit-validation/credit-underwriting-agent.py) and look for the string `run_name` which is a LangFuse pointer to record your traces against.
+Now let's see the complete workflow captured in your Langfuse observability platform:
 
-You shall see a flow similar to the picture below with the `run_name` key captured in a red rectangle. Notice that how a full trace with multiple calls to your tool and LLM are captured. Validate following:
+1. **Open Langfuse** using the URL from your prerequisites check
+2. **Navigate to Traces** in the left sidebar
+3. **Look for traces** with the run name `credit_underwriting_agent_with_image_id`
 
-- The flow has been executed as per your prompt
-- See the input and out of each LLM and MCP calls and familiarise yourself with the data captured
-- See the Metrics for LLM such as Time to First Token and LAtency capture by the LangFuse.
+You can find this identifier by examining the agent code:
 
-![LangFuse](../../static/images/module-3/LoanBuddy-Observability.png)
-*Observability*
+:::code{language=bash showCopyAction=true}
+# See the Langfuse run_name in the agent code
+grep -n "run_name" /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/credit-underwriting-agent.py
+:::
+
+**In Langfuse, you'll see a complete trace** similar to the image below, showing how the full workflow with multiple calls to tools and LLMs are captured:
+
+![LangFuse Workflow Trace](/static/images/module-3/LoanBuddy-Observability.png)
+
+**Validate the following in your Langfuse trace:**
+- **Workflow Execution**: The flow has been executed according to your prompt
+- **Tool Interactions**: Input and output of each LLM and MCP call
+- **Performance Metrics**: Time to First Token and latency captured by Langfuse
+- **Cost Tracking**: Token usage and costs for the complete workflow
+- **Decision Audit**: Complete reasoning for the loan approval/rejection

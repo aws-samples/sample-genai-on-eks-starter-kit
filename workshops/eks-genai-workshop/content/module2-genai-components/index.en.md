@@ -3,7 +3,7 @@ title: "Module 2: GenAI Platform Components"
 weight: 30
 ---
 
-You've just experienced individual AI models - now let's transform them into a unified platform! In this module, you'll build the infrastructure that powers enterprise GenAI applications by connecting LiteLLM as a unified API gateway and Langfuse for comprehensive observability.
+You've just experienced individual AI models - now let's transform them into a unified platform! In this module, you'll build the infrastructure that powers modern GenAI applications by connecting LiteLLM as a unified API gateway and Langfuse for comprehensive observability.
 
 ## Learning Objectives
 
@@ -64,7 +64,7 @@ This module focuses on **real-world deployment patterns** using Helm charts and 
 
 - **Dynamic Configuration**: See how Helm templates enable flexible deployments
 - **Automatic Integration**: Learn how components discover and connect to each other
-- **Production Patterns**: Understand resource management, ingress, and security
+- **Scalable Patterns**: Understand resource management, ingress, and security
 - **Hands-on Practice**: Add new models and explore observability features
 
 ## Module Sections

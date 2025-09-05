@@ -1,6 +1,6 @@
 ---
 title: "Workshop Summary and Next Steps"
-weight: 60
+weight: 70
 ---
 
 # Workshop Summary and Next Steps
