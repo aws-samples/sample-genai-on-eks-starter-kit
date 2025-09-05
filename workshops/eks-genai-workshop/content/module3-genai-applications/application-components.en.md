@@ -1,169 +1,345 @@
 ---
 title: "Application Components"
-date: 2025-08-13T11:05:19-07:00
 weight: 20
 ---
 
-Now you understand the use-case, let's explore how the application components are connected and examine the actual code that makes it work.
+# 🛠️ The AI Assembly Line for John's Loan
 
-## 🛠️ Hands-On: Discover Your Application Stack
+Now that you've seen John Michael Doe's loan application and understand the business problem, let's explore HOW the AI actually processes it. Think of this as an assembly line where each component has a specialized job.
 
-### The Big Picture
+![John's Application](/static/images/module-3/example1.png)
+*The application we're about to process automatically*
 
-In the previous module, you worked with AI Gateway (LiteLLM) and Observability (LangFuse). The Loan Buddy application consists of an Agentic module and several MCP Servers that will be deployed alongside your existing platform components on EKS.
+## 🧠 The Brain: Understanding LangGraph and LangChain
 
-You will deploy the application components onto Amazon EKS using pods for each component - one for the agentic module, and one each for the MCP servers. Two important things to notice: first, all calls from the agentic application to LLMs and MCP Servers are routed through your AI Gateway, providing consistent security and routing control. Second, all ecosystem components send observability data to LangFuse, capturing not only individual call metrics but complete end-to-end workflow interactions.
+Before diving into the components, let's understand the AI frameworks that power Loan Buddy:
 
-Let's start by examining the deployment configuration and then explore each component:
+### **LangGraph - The Workflow Orchestrator**
 
-:::code{language=bash showCopyAction=true}
-# Open the deployment file in VSC to see what will be deployed
-code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
+Think of LangGraph as the **project manager** of our AI system. It:
+- **Manages state** across multiple AI calls (remembers what's been done)
+- **Orchestrates workflows** (decides what to do next based on results)
+- **Handles errors** gracefully (retries, fallbacks, alternative paths)
+- **Tracks progress** through complex multi-step processes
+
+:::code{language=python showCopyAction=true}
+# In our agent, LangGraph creates the workflow:
+from langgraph.prebuilt import create_react_agent
+
+# This creates an agent that can:
+# 1. React to inputs
+# 2. Use tools (MCP servers)
+# 3. Maintain state across steps
+# 4. Make decisions
+graph = create_react_agent(model, tools, debug=True)
 :::
 
-Here is the component diagram where black arrows show the call flow while the red dotted arrows showcase the observability hooks:
+### **LangChain - The Foundation**
 
-<!-- ![The Big Picture](../../static/images/module-3/gen-ai-on-eks.png)
-*Loan Buddy Application Components* -->
+LangChain provides the building blocks:
+- **LLM integration** (connects to Claude via your LiteLLM gateway)
+- **Tool abstractions** (standardizes how AI uses external tools)
+- **Memory management** (keeps context across interactions)
+- **Prompt templates** (structures instructions to the AI)
 
-```mermaid
----
-title: Loan Buddy Application Components hosted on Amazon EKS
----
-graph TD
-    User("fa:fa-user User") --> AgenticApp
+:::code{language=python showCopyAction=true}
+# LangChain connects to your platform:
+from langchain_openai import ChatOpenAI
 
-    subgraph "EKS"
-        direction LR
-        AgenticApp["Agentic Application"]
-        AIGateway["AI Gateway"]
-        Observability["Observability"]
-        MCP_Address["MCP Server for Address Validation"]
-        MCP_Employment["MCP Server for Employment Validation"]
-
-        AgenticApp --> AIGateway
-        AIGateway --> MCP_Address
-        AIGateway --> MCP_Employment
-        
-        style AgenticApp fill:#fff,stroke:#f60,stroke-width:2px
-        style AIGateway fill:#fff,stroke:#f60,stroke-width:2px
-        style Observability fill:#fff,stroke:#f60,stroke-width:2px
-        style MCP_Address fill:#fff,stroke:#f60,stroke-width:2px
-        style MCP_Employment fill:#fff,stroke:#f60,stroke-width:2px
-    end
-    
-    LLM["Amazon BedRock"]
-    style LLM fill:#fff,stroke:#0c9,stroke-width:2px
-
-    AIGateway --> LLM
-    
-    linkStyle 0 stroke-width:1px,fill:none,stroke:black;
-    linkStyle 1 stroke-width:1px,fill:none,stroke:black;
-    linkStyle 2 stroke-width:1px,fill:none,stroke:black;
-    linkStyle 3 stroke-width:1px,fill:none,stroke:black;
-
-    AgenticApp -.-> Observability
-    AIGateway -.-> Observability
-    
-    
-    linkStyle 4 stroke-width:1px,fill:none,stroke:black;
-    linkStyle 5 stroke-width:1px,fill:none,stroke:red,stroke-dasharray: 5 5;
-    linkStyle 6 stroke-width:1px,fill:none,stroke:red,stroke-dasharray: 5 5;
-```
-
-## 🔍 Explore the Application Components
-
-Now let's examine each component in detail using your VSC IDE:
-
-### Step 1: Examine the Main Agent
-
-:::code{language=bash showCopyAction=true}
-# Open the main agent file in VSC
-code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/credit-underwriting-agent.py
+model = ChatOpenAI(
+    model="bedrock/claude-3.7-sonnet",
+    api_key=model_key,
+    base_url="http://litellm.litellm.svc.cluster.local:4000"  # Your gateway!
+)
 :::
 
-**What to look for in the agent code:**
-- **System Prompt** (around line 50): The instructions that drive the entire workflow
-- **Platform Integration** (lines 25-45): How it connects to your LiteLLM gateway and Langfuse
-- **MCP Server Configuration** (lines 35-50): How the agent discovers and uses tools
-- **Langfuse Integration** (line 40): The `run_name` that will appear in your traces
+## 📦 The Specialized Workers: MCP Servers Explained
 
-### Step 2: Explore the MCP Servers
+**MCP (Model Context Protocol)** servers are like specialized employees, each expert at one task. Let's meet the team that processes John's application:
 
-The MCP servers provide specialized tools that extend the agent's capabilities:
+### **1. Image Processor MCP - "The Document Reader" 📸**
+
+**Job**: Extract structured data from John's loan application image
 
 :::code{language=bash showCopyAction=true}
-# Open the address validator MCP server
-code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/mcp-address-validator.py
-
-# Open the employment validator MCP server  
-code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/mcp-income-employment-validator.py
-
-# Open the image processor MCP server
+# Let's examine this MCP server's code:
 code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/mcp-image-processor.py
 :::
 
-**Key things to notice in the MCP servers:**
-- **@mcp.tool decorators**: How tools are exposed to AI agents with descriptions
-- **Business Logic**: Address validation, employment verification, document processing
-- **Mock Databases**: Sample data for workshop testing
-- **Structured Responses**: JSON format that agents can understand
+**How it works:**
+1. **Receives** John's application image ID
+2. **Retrieves** the image from S3 storage
+3. **Uses Claude's vision** to read and understand the document
+4. **Extracts** structured JSON data
 
-### Step 3: Understanding the Image Processing Optimization
-
-Since we're using images of loan applications in our workflow, there's an important optimization to understand. Adding the full image to every AI call would cost more in input tokens. Instead, our agent uploads the file to S3 and the image processor MCP server downloads and processes it separately. This approach:
-
-- **Reduces token costs** by not sending images with every request
-- **Provides flexibility** to use different models for image processing
-- **Improves performance** by caching processed results
-
-### Step 4: Examine the Kubernetes Deployment
-
-:::code{language=bash showCopyAction=true}
-# See how the components will be deployed as Kubernetes pods
-grep -A 10 "kind: Deployment" /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
+**What it extracts from John's application:**
+:::code{language=json showCopyAction=true}
+{
+    "name": "John Michael Doe",
+    "date_of_birth": "March 15, 1985",
+    "ssn_last_4": "7890",
+    "email": "john.doe@email.com",
+    "employer": "Tech Solutions Inc",
+    "job_title": "Software Engineer",
+    "annual_income": 75000,
+    "address": "123 Main Street",
+    "city": "Anytown",
+    "state": "CA",
+    "zip": "90210",
+    "loan_amount": 8500,
+    "loan_purpose": "Home Improvement"
+}
 :::
 
-**Deployment Structure:**
-- **4 Deployments**: Main agent + 3 MCP servers
-- **4 Services**: Kubernetes services for internal communication
-- **Environment Variables**: Connections to your platform components
-- **Resource Allocation**: Proper CPU and memory limits
+**Key insight**: The image isn't sent with every AI call (expensive!). Instead, it's stored once in S3 and referenced by ID.
 
-## 🎯 Platform Integration Deep Dive
+### **2. Address Validator MCP - "The Detective" 🏠**
 
-### Connection to Your GenAI Platform
+**Job**: Verify John's address is real and assess risk
 
-Notice how Loan Buddy integrates with the platform you built in Modules 1 & 2:
+:::code{language=bash showCopyAction=true}
+# Examine the address validator:
+code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/mcp-address-validator.py
+:::
 
-**Environment Variables in the Deployment:**
-- `GATEWAY_URL`: Points to your LiteLLM service
-- `LANGFUSE_URL`: Points to your Langfuse service  
-- `LANGFUSE_PUBLIC_KEY` & `LANGFUSE_SECRET_KEY`: For trace integration
+**What it does with "123 Main Street, Anytown, CA 90210":**
+1. **Validates** the address format and ZIP code
+2. **Checks** if it's residential (not a PO Box)
+3. **Assesses** fraud risk indicators
+4. **Verifies** ownership status (John owns the home)
+5. **Calculates** stability score (4 years = high stability)
 
-**This means:**
-- All AI requests go through **your LiteLLM gateway**
-- All workflows are tracked in **your Langfuse instance**
-- The agent uses **Claude 3.7 Sonnet** from your Module 1 setup
+**Returns for John:**
+:::code{language=python showCopyAction=true}
+{
+    "validation_status": "VALID",
+    "is_residential": True,
+    "address_type": "Single Family",
+    "occupancy_status": "Owner Occupied",
+    "risk_score": 15,  # Low risk
+    "years_at_address": 4,
+    "recommendation": "Address verified successfully. Proceed with application."
+}
+:::
 
-## Key Takeaways
+### **3. Employment Validator MCP - "The Background Checker" 💼**
 
-✅ **Platform Reuse**: Loan Buddy leverages all the infrastructure you built in Modules 1 & 2
+**Job**: Verify John's employment and income claims
 
-✅ **MCP Tool Architecture**: Servers expose capabilities through simple decorators and descriptions
+:::code{language=bash showCopyAction=true}
+# Examine the employment validator:
+code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/mcp-income-employment-validator.py
+:::
 
-✅ **Cost Optimization**: Image processing separated to reduce token usage
+**What it verifies about Tech Solutions Inc:**
+1. **Employment status** (Full-time Software Engineer)
+2. **Income accuracy** ($75,000 annual / $6,250 monthly)
+3. **Employment duration** (3.5 years)
+4. **Stability assessment** (consistent employment history)
 
-✅ **Complete Observability**: Every agent decision tracked in your existing Langfuse
+**Returns for John:**
+:::code{language=python showCopyAction=true}
+{
+    "validation_status": "PASSED",
+    "employment_verified": True,
+    "income_verified": True,
+    "verified_employer": "Tech Solutions Inc",
+    "verified_income": 75000,
+    "employment_years": 3.5,
+    "stability_score": 85,  # High stability
+    "recommendation": "Employment and income verified successfully."
+}
+:::
 
-✅ **Kubernetes Native**: Deployed using standard patterns you've learned
+## 🎭 The Orchestrator: How the Agent Brings It All Together
 
-## 💡 Challenge Question
+The Loan Processing Agent is the conductor of this orchestra. Let's see how it processes John's application:
 
-How would you modify the application to validate that 25% of the total income should be greater than 4% of the loan amount?
+:::code{language=bash showCopyAction=true}
+# Open the main agent to see the orchestration:
+code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/credit-underwriting-agent.py
+:::
 
-**Hint**: Look at the system prompt in the agent code and the business logic in the MCP servers. The validation logic can be added either in the agent's prompt or as a new MCP tool function.
+### **The Agent's Workflow for John:**
+
+```mermaid
+graph TD
+    A[📄 John's Application Uploaded] --> B[🤖 Agent Receives Image ID]
+    B --> C[📸 Call Image Processor MCP]
+    C --> D[Extract John's Data]
+    D --> E[🏠 Call Address Validator MCP]
+    E --> F[Verify 123 Main St]
+    F --> G[💼 Call Employment Validator MCP]
+    G --> H[Verify Tech Solutions Inc]
+    H --> I[🧮 Calculate Ratios]
+    I --> J{Decision Logic}
+    J -->|All Checks Pass| K[✅ APPROVED]
+    J -->|Issues Found| L[❌ REJECTED]
+    K --> M[📊 Log to Langfuse]
+    L --> M
+    
+    style K fill:#90EE90
+    style L fill:#FFB6C1
+    style M fill:#87CEEB
+```
+
+### **The System Prompt - The Agent's Instructions**
+
+The agent follows instructions written in plain English:
+
+:::code{language=python showCopyAction=true}
+system_prompt = """You are a helpful AI assistant for credit underwriting.
+
+Your task is to process credit applications by:
+1. First, extract credit application data from the uploaded document
+2. Then validate the extracted information using validation tools
+3. Make a final credit decision based on all validation results
+4. Present a comprehensive credit assessment
+
+You have access to these MCP tools:
+- extract_credit_application_data: Extract applicant information
+- validate_address: Verify address information
+- validate_income_employment: Verify employment and income
+"""
+:::
+
+**Key Insight**: No complex programming - just clear instructions in English!
+
+## 🔌 Platform Integration: How It All Connects
+
+Let's examine the deployment configuration to see how everything connects:
+
+:::code{language=bash showCopyAction=true}
+# Open the deployment file:
+code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
+:::
+
+### **Key Integration Points:**
+
+::::tabs
+
+:::tab{label="LiteLLM Gateway"}
+```yaml
+- name: GATEWAY_URL
+  value: "http://litellm.litellm.svc.cluster.local:4000"
+- name: GATEWAY_MODEL_ACCESS_KEY
+  value: "your-api-key"
+```
+**All AI requests route through your gateway** - no direct model calls!
+:::
+
+:::tab{label="Langfuse Observability"}
+```yaml
+- name: LANGFUSE_URL
+  value: "http://langfuse-web.langfuse.svc.cluster.local:3000"
+- name: LANGFUSE_PUBLIC_KEY
+  value: "your-public-key"
+```
+**Every decision is tracked** - complete audit trail!
+:::
+
+:::tab{label="MCP Communication"}
+```yaml
+- name: MCP_ADDRESS_VALIDATOR
+  value: "http://mcp-address-validator:8000"
+- name: MCP_EMPLOYMENT_VALIDATOR
+  value: "http://mcp-employment-validator:8000"
+```
+**Internal Kubernetes networking** - secure and fast!
+:::
+
+:::tab{label="S3 Storage"}
+```yaml
+- name: S3_BUCKET_NAME
+  value: "langfuse"
+- name: S3_ENDPOINT_URL
+  value: "http://langfuse-s3.langfuse.svc.cluster.local:9000"
+```
+**Images stored once** - referenced by ID for efficiency!
+:::
+
+::::
+
+## 💡 The Complete Picture: Processing John's Application
+
+Now let's trace the complete flow when John's application is processed:
+
+### **Step 1: Upload & Store**
+```
+John's application image → Uploaded to API → Stored in S3 → Returns image_id
+```
+
+### **Step 2: Agent Orchestration**
+```
+Agent receives image_id → Calls Image Processor MCP → Gets John's data as JSON
+```
+
+### **Step 3: Validation Chain**
+```
+Agent has John's data → Calls Address Validator → "123 Main St" verified ✅
+                      → Calls Employment Validator → "Tech Solutions Inc" confirmed ✅
+```
+
+### **Step 4: Decision Making**
+```
+Agent analyzes:
+- Debt-to-income: $275/$6,250 = 4.4% ✅ (Excellent)
+- Employment: 3.5 years stable ✅
+- Address: 4 years, owns home ✅
+- Purpose: Home improvement ✅
+
+Decision: APPROVED
+```
+
+### **Step 5: Observability**
+```
+Complete trace → Logged to Langfuse → Includes all tool calls, reasoning, tokens used
+```
+
+## 🎯 Why This Architecture Matters
+
+### **Separation of Concerns**
+- Each MCP server has ONE job and does it well
+- Agent orchestrates but doesn't implement business logic
+- Platform components (LiteLLM, Langfuse) handle infrastructure
+
+### **Scalability**
+- MCP servers can be scaled independently
+- Multiple agents can share the same MCP servers
+- Platform components handle load balancing
+
+### **Maintainability**
+- Update business rules in MCP servers without touching the agent
+- Add new validation tools without changing existing code
+- Complete observability makes debugging easy
+
+### **Cost Optimization**
+- Images processed once and cached
+- Efficient token usage (no image in every call)
+- Shared infrastructure reduces overhead
+
+## 💡 Challenge: Extend the System
+
+**Question**: How would you add a new validation rule that requires the monthly payment to be less than 25% of monthly income?
+
+**Hint**: You could either:
+1. Add logic to the Employment Validator MCP to check this ratio
+2. Create a new "Debt Ratio Calculator" MCP server
+3. Add the check to the agent's system prompt
+
+Think about the trade-offs of each approach!
 
 ## What's Next?
 
-Now that you've explored the architecture and examined the code, let's deploy Loan Buddy on your EKS cluster and see it process real loan applications!
+Now that you understand how all the components work together to process John's loan application, it's time to deploy everything and see it in action! In the next section, you'll:
+
+1. Deploy all four components to your EKS cluster
+2. Process John's actual application
+3. Watch the real-time logs as the AI makes decisions
+4. Explore the complete workflow in Langfuse
+
+::alert[**Ready to Deploy?** Make sure you have your Langfuse keys and LiteLLM API key ready - you'll need them to configure the deployment!]{type="warning"}
+
+---
+
+**[Next: Deploy and Test Your Application →](../running-application/)**

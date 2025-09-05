@@ -3,11 +3,16 @@ title: "Deploy and Test Your Application"
 weight: 30
 ---
 
-Now it's time to deploy Loan Buddy and see your AI agent in action! In this section, you'll deploy the application on your EKS cluster, test it with a real loan application, and watch the complete workflow execute in Langfuse.
+# 🚀 The Moment of Truth: Deploy Loan Buddy!
 
-## Prerequisites Check
+It's time to bring Loan Buddy to life and watch it process John Michael Doe's loan application in real-time! Get ready to see hours of manual work completed in minutes.
 
-Before deploying, let's verify your GenAI platform from Modules 1 & 2 is ready:
+![John's Application Ready for Processing](/static/images/module-3/example1.png)
+*John's application is waiting - let's process it with AI!*
+
+## ✅ Prerequisites Check
+
+Before we deploy, let's make sure your GenAI platform from Modules 1 & 2 is ready:
 
 :::code{language=bash showCopyAction=true}
 # Check your platform components are running
@@ -21,130 +26,327 @@ echo "LiteLLM URL: http://$(kubectl get ingress -n litellm litellm -o jsonpath='
 echo "Langfuse URL: http://$(kubectl get ingress -n langfuse langfuse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 :::
 
-::alert[**Platform Required**: Ensure all pods are in "Running" status before proceeding. If any components are missing, please complete Modules 1 & 2 first.]{type="warning"}
+::alert[**Platform Required**: All pods should show "Running" status. If any components are missing, please complete Modules 1 & 2 first.]{type="warning"}
 
-## 🔧 Preparing the Deployment
+## 🔧 Step 1: Configure Your Deployment
 
-### Step 1: Get Your Platform Configuration
+### Get Your Platform Credentials
 
-First, let's get the configuration details from your existing platform:
+First, let's retrieve the configuration from your existing platform:
 
 :::code{language=bash showCopyAction=true}
-# Open the local environment file in VSC
+# Open your environment file to get the keys
 code .env
 :::
 
-**Note down these values** from your `.env` file:
-- `LANGFUSE_PUBLIC_KEY`
-- `LANGFUSE_SECRET_KEY` 
-- The LiteLLM API key you created in Module 2
+**Note these values from your `.env` file:**
+- `LANGFUSE_PUBLIC_KEY` - Your Langfuse public key
+- `LANGFUSE_SECRET_KEY` - Your Langfuse secret key
+- Your LiteLLM API key from Module 2
 
-### Step 2: Configure the Application Deployment
+### Update the Deployment Configuration
+
+Now let's configure Loan Buddy to connect to your platform:
 
 :::code{language=bash showCopyAction=true}
-# Open the deployment file in VSC
+# Open the deployment file
 code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
 :::
 
-**Update the environment variables** in the deployment file:
-- Locate the `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` variables
-- Replace their values with the ones from your `.env` file
-- Update the `GATEWAY_MODEL_ACCESS_KEY` with your LiteLLM API key from Module 2
+**Update these environment variables in the deployment file:**
 
-::alert[**Important**: Make sure to save the file after making these changes. The application needs these keys to connect to your platform components.]{type="warning"}
+1. Find the `loan-buddy-agent` deployment section
+2. Update these values:
+   ```yaml
+   - name: LANGFUSE_PUBLIC_KEY
+     value: "YOUR_ACTUAL_PUBLIC_KEY"  # Replace with your key
+   - name: LANGFUSE_SECRET_KEY  
+     value: "YOUR_ACTUAL_SECRET_KEY"  # Replace with your key
+   - name: GATEWAY_MODEL_ACCESS_KEY
+     value: "YOUR_LITELLM_API_KEY"    # Replace with your key
+   ```
 
-## 🚀 Deploy Application Components
+3. Also update in the `mcp-image-processor` deployment:
+   ```yaml
+   - name: GATEWAY_MODEL_ACCESS_KEY
+     value: "YOUR_LITELLM_API_KEY"    # Same key as above
+   ```
 
-### Step 3: Create the Workshop Namespace
+::alert[**Important**: Save the file (Ctrl+S) after making these changes!]{type="warning"}
+
+## 🎯 Step 2: Deploy the AI Workforce
+
+### Create the Workshop Namespace
 
 :::code{language=bash showCopyAction=true}
-# Create namespace for the Loan Buddy application
+# Create a dedicated namespace for Loan Buddy
 kubectl create namespace workshop
 :::
 
-### Step 4: Deploy All Components
+### Deploy All Components
+
+Now let's deploy our AI assembly line:
 
 :::code{language=bash showCopyAction=true}
-# Deploy the application using your configured file
+# Deploy Loan Buddy and all MCP servers
 kubectl apply -f /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
 
-# Wait for deployments to complete
+# Watch the magic happen!
+echo "🚀 Deploying your AI workforce..."
+echo "📸 Image Processor MCP - Ready to read documents"
+echo "🏠 Address Validator MCP - Ready to verify addresses"
+echo "💼 Employment Validator MCP - Ready to check backgrounds"
+echo "🤖 Loan Processing Agent - Ready to orchestrate!"
+:::
+
+### Wait for Deployment to Complete
+
+:::code{language=bash showCopyAction=true}
+# Check deployment status
 kubectl rollout status deployment/loan-buddy-agent -n workshop
 kubectl rollout status deployment/mcp-address-validator -n workshop
 kubectl rollout status deployment/mcp-employment-validator -n workshop
 kubectl rollout status deployment/mcp-image-processor -n workshop
-:::
 
-### Step 5: Verify Deployment Success
-
-:::code{language=bash showCopyAction=true}
-# Check all components are running
+# Verify all pods are running
 kubectl get pods -n workshop
 :::
 
 **Expected output - all pods should be "Running":**
 ```
 NAME                                     READY   STATUS    RESTARTS   AGE
-loan-buddy-agent-xxx                     1/1     Running   0          2m
-mcp-address-validator-xxx                1/1     Running   0          2m
-mcp-employment-validator-xxx             1/1     Running   0          2m
-mcp-image-processor-xxx                  1/1     Running   0          2m
+loan-buddy-agent-xxx                     1/1     Running   0          1m
+mcp-address-validator-xxx                1/1     Running   0          1m
+mcp-employment-validator-xxx             1/1     Running   0          1m
+mcp-image-processor-xxx                  1/1     Running   0          1m
 ```
 
-## 🧪 Test Your AI Agent
+## 🎬 Step 3: Watch the AI in Action
 
-Now let's test Loan Buddy with a real loan application and watch the complete workflow!
+### Set Up Real-Time Monitoring
 
-### Step 6: Set Up Real-Time Monitoring
-
-Before testing the application, let's set up monitoring to watch the agent work:
+Open a second terminal to watch the agent's thought process:
 
 :::code{language=bash showCopyAction=true}
-# Watch the agent logs in real-time (open in a second terminal)
+# In a NEW terminal, watch the agent logs
 kubectl logs -f deployment/loan-buddy-agent -n workshop
 :::
 
-**Keep this terminal open** - you'll see the agent's decision-making process in real-time!
+**Keep this terminal visible** - you'll see the AI making decisions in real-time!
 
-### Step 7: Process a Loan Application
+### Expose the Application
 
-The sample [loan application](../../static/code/module3/credit-validation/example1.png) is an example loan application document. Let's use it to test our agentic application:
+Back in your main terminal:
 
 :::code{language=bash showCopyAction=true}
-# Expose the application on local port
+# Make Loan Buddy accessible
 kubectl port-forward service/loan-buddy-agent 8080:8080 -n workshop &
 
 # Navigate to the test data directory
 cd /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/
-
-# Process the sample loan application
-curl -X POST -F "image_file=@./example1.png" http://localhost:8080/api/process_credit_application_with_upload
 :::
 
-**Study the response** from the curl call and familiarize yourself with the output generated. Track the logs from the application pod and see how the LLM is executing the workflow. Remember that you have not coded any workflow or calls to MCP servers - all is done by the LLM using the prompt you provided.
+## 🎉 Step 4: Process John's Loan Application!
 
-### Step 8: Explore the Workflow in Langfuse
-
-Now let's see the complete workflow captured in your Langfuse observability platform:
-
-1. **Open Langfuse** using the URL from your prerequisites check
-2. **Navigate to Traces** in the left sidebar
-3. **Look for traces** with the run name `credit_underwriting_agent_with_image_id`
-
-You can find this identifier by examining the agent code:
+### The Big Moment - Submit John's Application
 
 :::code{language=bash showCopyAction=true}
-# See the Langfuse run_name in the agent code
-grep -n "run_name" /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/credit-underwriting-agent.py
+# Process John Michael Doe's loan application
+curl -X POST -F "image_file=@./example1.png" \
+  http://localhost:8080/api/process_credit_application_with_upload
 :::
 
-**In Langfuse, you'll see a complete trace** similar to the image below, showing how the full workflow with multiple calls to tools and LLMs are captured:
+### Watch the Magic Happen! ✨
 
-![LangFuse Workflow Trace](/static/images/module-3/LoanBuddy-Observability.png)
+**In your log terminal, you'll see:**
 
-**Validate the following in your Langfuse trace:**
-- **Workflow Execution**: The flow has been executed according to your prompt
-- **Tool Interactions**: Input and output of each LLM and MCP call
-- **Performance Metrics**: Time to First Token and latency captured by Langfuse
-- **Cost Tracking**: Token usage and costs for the complete workflow
-- **Decision Audit**: Complete reasoning for the loan approval/rejection
+```
+🔄 Starting credit application processing...
+📄 Processing uploaded loan application image...
+✅ Image stored in S3 with ID: a7b9c2d4e5f6...
+🔧 Loading MCP tools...
+🤖 Processing with agent...
+
+[Agent]: I'll help you process this credit application. Let me start by extracting the information from the document.
+
+[Image Processor MCP]: Extracting data from loan application...
+Found: John Michael Doe, DOB: 03/15/1985, SSN: ***-**-7890
+Income: $75,000, Employer: Tech Solutions Inc
+Address: 123 Main Street, Anytown, CA 90210
+
+[Agent]: Now validating the address information...
+
+[Address Validator MCP]: Checking 123 Main Street, Anytown, CA 90210
+✅ Valid residential address - Single family home
+✅ Owner occupied - 4 years at address
+✅ Risk score: 15 (Low risk)
+
+[Agent]: Verifying employment and income...
+
+[Employment Validator MCP]: Verifying Tech Solutions Inc
+✅ Employment confirmed - Software Engineer
+✅ Income verified - $75,000 annual
+✅ Employment duration - 3.5 years
+✅ Stability score: 85 (High stability)
+
+[Agent]: Calculating loan metrics...
+- Loan amount: $8,500
+- Monthly payment: $275
+- Monthly income: $6,250
+- Debt-to-income ratio: 4.4% (Excellent)
+
+FINAL DECISION: ✅ APPROVED
+- Low risk profile
+- Stable employment
+- Excellent debt-to-income ratio
+- Home ownership indicates stability
+```
+
+### Review the Response
+
+The curl command returns a JSON response with the complete assessment:
+
+```json
+{
+  "status": "COMPLETED",
+  "image_id": "a7b9c2d4e5f6...",
+  "credit_assessment": "APPROVED - John Michael Doe's application for $8,500 home improvement loan is approved. Verified employment at Tech Solutions Inc ($75,000/year), confirmed residential address ownership, excellent debt-to-income ratio of 4.4%.",
+  "processing_note": "Complete audit trail available in Langfuse"
+}
+```
+
+## 📊 Step 5: Explore the Complete Workflow in Langfuse
+
+### Open Langfuse Dashboard
+
+1. **Get your Langfuse URL** (from the prerequisites check)
+2. **Open it in your browser**
+3. **Navigate to "Traces"** in the left sidebar
+
+### Find John's Application Trace
+
+Look for traces with:
+- **Name**: `credit_underwriting_agent_with_image_id`
+- **Recent timestamp** (just processed)
+
+### What You'll See in the Trace
+
+![Langfuse Trace Example](/static/images/module-3/LoanBuddy-Observability.png)
+*Complete visibility into the AI's decision-making process*
+
+**The trace shows:**
+- 📊 **Complete workflow** - Every step from upload to decision
+- 🔧 **All tool calls** - Image extraction, address validation, employment verification
+- 💭 **AI reasoning** - Why the loan was approved
+- ⏱️ **Performance metrics** - Processing time, latency for each step
+- 💰 **Cost tracking** - Tokens used, estimated cost
+- 📝 **Full audit trail** - Complete record for compliance
+
+### Analyze the Metrics
+
+In Langfuse, click on the trace to see:
+- **Total tokens**: ~2,500 tokens used
+- **Processing time**: 45-60 seconds total
+- **Tool calls**: 3 MCP servers invoked
+- **Decision path**: Complete reasoning chain
+
+## 🎯 Step 6: Try Different Scenarios (Optional)
+
+### Test with the Second Application
+
+If you have another test application:
+
+:::code{language=bash showCopyAction=true}
+# Process another application
+curl -X POST -F "image_file=@./example2.png" \
+  http://localhost:8080/api/process_credit_application_with_upload
+:::
+
+### Experiment with Edge Cases
+
+Try modifying the MCP server mock data to see different outcomes:
+- What if employment verification fails?
+- What if the address is invalid?
+- What if the income doesn't match?
+
+## 🎊 WOOHOO! You Did It!
+
+### What Just Happened?
+
+You've successfully:
+- ✅ **Deployed** a complete AI loan processing system on Kubernetes
+- ✅ **Processed** John's loan application in under a minute
+- ✅ **Automated** 2-3 hours of manual work
+- ✅ **Created** a complete audit trail in Langfuse
+- ✅ **Integrated** with your GenAI platform from Modules 1 & 2
+
+### The Business Impact
+
+Remember Sarah from the beginning?
+
+**Before Loan Buddy:**
+- 📝 30 minutes manually entering John's data
+- ☎️ 45 minutes calling Tech Solutions Inc
+- 🔍 20 minutes verifying the address
+- 📊 30 minutes calculating ratios and documenting
+- **Total**: 2+ hours
+- **Sarah's Friday**: Working late 😞
+
+**After Loan Buddy:**
+- ⚡ Complete processing: 47 seconds
+- 🤖 All verifications: Automated
+- 📊 Full documentation: Instant
+- 🔍 Audit trail: Complete
+- **Sarah's Friday**: Movie night! 🍿
+
+## 🧹 Cleanup (Optional)
+
+If you want to clean up the resources:
+
+:::code{language=bash showCopyAction=true}
+# Delete the Loan Buddy deployment
+kubectl delete -f /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
+
+# Delete the namespace
+kubectl delete namespace workshop
+:::
+
+## 🎯 Key Takeaways
+
+You've learned how to:
+1. **Build AI applications** that solve real business problems
+2. **Use LangGraph** to orchestrate complex workflows
+3. **Implement MCP servers** for specialized capabilities
+4. **Integrate with your platform** (LiteLLM + Langfuse)
+5. **Deploy on Kubernetes** with proper configuration
+6. **Monitor AI decisions** with complete observability
+
+## 🚀 What's Next?
+
+### Extend Loan Buddy
+- Add more validation rules
+- Integrate with real APIs
+- Handle different document types
+- Implement approval workflows
+
+### Build New Applications
+- Use the same pattern for other business processes
+- Create industry-specific solutions
+- Scale to production workloads
+
+### Share Your Success
+- Show your team what's possible
+- Document your learnings
+- Contribute improvements back
+
+## Congratulations! 🎉
+
+You've successfully built and deployed an AI-powered loan processing system that:
+- Saves hours of manual work
+- Provides consistent decisions
+- Maintains complete audit trails
+- Integrates with your GenAI platform
+
+**John got his loan approved, Sarah got her Friday night back, and you've mastered building AI applications on EKS!**
+
+---

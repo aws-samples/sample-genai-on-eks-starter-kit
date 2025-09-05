@@ -3,7 +3,7 @@ title: "Module 3: Building GenAI Applications"
 weight: 40
 ---
 
-You've built an amazing GenAI platform with models, gateway, and observability - now let's put it to work! In this module, you'll use your platform to build "Loan Buddy," an intelligent loan processing application that demonstrates how AI agents can automate complex business workflows.
+You've built an amazing GenAI platform with models, gateway, and observability - now let's put it to work! In this module, you'll use your platform to build "Loan Buddy" an intelligent loan processing application that demonstrates how AI agents can automate complex business workflows.
 
 ::alert[**Platform Required**: This module builds on your GenAI platform from Modules 1 & 2. Please complete those modules first if you haven't already.]{type="warning"}
 
@@ -18,26 +18,9 @@ By the end of this module, you will:
 - 🏗️ **Understand application architecture** for AI agents on Kubernetes
 - 💼 **See business value** of AI automation in action
 
-## What You'll Build: Loan Buddy
-
-**Loan Buddy** is an intelligent loan processing application that automates credit application review:
-
-### **The Business Problem**
-Banks spend significant time manually reviewing loan applications, leading to:
-- Slow processing times and poor customer experience
-- Human errors in data extraction and validation
-- Inconsistent decision-making processes
-- High operational costs
-
-### **The AI Solution**
-Loan Buddy uses your GenAI platform to:
-- **Extract information** from loan application images using vision models
-- **Validate data** using external services (address, employment verification)
-- **Apply business rules** automatically (loan amount limits, income ratios)
-- **Make decisions** or route to human review with full audit trails
-
 ## Application Architecture
 
+**Loan Buddy** demonstrates how AI agents can transform manual loan processing into intelligent automation using your GenAI platform.
 Here's how Loan Buddy uses your GenAI platform:
 
 ```mermaid
