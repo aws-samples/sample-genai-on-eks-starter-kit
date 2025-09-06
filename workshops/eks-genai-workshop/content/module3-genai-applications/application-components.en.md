@@ -7,7 +7,8 @@ weight: 20
 
 Now that you've seen John Michael Doe's loan application and understand the business problem, let's explore HOW the AI actually processes it. Think of this as an assembly line where each component has a specialized job.
 
-![John's Application](/static/images/module-3/example1.png)
+![John's Application](/static/images/module-3/example1.png)  
+
 *The application we're about to process automatically*
 
 ## 🧠 The Brain: Understanding LangGraph and LangChain
@@ -16,7 +17,7 @@ Before diving into the components, let's understand the AI frameworks that power
 
 ### **LangGraph - The Workflow Orchestrator**
 
-Think of LangGraph as the **project manager** of our AI system. It:
+Think of [LangGraph](https://github.com/langchain-ai/langgraph) as the **project manager** of our AI system. It:
 - **Manages state** across multiple AI calls (remembers what's been done)
 - **Orchestrates workflows** (decides what to do next based on results)
 - **Handles errors** gracefully (retries, fallbacks, alternative paths)
@@ -36,7 +37,7 @@ graph = create_react_agent(model, tools, debug=True)
 
 ### **LangChain - The Foundation**
 
-LangChain provides the building blocks:
+[LangChain](https://github.com/langchain-ai/langchain) provides the building blocks:
 - **LLM integration** (connects to Claude via your LiteLLM gateway)
 - **Tool abstractions** (standardizes how AI uses external tools)
 - **Memory management** (keeps context across interactions)
@@ -260,42 +261,6 @@ code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validatio
 
 ::::
 
-## 💡 The Complete Picture: Processing John's Application
-
-Now let's trace the complete flow when John's application is processed:
-
-### **Step 1: Upload & Store**
-```
-John's application image → Uploaded to API → Stored in S3 → Returns image_id
-```
-
-### **Step 2: Agent Orchestration**
-```
-Agent receives image_id → Calls Image Processor MCP → Gets John's data as JSON
-```
-
-### **Step 3: Validation Chain**
-```
-Agent has John's data → Calls Address Validator → "123 Main St" verified ✅
-                      → Calls Employment Validator → "Tech Solutions Inc" confirmed ✅
-```
-
-### **Step 4: Decision Making**
-```
-Agent analyzes:
-- Debt-to-income: $275/$6,250 = 4.4% ✅ (Excellent)
-- Employment: 3.5 years stable ✅
-- Address: 4 years, owns home ✅
-- Purpose: Home improvement ✅
-
-Decision: APPROVED
-```
-
-### **Step 5: Observability**
-```
-Complete trace → Logged to Langfuse → Includes all tool calls, reasoning, tokens used
-```
-
 ## 🎯 Why This Architecture Matters
 
 ### **Separation of Concerns**
@@ -337,8 +302,6 @@ Now that you understand how all the components work together to process John's l
 2. Process John's actual application
 3. Watch the real-time logs as the AI makes decisions
 4. Explore the complete workflow in Langfuse
-
-::alert[**Ready to Deploy?** Make sure you have your Langfuse keys and LiteLLM API key ready - you'll need them to configure the deployment!]{type="warning"}
 
 ---
 

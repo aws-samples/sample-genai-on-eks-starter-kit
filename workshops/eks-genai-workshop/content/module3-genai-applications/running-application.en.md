@@ -7,7 +7,8 @@ weight: 30
 
 It's time to bring Loan Buddy to life and watch it process John Michael Doe's loan application in real-time! Get ready to see hours of manual work completed in minutes.
 
-![John's Application Ready for Processing](/static/images/module-3/example1.png)
+![John's Application Ready for Processing](/static/images/module-3/example1.png) 
+
 *John's application is waiting - let's process it with AI!*
 
 ## ✅ Prerequisites Check
@@ -299,18 +300,6 @@ Remember Sarah from the beginning?
 - 🔍 Audit trail: Complete
 - **Sarah's Friday**: Movie night! 🍿
 
-## 🧹 Cleanup (Optional)
-
-If you want to clean up the resources:
-
-:::code{language=bash showCopyAction=true}
-# Delete the Loan Buddy deployment
-kubectl delete -f /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
-
-# Delete the namespace
-kubectl delete namespace workshop
-:::
-
 ## 🎯 Key Takeaways
 
 You've learned how to:
@@ -320,24 +309,6 @@ You've learned how to:
 4. **Integrate with your platform** (LiteLLM + Langfuse)
 5. **Deploy on Kubernetes** with proper configuration
 6. **Monitor AI decisions** with complete observability
-
-## 🚀 What's Next?
-
-### Extend Loan Buddy
-- Add more validation rules
-- Integrate with real APIs
-- Handle different document types
-- Implement approval workflows
-
-### Build New Applications
-- Use the same pattern for other business processes
-- Create industry-specific solutions
-- Scale to production workloads
-
-### Share Your Success
-- Show your team what's possible
-- Document your learnings
-- Contribute improvements back
 
 ## Congratulations! 🎉
 

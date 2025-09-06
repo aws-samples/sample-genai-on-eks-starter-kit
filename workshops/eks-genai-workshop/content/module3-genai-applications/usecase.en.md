@@ -7,7 +7,8 @@ weight: 10
 
 It's 5 PM on a Friday. Sarah, a loan officer at Community Bank, looks at her computer screen. A loan application just came in from John Michael Doe...
 
-![John's Loan Application](/static/images/module-3/example1.png)
+![John's Loan Application](/static/images/module-3/example1.png) 
+
 *A typical personal loan application - Form CLA-2024-001*
 
 Sarah sighs. To process this application, she needs to:
