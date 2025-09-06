@@ -589,6 +589,99 @@ Should see **bedrock/gpt-oss-20b** amongst the models.
 ::alert[**Production Note**: In production environments, you'd typically use the automated integration system we explored earlier. This manual approach is useful for understanding the underlying configuration and for one-off model additions.]{type="success"}
 
 
+## 🔑 Hands-On: Create a Virtual Key for Module 3
+
+In Module 3, you'll build an agentic application that needs secure access to your models. Let's create a dedicated Virtual Key that will power your agent's interactions with all available models.
+
+### Step 1: Navigate to Virtual Keys
+
+In the LiteLLM interface, click on **"Virtual Keys"** in the left sidebar:
+
+![Virtual Key Navigation](/static/images/module-2/virtual-key.png)
+
+**What you'll see:**
+- 🔍 **"Virtual Keys"** highlighted in the sidebar (orange box)
+- ➕ **"+ Create New Key"** button ready for action
+- 📊 Empty results table (showing "1 - 0 of 0 results" initially)
+
+### Step 2: Configure Your Agent Key
+
+Click the **"+ Create New Key"** button to open the key creation dialog:
+
+![Create Key Configuration](/static/images/module-2/create-key.png)
+
+**Configure your key with these settings:**
+
+**Key Ownership:**
+- ✅ **Owned By**: Select "You" (default selection)
+- 📁 **Team**: Leave as "Search or select a team" (optional)
+
+**Key Details:**
+- 📝 **Key Name**: Enter `agent-key`
+- 🤖 **Models**: Select all available models:
+  - `bedrock/claude-3.7-sonnet` ✓
+  - `bedrock/gpt-oss-20b` ✓  
+  - `vllm/llama-3-1-8b-int8-neuron` ✓
+  - `vllm/qwen3-8b-fp8-neuron` ✓
+- 🔧 **Key Type**: Keep as "Default"
+- ⚙️ **Optional Settings**: Leave expanded but unchanged
+
+Click **"Create Key"** to generate your Virtual Key.
+
+### Step 3: Save Your API Key
+
+A popup will appear with your newly created key:
+
+![Copy API Key](/static/images/module-2/copy-key.png)
+
+**Critical Security Notice:**
+::alert[**⚠️ IMPORTANT**: This is your only chance to copy this key! For security reasons, **you will not be able to view it again** through your LiteLLM account. If you lose this secret key, you will need to generate a new one.]{type="warning"}
+
+**Save your key:**
+1. Click **"Copy API Key"** button
+2. Store it securely for Module 3:
+
+:::code{language=bash showCopyAction=true}
+# Save in your environment or notes
+export AGENT_KEY="sk-aUM4QuQjObwI4nGcNoBYPw"  # Your actual key will be different
+:::
+
+### Step 4: Verify Key Access
+
+Let's test that your Virtual Key has access to all models:
+
+1. Navigate to **"Test Key"** in the sidebar
+2. Configure the test interface:
+
+![Test Key Configuration](/static/images/module-2/select-test-key.png)
+
+**Test Configuration:**
+- 🔑 **API Key Source**: Select "Virtual Key" from dropdown
+- 🔐 **Key Input**: Paste your `sk-` key in the field that appears
+- 🤖 **Select Model**: Choose any model (e.g., "bedrock/claude-3.7-sonnet")
+
+### Step 5: Validate Model Access
+
+Send a test message to confirm your key works:
+
+![Test Key Success](/static/images/module-2/test-key.png)
+
+**What you're validating:**
+- ✅ **Authentication**: Your Virtual Key is accepted
+- ✅ **Model Access**: The key can access the selected model
+- ✅ **Response Generation**: Models respond correctly
+- ✅ **Multi-Model Support**: Try switching models to verify access to all
+
+**Example test:**
+- **Question**: "Why is most of the landmass in the world above the equator?"
+- **Response**: You should see a detailed geological explanation
+- **Model Used**: Shows which model responded (e.g., "us.anthropic.claude-3-7-sonnet")
+
+::alert[**Success!** Your Virtual Key is now ready for Module 3's agentic application. This key provides unified access to all your models through a single authentication token.]{type="success"}
+
+You'll use this Virtual Key in Module 3 to build an intelligent agent that can seamlessly switch between models based on task requirements!
+
+
 ## Key Benefits You've Experienced
 
 Through your hands-on exploration, you've experienced the power of a unified AI gateway:

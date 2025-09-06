@@ -44,6 +44,10 @@ spec:
           value: "http://mcp-employment-validator:8000"
         - name: MCP_IMAGE_PROCESSOR
           value: "http://mcp-image-processor:8000"
+        - name: OTEL_EXPORTER_OTLP_HEADERS
+          value: "Authorization=Basic bGZfcGtfMTIzNDU2Nzg5MDpsZl9za18xMjM0NTY3ODkw"
+        - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+          value: "http://langfuse-web.langfuse.svc.cluster.local:3000/api/public/otel/v1/traces"
         resources:
           requests:
             memory: "8Gi"

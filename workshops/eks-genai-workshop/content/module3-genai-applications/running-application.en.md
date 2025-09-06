@@ -31,19 +31,36 @@ echo "Langfuse URL: http://$(kubectl get ingress -n langfuse langfuse -o jsonpat
 
 ## 🔧 Step 1: Configure Your Deployment
 
-### Get Your Platform Credentials
+### Retrieve Your Platform Credentials
 
-First, let's retrieve the configuration from your existing platform:
+First, let's make sure you have your Virtual Key from Module 2:
 
 :::code{language=bash showCopyAction=true}
-# Open your environment file to get the keys
-code .env
+# Check if you have your AGENT_KEY from Module 2
+if [ -z "$AGENT_KEY" ]; then
+  echo "❌ AGENT_KEY not found. Please set it from Module 2"
+  echo "Run: export AGENT_KEY='your-sk-key-from-module-2'"
+else
+  echo "✅ AGENT_KEY found: ${AGENT_KEY:0:10}..."
+fi
 :::
 
-**Note these values from your `.env` file:**
-- `LANGFUSE_PUBLIC_KEY` - Your Langfuse public key
-- `LANGFUSE_SECRET_KEY` - Your Langfuse secret key
-- Your LiteLLM API key from Module 2
+::alert[**Missing AGENT_KEY?** Go back to Module 2, Step 3 of the Virtual Key section and copy your key. Then run: `export AGENT_KEY="sk-your-actual-key"`]{type="warning"}
+
+### Set Up All Required Keys
+
+Now let's set up all the credentials needed for Loan Buddy:
+
+:::code{language=bash showCopyAction=true}
+# Load your environment file to get Langfuse keys
+source .env
+
+# Verify all required keys are present
+echo "Checking required credentials..."
+[ ! -z "$LANGFUSE_PUBLIC_KEY" ] && echo "✅ LANGFUSE_PUBLIC_KEY found" || echo "❌ LANGFUSE_PUBLIC_KEY missing"
+[ ! -z "$LANGFUSE_SECRET_KEY" ] && echo "✅ LANGFUSE_SECRET_KEY found" || echo "❌ LANGFUSE_SECRET_KEY missing"
+[ ! -z "$AGENT_KEY" ] && echo "✅ AGENT_KEY found" || echo "❌ AGENT_KEY missing"
+:::
 
 ### Update the Deployment Configuration
 
@@ -56,24 +73,35 @@ code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validatio
 
 **Update these environment variables in the deployment file:**
 
+::alert[**Use Your AGENT_KEY**: Replace `YOUR_LITELLM_API_KEY` with the value from your `$AGENT_KEY` environment variable (the Virtual Key you created in Module 2, Step 9)]{type="warning"}
+
 1. Find the `loan-buddy-agent` deployment section
 2. Update these values:
    ```yaml
    - name: LANGFUSE_PUBLIC_KEY
-     value: "YOUR_ACTUAL_PUBLIC_KEY"  # Replace with your key
+     value: "YOUR_ACTUAL_PUBLIC_KEY"  # Replace with value from $LANGFUSE_PUBLIC_KEY
    - name: LANGFUSE_SECRET_KEY  
-     value: "YOUR_ACTUAL_SECRET_KEY"  # Replace with your key
+     value: "YOUR_ACTUAL_SECRET_KEY"  # Replace with value from $LANGFUSE_SECRET_KEY
    - name: GATEWAY_MODEL_ACCESS_KEY
-     value: "YOUR_LITELLM_API_KEY"    # Replace with your key
+     value: "YOUR_LITELLM_API_KEY"    # Replace with value from $AGENT_KEY
    ```
 
 3. Also update in the `mcp-image-processor` deployment:
    ```yaml
    - name: GATEWAY_MODEL_ACCESS_KEY
-     value: "YOUR_LITELLM_API_KEY"    # Same key as above
+     value: "YOUR_LITELLM_API_KEY"    # Same value from $AGENT_KEY
    ```
 
+**Tip:** You can echo your keys to copy them:
+:::code{language=bash showCopyAction=true}
+echo "LANGFUSE_PUBLIC_KEY: $LANGFUSE_PUBLIC_KEY"
+echo "LANGFUSE_SECRET_KEY: $LANGFUSE_SECRET_KEY"
+echo "AGENT_KEY: $AGENT_KEY"
+:::
+
 ::alert[**Important**: Save the file (Ctrl+S) after making these changes!]{type="warning"}
+
+::alert[**Configuration Complete!** Your deployment file is now configured with all the necessary credentials from Module 2.]{type="success"}
 
 ## 🎯 Step 2: Deploy the AI Workforce
 
@@ -154,7 +182,8 @@ cd /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/
 :::code{language=bash showCopyAction=true}
 # Process John Michael Doe's loan application
 curl -X POST -F "image_file=@./example1.png" \
-  http://localhost:8080/api/process_credit_application_with_upload
+  http://localhost:8080/api/process_credit_application_with_upload \
+  | (data=$(cat); echo "$data" | jq -C 'del(.credit_assessment) + {"credit_assessment": "(formatted below)"}'; echo -e "\n\033[1;36m═══ CREDIT ASSESSMENT ═══\033[0m\n"; echo "$data" | jq -r '.credit_assessment' | sed 's/\\n/\n/g')
 :::
 
 ### Watch the Magic Happen! ✨

@@ -387,7 +387,112 @@ Click on the generation section to see the deepest level of detail:
 
 Now go back to your OpenWebUI tab and send a message to any model. Watch the trace appear in Langfuse in real-time!
 
-### Step 9: Advanced Features
+### Step 9: Create Custom Dashboards
+
+Langfuse provides powerful dashboard capabilities for visualizing your AI metrics. Let's explore the built-in dashboards and create your own custom analytics!
+
+Navigate to **"Dashboards"** in the left sidebar:
+
+![Dashboards Navigation](/static/images/module-2/dashboard.png)
+
+**What you'll see:**
+- 📊 **Pre-built Dashboards** - Three default dashboards ready to use:
+  - **Langfuse Cost Dashboard** - Review your LLM costs
+  - **Langfuse Latency Dashboard** - Monitor latency metrics for performance optimization
+  - **Langfuse Usage Management** - Track usage metrics across traces
+- ➕ **"+ New dashboard"** button in the top right
+
+### Explore the Cost Dashboard
+
+Click on **"Langfuse Cost Dashboard"** to see comprehensive cost analytics:
+
+![Cost Dashboard Full View](/static/images/module-2/cost-dashboard-long.png)
+
+**Dashboard Widgets:**
+- 📈 **Total Count Traces**: 27 traces tracked
+- 🔢 **Total Count Observations**: 28 observations recorded
+- 💰 **Total costs**: Line chart showing spending over time ($0.038 total)
+- 🎯 **Cost by Model Name**: Bar chart comparing model costs
+- 🌐 **Cost by Environment**: Donut chart showing environment distribution
+- 👥 **Top 20 Users by Cost**: User spending breakdown
+- 📊 **Top 20 Use Cases**: Cost analysis by trace and observation
+
+### Filter for Workshop Activity
+
+To see just your workshop activity, adjust the time filter:
+
+1. Click the **"Past 7 days"** dropdown
+2. Select **"Past 1 hour"**
+3. Watch the dashboard update with your recent activity:
+
+![Filtered Cost Dashboard](/static/images/module-2/cost-dashboard.png)
+
+**What changes:**
+- ⏰ **Time range**: Now showing "Sep 06, 25 : 11:53 - Sep 06, 25 : 12:53"
+- 📊 **Activity spikes**: Your recent model interactions clearly visible
+- 💵 **Real-time costs**: Exact spending for your workshop session
+
+### Create Your Own Dashboard
+
+Let's build a custom latency-focused dashboard. Click **"+ New dashboard"** to start:
+
+![Back to Dashboards](/static/images/module-2/back-dashboard.png)
+
+In the creation dialog:
+
+![Create Dashboard Dialog](/static/images/module-2/create-dashboard.png)
+
+**Configure your dashboard:**
+- 📝 **Dashboard Name**: Enter "Latency Dashboard"
+- 📄 **Description**: Add a helpful description (optional)
+- ✅ Click **"Create"** to generate your dashboard
+
+### Build Your First Widget
+
+Your new dashboard starts empty:
+
+![Empty Dashboard](/static/images/module-2/latency-dashboard.png)
+
+**Add your first widget:**
+1. Click **"+ Add Widget"** button
+2. In the popup, select **"Create New Widget"**
+
+### Configure Widget for Model Latency Comparison
+
+Design a widget to compare average latency across models:
+
+![Widget Configuration](/static/images/module-2/final-widget.png)
+
+**Widget Settings:**
+
+**Data Selection:**
+- 📊 **View**: Select "Observations"
+- 📈 **Metric**: Choose "Latency"
+- 📐 **Aggregation**: Select "Avg"
+
+**Visualization:**
+- 📝 **Name**: "Avg Latency by Provided Model Name (Observations)"
+- 📄 **Description**: "Shows the avg latency of Observations by provided model name"
+- 📊 **Chart Type**: "Vertical Bar Chart"
+- 📅 **Date Range**: "Past 3 hours"
+- 🔧 **Breakdown Dimension**: "Provided Model Name"
+
+Click **"Save Widget"** to add it to your dashboard!
+
+### View Your Custom Dashboard
+
+Your dashboard now displays model latency comparisons:
+
+![Final Dashboard with Widget](/static/images/module-2/final-dashboard.png)
+
+**What your widget reveals:**
+- ⚡ **llama-3-1-8b-int8-neuron**: ~4,000ms average latency
+- 🚀 **us.anthropic.claude-3-7-sonnet**: ~2,500ms average latency  
+- 🎯 **openai.gpt-oss-20b-1:0**: ~1,500ms average latency
+
+::alert[**🏆 Challenge**: Create additional widgets to track metrics that matter to you! Try adding widgets for token usage per model, success rates, or cost per hour. Each widget helps you understand your AI usage patterns better.]{type="success"}
+
+### Step 10: Advanced Features
 
 Langfuse also supports advanced evaluation capabilities like:
 

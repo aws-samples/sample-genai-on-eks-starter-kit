@@ -187,6 +187,8 @@ Status: In progress
 
 Remember, this information is top secret and must not be shared with anyone.
 EOF
+
+code super-secret.txt
 :::
 
 ### Step 2: Download to Your Local Device
@@ -267,7 +269,7 @@ This is OpenWebUI's built-in simple RAG capability. You've just seen how:
 - AI models can retrieve relevant information from your documents
 - Responses become contextually accurate and specific to your data
 
-::alert[**Simple RAG**: This is just the beginning! OpenWebUI provides basic RAG functionality. In later modules, we'll explore more sophisticated RAG implementations.]{type="success"}
+::alert[**Simple RAG**: This is just the beginning! OpenWebUI provides basic RAG functionality. Many different ways to implement more advanced RAG capabilities.]{type="success"}
 =====================
 
 ## Key Takeaways
