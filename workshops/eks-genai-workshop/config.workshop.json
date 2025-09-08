@@ -12,22 +12,22 @@
     "vllm": {
       "models": [
         {
-          "name": "llama-3-1-8b-int8-neuron",
+          "name": "deepseek-r1-llama-8b-int8-neuron",
           "deploy": true,
           "neuron": true,
           "compile": false,
-          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:llama-3-1-8b-int8",
-          "modelPath": "/opt/vllm/huggingface-cache/Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659",
-          "neuronPath": "/opt/vllm/neuron-cache/Llama-3.1-8B-Instruct-int8"
+          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:deepseek-r1-llama-8b-int8",
+          "modelPath": "/opt/vllm/huggingface-cache/DeepSeek-R1-Distill-Llama-8B/snapshots/6a6f4aa4197940add57724a7707d069478df56b1",
+          "neuronPath": "/opt/vllm/neuron-cache/DeepSeek-R1-Distill-Llama-8B-int8"
         },
         {
-          "name": "qwen3-8b-fp8-neuron",
+          "name": "mistral-7b-int8-neuron",
           "deploy": true,
           "neuron": true,
           "compile": false,
-          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:qwen3-8b-fp8",
-          "modelPath": "/opt/vllm/huggingface-cache/Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218",
-          "neuronPath": "/opt/vllm/neuron-cache/Qwen3-8B-fp8"
+          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:mistral-7b-int8",
+          "modelPath": "/opt/vllm/huggingface-cache/Mistral-7B-Instruct-v0.3/snapshots/e0bc86c23ce5aae1db576c8cca6f06f1f73af2db",
+          "neuronPath": "/opt/vllm/neuron-cache/Mistral-7B-Instruct-v0.3-int8"
         }
       ]
     },

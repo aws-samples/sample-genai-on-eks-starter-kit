@@ -27,7 +27,7 @@ spec:
         {{/if}}
       containers:
         - name: vllm
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+          image: {{{IMAGE}}}
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,7 +38,11 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
+            {{#if compile}}
             - deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+            {{else}}
+            - {{{modelPath}}}
+            {{/if}}
             - --served-model-name=deepseek-r1-llama-8b-int8-neuron
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
@@ -50,19 +54,18 @@ spec:
             - --max-num-seqs=4
             - --max-model-len=8192 #8K
             {{#unless compile}}
-            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-R1-Distill-Llama-8B/snapshots/6a6f4aa4197940add57724a7707d069478df56b1", "kv_cache_quant": true}'
+            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "{{{modelPath}}}", "kv_cache_quant": true}'
             {{/unless}}
           env:
+            {{#if compile}}
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
+            {{/if}}
             - name: NEURON_COMPILED_ARTIFACTS
-              value: /root/.cache/neuron/deepseek-ai/DeepSeek-R1-Distill-Llama-8B-int8
-          ports:
-            - name: http
-              containerPort: 8000
+              value: {{{neuronPath}}}
           ports:
             - name: http
               containerPort: 8000
@@ -83,6 +86,7 @@ spec:
             limits:
               aws.amazon.com/neuroncore: 2
           {{/if}}
+      {{#if compile}}
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
@@ -95,6 +99,7 @@ spec:
         - name: neuron-cache
           persistentVolumeClaim:
             claimName: neuron-cache
+      {{/if}}
       tolerations:
         - key: aws.amazon.com/neuron
           operator: Exists
