@@ -123,10 +123,6 @@ kubectl get pods -A | grep -E "litellm|langfuse|openwebui|vllm"
 kubectl get svc -A | grep -E "litellm|langfuse|openwebui|vllm"
 :::
 
-## Architecture Diagram
-
-![archi](/static/images/introduction/archi.png)
-
 ## 🎉 Success Checklist
 
 Before proceeding to Module 1, confirm:
