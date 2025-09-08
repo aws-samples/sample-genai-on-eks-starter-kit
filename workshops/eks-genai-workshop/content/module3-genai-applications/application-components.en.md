@@ -164,21 +164,35 @@ code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validatio
 ### **The Agent's Workflow for John:**
 
 ```mermaid
-graph TD
-    A[📄 John's Application Uploaded] --> B[🤖 Agent Receives Image ID]
-    B --> C[📸 Call Image Processor MCP]
-    C --> D[Extract John's Data]
-    D --> E[🏠 Call Address Validator MCP]
-    E --> F[Verify 123 Main St]
-    F --> G[💼 Call Employment Validator MCP]
-    G --> H[Verify Tech Solutions Inc]
-    H --> I[🧮 Calculate Ratios]
-    I --> J{Decision Logic}
-    J -->|All Checks Pass| K[✅ APPROVED]
-    J -->|Issues Found| L[❌ REJECTED]
-    K --> M[📊 Log to Langfuse]
-    L --> M
+graph LR
+    subgraph "Workflow"
+        A[📄 John's Application Uploaded]
+        B[🤖 Agent Receives Image ID]
+        C[📸 Call Image Processor MCP]
+        D[Extract John's Data]
+        E[🏠 Call Address Validator MCP]
+        F[Verify 123 Main St]
+        G[💼 Call Employment Validator MCP]
+        H[Verify Tech Solutions Inc]
+        I[🧮 Calculate Ratios]
+        J{Decision Logic}
+        K[✅ APPROVED]
+        L[❌ REJECTED]
+    end
     
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    J --> K
+    J --> L
+    Workflow --> M[📊 Log to Langfuse]
+
     style K fill:#90EE90
     style L fill:#FFB6C1
     style M fill:#87CEEB

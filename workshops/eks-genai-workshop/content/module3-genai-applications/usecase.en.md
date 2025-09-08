@@ -96,15 +96,15 @@ graph LR
     
     subgraph "Your GenAI Platform"
         GATEWAY[🚪 LiteLLM Gateway<br/>Routes AI Requests]
-        CLAUDE[🧠 Claude 3.7 Sonnet<br/>Processes & Decides]
         LANGFUSE[📊 Langfuse<br/>Tracks Everything]
+        CLAUDE[🧠 Claude 3.7 Sonnet<br/>Processes & Decides]
+        MCP1[🏠 Address Validator<br/>Verifies 123 Main St]
+        MCP2[💼 Employment Checker<br/>Confirms Tech Solutions Inc]
+        MCP3[📸 Image Processor<br/>Extracts John's Data]
     end
     
     subgraph "Loan Buddy Components"
         AGENT[🤖 Loan Processing Agent<br/>Orchestrates Workflow]
-        MCP1[🏠 Address Validator<br/>Verifies 123 Main St]
-        MCP2[💼 Employment Checker<br/>Confirms Tech Solutions Inc]
-        MCP3[📸 Image Processor<br/>Extracts John's Data]
     end
     
     APP --> AGENT
@@ -113,9 +113,11 @@ graph LR
     CLAUDE --> GATEWAY
     GATEWAY --> LANGFUSE
     
-    AGENT --> MCP1
-    AGENT --> MCP2
-    AGENT --> MCP3
+    GATEWAY --> MCP1
+    GATEWAY --> MCP2
+    GATEWAY --> MCP3
+
+    AGENT --> LANGFUSE
     
     style AGENT fill:#ff9999,stroke:#333,stroke-width:2px
     style GATEWAY fill:#fff3e0
