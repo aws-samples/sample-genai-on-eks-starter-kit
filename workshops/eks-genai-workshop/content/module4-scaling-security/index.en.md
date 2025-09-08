@@ -1,7 +1,7 @@
 ---
 title: "Module 4: Scaling and Securing Agents"
 weight: 50
-duration: "1 hour"
+duration: "2 hours"
 difficulty: "intermediate-advanced"
 ---
 
@@ -197,12 +197,13 @@ This module emphasizes cost-effective scaling strategies:
 
 ## Time Allocation
 
-Total module time: **1 hour (60 minutes)**
+Total module time: **2 hours (120 minutes)**
 
-- EKS Auto Mode exploration: 15 minutes
-- vLLM HPA configuration: 30 minutes  
-- Testing & monitoring: 10 minutes
-- Cleanup: 5 minutes
+- Karpenter setup: 30 minutes
+- vLLM HPA configuration: 25 minutes  
+- LiteLLM proxy setup: 35 minutes
+- Monitoring & testing: 20 minutes
+- Cleanup & validation: 10 minutes
 
 ## Let's Get Started!
 
