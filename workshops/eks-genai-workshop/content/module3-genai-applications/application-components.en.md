@@ -157,9 +157,13 @@ code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validatio
 The Loan Processing Agent is the conductor of this orchestra. Let's see how it processes John's application:
 
 :::code{language=bash showCopyAction=true}
-# Open the main agent to see the orchestration:
+
+## Open the main agent to see the orchestration:
+
 code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/credit-underwriting-agent.py
 :::
+
+Notice that the instructions provided in the code are in plain english. BAsed on our instructions, the LLM create the workflow as mentioned below. This results in improved agility and easier transition from requirements to code. Agentic workflows are redefining the way we build systems and as the capabilities of LLM grows over time, it will be easier to build systems.
 
 ### **The Agent's Workflow for John:**
 
@@ -206,15 +210,18 @@ The agent follows instructions written in plain English:
 system_prompt = """You are a helpful AI assistant for credit underwriting.
 
 Your task is to process credit applications by:
+
 1. First, extract credit application data from the uploaded document
 2. Then validate the extracted information using validation tools
 3. Make a final credit decision based on all validation results
 4. Present a comprehensive credit assessment
 
 You have access to these MCP tools:
+
 - extract_credit_application_data: Extract applicant information
 - validate_address: Verify address information
 - validate_income_employment: Verify employment and income
+
 """
 :::
 
@@ -234,6 +241,7 @@ code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validatio
 ::::tabs
 
 :::tab{label="LiteLLM Gateway"}
+
 ```yaml
 - name: GATEWAY_URL
   value: "http://litellm.litellm.svc.cluster.local:4000"
