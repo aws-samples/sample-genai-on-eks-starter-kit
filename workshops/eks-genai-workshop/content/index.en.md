@@ -22,7 +22,7 @@ This workshop is built on the **[AWS GenAI on EKS Starter Kit](https://github.co
 This isn't just another "Hello World" AI tutorial. You'll work with:
 
 - **GenAI Platform** built on EKS Auto Mode
-- **Real LLMs** including Llama 3.1 running on AWS Neuron chips and Claude 3.7 via Amazon Bedrock
+- **Real LLMs** including Mistral 7b & DeepSeek R1 Llama 8b running on AWS Neuron chips and Claude 3.7 via Amazon Bedrock
 - **Modern AI Patterns** for observability, cost tracking, and scalability
 - **Cutting-edge frameworks** like LangChain, LangGraph, and Model Context Protocol
 - **Hands-on exercises** that mirror real-world GenAI deployments
@@ -65,7 +65,7 @@ graph LR
 You'll start by interacting with Large Language Models through different deployment patterns:
 
 - 💬 **Open WebUI** - Deploy a ChatGPT-like interface for model interaction
-- ⚡ **vLLM on AWS Neuron** - Host Llama 3.1 8b & Qwen3 8b on Neuron
+- ⚡ **vLLM on AWS Neuron** - Host Mistral 7b & DeepSeek R1 Llama 8b on Neuron
 - ☁️ **AWS Bedrock Integration** - Connect to Claude 3.7 and GPT OSS 20b via Amazon Bedrock
 
 ::alert[**Hands-on Focus**: You'll get to use real models deployed on EKS and see immediate results - no simulation or mocking!]{type="success"}

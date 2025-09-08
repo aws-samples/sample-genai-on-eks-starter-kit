@@ -160,9 +160,9 @@ Once logged in, you'll see the model selection dropdown at the top:
 
 ![Model Selection](/static/images/module-1/models.png)
 
-**Important**: Select **vllm/llama-3-1-8b-int8-neuron** from the dropdown. You'll see several options:
-- ✅ **vllm/llama-3-1-8b-int8-neuron** (use this one)
-- ✅ **vllm/qwen3-8b-fp8-neuron** (also available)
+**Important**: Select **vllm/mistral-7b-int8-neuron** from the dropdown. You'll see several options:
+- ✅ **vllm/mistral-7b-int8-neuron** (use this one)
+- ✅ **vllm/deepseek-r1-llama-8b-int8-neuron** (also available)
 - ❌ **bedrock/claude-3.7-sonnet** (not configured yet - we'll enable this later)
 
 ::alert[**Model Selection**: Stick with the vLLM models for now. We'll configure Bedrock access in a future section of this module.]{type="warning"}
@@ -180,7 +180,7 @@ You should see a response similar to this:
 
 ![First Chat Response](/static/images/module-1/vllm.png)
 
-Notice how the model provides a detailed, well-structured response about ants, fleas, and mantis shrimp!
+Notice how the model provides a detailed, well-structured response about Dung Beetles and Bacteria!
 
 ### Step 5: Explore Response Features
 
@@ -199,7 +199,7 @@ After receiving your first response, explore these interface features:
 Want to see how different models respond to the same question?
 
 1. **Click the "+" button** next to the model name
-2. **Select a second model** (try "vllm/qwen3-8b-fp8-neuron")
+2. **Select a second model** (try "vllm/deepseek-r1-llama-8b-int8-neuron")
 3. **Ask the same question** to both models
 4. **Compare their responses** side by side
 
@@ -294,7 +294,7 @@ sequenceDiagram
 
 ## What's Next?
 
-Now that you understand the chat interface, let's explore the model serving infrastructure behind it. In the next section, we'll dive deep into vLLM and see how Llama 3.1 is served on AWS Neuron hardware.
+Now that you understand the chat interface, let's explore the model serving infrastructure behind it. In the next section, we'll dive deep into vLLM and see how Mistral 7b is served on AWS Neuron hardware.
 
 ---
 

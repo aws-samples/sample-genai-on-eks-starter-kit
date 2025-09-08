@@ -77,7 +77,7 @@ kubectl get storageclass
 kubectl get pv | grep efs
 :::
 
-::alert[The EFS storage is pre-configured with model caches for Llama 3.1 and Qwen3 models, significantly reducing deployment time for new model instances.]{type="info"}
+::alert[The EFS storage is pre-configured with model caches for Mistral 7b and DeepSeek R1 Llama 8b models, significantly reducing deployment time for new model instances.]{type="info"}
 
 ### 🎯 Pre-Installed GenAI Stack
 
@@ -108,8 +108,8 @@ Comprehensive observability platform for LLM applications.
 High-performance inference engine for large language models.
 
 - **Pre-loaded Models**:
-  - Llama 3.1 8B (INT8 quantized for Neuron)
-  - Qwen3 8B (FP8 quantized for Neuron)
+  - Mistral 7B (INT8 quantized for Neuron)
+  - DeepSeek R1 Llama 8B (INT8 quantized for Neuron)
 - **Optimization**: Continuous batching, PagedAttention, tensor parallelism
 - **Hardware Acceleration**: Optimized for AWS Neuron chips
 

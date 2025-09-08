@@ -26,7 +26,7 @@
           "neuron": true,
           "compile": false,
           "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:mistral-7b-int8",
-          "modelPath": "/opt/vllm/huggingface-cache/Mistral-7B-Instruct-v0.3/snapshots/e0bc86c23ce5aae1db576c8cca6f06f1f73af2db",
+          "modelPath": "/opt/vllm/huggingface-cache/Mistral-7B-Instruct-v0.3/snapshots/0d4b76e1efeb5eb6f6b5e757c79870472e04bd3a",
           "neuronPath": "/opt/vllm/neuron-cache/Mistral-7B-Instruct-v0.3-int8"
         }
       ]

@@ -486,7 +486,7 @@ Your dashboard now displays model latency comparisons:
 ![Final Dashboard with Widget](/static/images/module-2/final-dashboard.png)
 
 **What your widget reveals:**
-- ⚡ **llama-3-1-8b-int8-neuron**: ~4,000ms average latency
+- ⚡ **mistral-7b-int8-neuron**: ~4,000ms average latency
 - 🚀 **us.anthropic.claude-3-7-sonnet**: ~2,500ms average latency  
 - 🎯 **openai.gpt-oss-20b-1:0**: ~1,500ms average latency
 

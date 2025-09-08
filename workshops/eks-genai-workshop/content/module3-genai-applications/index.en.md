@@ -33,7 +33,7 @@ graph LR
     subgraph "Your GenAI Platform (Modules 1 & 2)"
         UI[Open WebUI]
         GATEWAY[LiteLLM Gateway]
-        MODELS[AI Models<br/>Claude 3.7 / Llama 3.1]
+        MODELS[AI Models<br/>Claude 3.7 / Mistral 7b]
         OBS[Langfuse Observability]
     end
     

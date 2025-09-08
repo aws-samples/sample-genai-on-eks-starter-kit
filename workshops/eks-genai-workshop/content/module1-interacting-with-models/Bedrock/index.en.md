@@ -141,8 +141,10 @@ Open WebUI's powerful feature allows you to compare responses from different mod
 
 1. **Select your first model** (e.g., Claude 3.7 Sonnet)
 2. **Click the "+" button** next to the model name to add a second model
-3. **Choose a second model** (e.g., vLLM Llama 3.1)
-4. **Ask the same question** to both models simultaneously
+3. **Choose a second model** (e.g., vLLM Deepseek)
+4. **Click the "+" button** next to the model name to add a third model
+5. **Choose a third model** (e.g., vLLM Mistral)
+6. **Ask the same question** to both models simultaneously
 
 ### Example Comparison
 
