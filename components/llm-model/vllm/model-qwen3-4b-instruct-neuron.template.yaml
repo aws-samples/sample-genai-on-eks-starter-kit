@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qwen3-8b-neuron
+  name: qwen3-4b-instruct-neuron
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qwen3-8b-neuron
+      app: qwen3-4b-instruct-neuron
   template:
     metadata:
       labels:
-        app: qwen3-8b-neuron
+        app: qwen3-4b-instruct-neuron
     spec:
       securityContext:
         seccompProfile:
@@ -20,14 +20,14 @@ spec:
       nodeSelector:
         eks.amazonaws.com/instance-family: inf2
         {{#if compile}}
-        node.kubernetes.io/instance-type: inf2.8xlarge
+        node.kubernetes.io/instance-type: inf2.8xlarge 
         karpenter.sh/capacity-type: on-demand
         {{else}}
         node.kubernetes.io/instance-type: inf2.xlarge
         {{/if}}
       containers:
         - name: vllm
-          image: public.ecr.aws/t0h7h1e6/vllm-neuron:qwen3-8b
+          image: public.ecr.aws/t0h7h1e6/vllm-neuron:qwen3-4b-instruct
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,20 +38,19 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - /root/.cache/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218
-            - --served-model-name=qwen3-8b-neuron
+            - /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B-Instruct-2507/snapshots/cdbee75f17c01a7cc42f958dc650907174af0554
+            - --served-model-name=qwen3-4b-instruct-neuron
             - --trust-remote-code
-            - --gpu-memory-utilization=0.90
-            # - --max-model-len=32768 # 32K
+            # - --gpu-memory-utilization=0.90
+            - --max-model-len=32768 # 32K
             # Qwen3 specific
             - --enable-auto-tool-choice
             - --tool-call-parser=hermes
             - --reasoning-parser=qwen3
             # Neuron specific
             - --tensor-parallel-size=2
-            # - --gpu-memory-utilization=0.95
+            - --gpu-memory-utilization=0.95
             - --max-num-seqs=1
-            - --max-model-len=16384
           env:
             {{#if compile}}
             - name: HUGGING_FACE_HUB_TOKEN
@@ -61,7 +60,7 @@ spec:
                   key: token
             {{/if}}
             - name: NEURON_COMPILED_ARTIFACTS
-              value: /root/.cache/neuron/Qwen/Qwen3-8B
+              value: /root/.cache/neuron/Qwen/Qwen3-4B-Instruct-2507
           ports:
             - name: http
               containerPort: 8000
@@ -104,11 +103,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: qwen3-8b-neuron
+  name: qwen3-4b-instruct-neuron
   namespace: vllm
 spec:
   selector:
-    app: qwen3-8b-neuron
+    app: qwen3-4b-instruct-neuron
   ports:
     - name: http
       port: 8000

@@ -11,24 +11,8 @@
   "llm-model": {
     "vllm": {
       "models": [
-        {
-          "name": "deepseek-r1-llama-8b-int8-neuron",
-          "deploy": true,
-          "neuron": true,
-          "compile": false,
-          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:deepseek-r1-llama-8b-int8",
-          "modelPath": "/opt/vllm/huggingface-cache/DeepSeek-R1-Distill-Llama-8B/snapshots/6a6f4aa4197940add57724a7707d069478df56b1",
-          "neuronPath": "/opt/vllm/neuron-cache/DeepSeek-R1-Distill-Llama-8B-int8"
-        },
-        {
-          "name": "mistral-7b-int8-neuron",
-          "deploy": true,
-          "neuron": true,
-          "compile": false,
-          "image": "public.ecr.aws/t0h7h1e6/vllm-neuron:mistral-7b-int8",
-          "modelPath": "/opt/vllm/huggingface-cache/Mistral-7B-Instruct-v0.3/snapshots/0d4b76e1efeb5eb6f6b5e757c79870472e04bd3a",
-          "neuronPath": "/opt/vllm/neuron-cache/Mistral-7B-Instruct-v0.3-int8"
-        }
+        { "name": "qwen3-8b-neuron", "deploy": true, "neuron": true, "compile": false },
+        { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": true, "neuron": true, "compile": false }
       ]
     },
     "sglang": { "models": [] },

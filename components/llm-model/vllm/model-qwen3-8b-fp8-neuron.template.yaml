@@ -20,14 +20,14 @@ spec:
       nodeSelector:
         eks.amazonaws.com/instance-family: inf2
         {{#if compile}}
-        node.kubernetes.io/instance-type: inf2.8xlarge 
+        node.kubernetes.io/instance-type: inf2.8xlarge
         karpenter.sh/capacity-type: on-demand
         {{else}}
         node.kubernetes.io/instance-type: inf2.xlarge
         {{/if}}
       containers:
         - name: vllm
-          image: {{{IMAGE}}}
+          image: public.ecr.aws/t0h7h1e6/vllm-neuron:qwen3-8b
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,14 +38,10 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            {{#if compile}}
-            - Qwen/Qwen3-8B
-            {{else}}
-            - {{{modelPath}}}
-            {{/if}}
+            - /root/.cache/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218
             - --served-model-name=qwen3-8b-fp8-neuron
             - --trust-remote-code
-            # - --gpu-memory-utilization=0.90
+            - --gpu-memory-utilization=0.90
             # - --max-model-len=32768 # 32K
             # Qwen3 specific
             - --enable-auto-tool-choice
@@ -53,11 +49,11 @@ spec:
             - --reasoning-parser=qwen3
             # Neuron specific
             - --tensor-parallel-size=2
-            - --gpu-memory-utilization=0.95
-            - --max-num-seqs=4
-            - --max-model-len=4096
+            # - --gpu-memory-utilization=0.95
+            - --max-num-seqs=1
+            - --max-model-len=16384
             {{#unless compile}}
-            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "{{{modelPath}}}", "kv_cache_quant": true, "quantization_dtype": "f8e4m3"}'
+            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218", "kv_cache_quant": true, "quantization_dtype": "f8e4m3"}'
             {{/unless}}
           env:
             {{#if compile}}
@@ -68,7 +64,7 @@ spec:
                   key: token
             {{/if}}
             - name: NEURON_COMPILED_ARTIFACTS
-              value: {{{neuronPath}}}
+              value: /root/.cache/neuron/Qwen/Qwen3-8B
             - name: XLA_HANDLE_SPECIAL_SCALAR
               value: "1"
           ports:
@@ -104,7 +100,7 @@ spec:
         - name: neuron-cache
           persistentVolumeClaim:
             claimName: neuron-cache
-      {{/if}}      
+      {{/if}}
       tolerations:
         - key: aws.amazon.com/neuron
           operator: Exists

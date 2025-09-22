@@ -20,14 +20,14 @@ spec:
       nodeSelector:
         eks.amazonaws.com/instance-family: inf2
         {{#if compile}}
-        node.kubernetes.io/instance-type: inf2.8xlarge 
+        node.kubernetes.io/instance-type: inf2.8xlarge
         karpenter.sh/capacity-type: on-demand
         {{else}}
         node.kubernetes.io/instance-type: inf2.xlarge
         {{/if}}
       containers:
         - name: vllm
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+          image: public.ecr.aws/t0h7h1e6/vllm-neuron:deepseek-r1-qwen3-8b
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,7 +38,7 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+            - /root/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-R1-0528-Qwen3-8B/snapshots/6e8885a6ff5c1dc5201574c8fd700323f23c25fa
             - --served-model-name=deepseek-r1-qwen3-8b-fp8-neuron
             - --trust-remote-code
             # - --gpu-memory-utilization=0.90
@@ -47,20 +47,22 @@ spec:
             - --reasoning-parser=deepseek_r1
             # Neuron specific
             - --tensor-parallel-size=2
-            - --gpu-memory-utilization=0.95
-            - --max-num-seqs=4
-            - --max-model-len=4096
+            # - --gpu-memory-utilization=0.95
+            - --max-num-seqs=1
+            - --max-model-len=16384
             {{#unless compile}}
             - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-R1-0528-Qwen3-8B/snapshots/6e8885a6ff5c1dc5201574c8fd700323f23c25fa", "kv_cache_quant": true, "quantization_dtype": "f8e4m3"}'
             {{/unless}}
           env:
+            {{#if compile}}
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
+            {{/if}}
             - name: NEURON_COMPILED_ARTIFACTS
-              value: /root/.cache/neuron/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B-fp8
+              value: /root/.cache/neuron/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
             - name: XLA_HANDLE_SPECIAL_SCALAR
               value: "1"
           ports:
@@ -83,6 +85,7 @@ spec:
             limits:
               aws.amazon.com/neuroncore: 2
           {{/if}}
+      {{#if compile}}
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
@@ -95,6 +98,7 @@ spec:
         - name: neuron-cache
           persistentVolumeClaim:
             claimName: neuron-cache
+      {{/if}}
       tolerations:
         - key: aws.amazon.com/neuron
           operator: Exists
