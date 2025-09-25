@@ -50,9 +50,6 @@ Navigate directly to the [Bedrock Model Access Page](https://us-west-2.console.a
 ### Step 3: Submit Your Request
 
 1. Scroll down and click **"Next"**
-
-![Click Next](/static/images/module-1/bedrock-model-access-next.png)
-
 2. On the **"Review and submit"** page, review your selection and click **"Submit"**
 
 ![Review and Submit](/static/images/module-1/bedrock-review-submit.png)
@@ -143,7 +140,7 @@ Open WebUI's powerful feature allows you to compare responses from different mod
 2. **Click the "+" button** next to the model name to add a second model
 3. **Choose a second model** (e.g., vLLM Deepseek)
 4. **Click the "+" button** next to the model name to add a third model
-5. **Choose a third model** (e.g., vLLM Mistral)
+5. **Choose a third model** (e.g., vLLM Qwen 3)
 6. **Ask the same question** to both models simultaneously
 
 ### Example Comparison
@@ -153,6 +150,8 @@ Try this mathematical question with both models:
 **Test Question**: "What is squareroot of 144 divided by 29 multiplied by pi"
 
 ![Model Comparison: Side-by-Side Results](/static/images/module-1/model-comparison-claude-vs-llama.png)
+
+::alert[**/no_think**: If models take too long to think (6 minutes for qwen in this example) - feel free to add /no_think to your question.]{type="info"}
 
 ### What You'll Observe
 

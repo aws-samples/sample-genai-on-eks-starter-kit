@@ -47,8 +47,8 @@ kubectl get pods -n vllm -l app
 :::code{language=yaml showCopyAction=false}
 # Your running models (available to LiteLLM):
 NAME                                        READY   STATUS    
-mistral-7b-int8-neuron-*                    1/1     Running   # ← Mistral model
-deepseek-r1-llama-8b-int8-neuron-*         1/1     Running   # ← DeepSeek model
+deepseek-r1-qwen3-8b-neuron-*                    1/1     Running   # ← DeepSeek model
+qwen3-8b-neuron-neuron-*         1/1     Running   # ← Qwen model
 :::
 
 **Why this matters:** Our setup automatically discovers these running models and points LiteLLM to them using the Helm Chart configuration.
@@ -74,16 +74,16 @@ model_list:
       aws_region_name: us-west-2
       
   # vLLM models (discovered automatically from running pods)
-  - model_name: vllm/deepseek-r1-llama-8b-int8-neuron
+  - model_name: vllm/qwen3-8b-neuron
     litellm_params:
-      model: openai/deepseek-r1-llama-8b-int8-neuron
+      model: openai/qwen3-8b-neuron
       api_key: fake-key
-      api_base: http://deepseek-r1-llama-8b-int8-neuron.vllm:8000/v1
-  - model_name: vllm/mistral-7b-int8-neuron
+      api_base: http://qwen3-8b-neuron.vllm:8000/v1
+  - model_name: vllm/deepseek-r1-qwen3-8b-neuron
     litellm_params:
-      model: openai/mistral-7b-int8-neuron
+      model: openai/deepseek-r1-qwen3-8b-neuron
       api_key: fake-key
-      api_base: http://mistral-7b-int8-neuron.vllm:8000/v1
+      api_base: http://deepseek-r1-qwen3-8b-neuron.vllm:8000/v1
 :::
 
 **The Magic:** Notice how your running vLLM pods automatically become API endpoints in LiteLLM!
@@ -444,8 +444,8 @@ After logging in, click on the **Models + Endpoints** to view the models configu
 
 **Your Models:**
 - ✅ **bedrock/claude-3.7-sonnet** - AWS Bedrock model (bedrock provider)
-- ✅ **vllm/mistral-7b-int8-neuron** - Self-hosted model (openai provider)
-- ✅ **vllm/deepseek-r1-llama-8b-int8-neuron** - Self-hosted model (openai provider)
+- ✅ **vllm/qwen3-8b-neuron** - Self-hosted model (openai provider)
+- ✅ **vllm/deepseek-r1-qwen3-8b-neuron** - Self-hosted model (openai provider)
 
 **Key Insight:** Notice how the vLLM models show "openai" as the provider - this is because LiteLLM presents them through an OpenAI-compatible API!
 
@@ -627,8 +627,8 @@ Click the **"+ Create New Key"** button to open the key creation dialog:
 - 🤖 **Models**: Select all available models:
   - `bedrock/claude-3.7-sonnet` ✓
   - `bedrock/gpt-oss-20b` ✓  
-  - `vllm/deepseek-r1-llama-8b-int8-neuron` ✓
-  - `vllm/mistral-7b-int8-neuron` ✓
+  - `vllm/qwen3-8b-neuron` ✓
+  - `vllm/deepseek-r1-qwen3-8b-neuron` ✓
 - 🔧 **Key Type**: Keep as "Default"
 - ⚙️ **Optional Settings**: Leave expanded but unchanged
 

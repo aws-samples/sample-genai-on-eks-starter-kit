@@ -309,8 +309,7 @@ You'll now see the main Langfuse dashboard with comprehensive analytics:
 - 💰 **$0.10957 Total cost** - Your actual workshop spending
 - 🔍 **Model Breakdown**:
   - `us.anthropic.claude-3-7-sonnet`: 20.63K tokens, $0.106486
-  - `openai.gpt-oss-20b-1:0`: 7.52K tokens, $0.001084  
-  - `llama-3-1-8b-int8-neuron`: 12.86K tokens, $0 (self-hosted)
+  - `openai.gpt-oss-20b-1:0`: 7.52K tokens, $0.001084
 - 📈 **Usage Timeline**: Chart showing your interaction patterns over time
 
 **What This Tells You:**
@@ -486,9 +485,7 @@ Your dashboard now displays model latency comparisons:
 ![Final Dashboard with Widget](/static/images/module-2/final-dashboard.png)
 
 **What your widget reveals:**
-- ⚡ **mistral-7b-int8-neuron**: ~4,000ms average latency
-- 🚀 **us.anthropic.claude-3-7-sonnet**: ~2,500ms average latency  
-- 🎯 **openai.gpt-oss-20b-1:0**: ~1,500ms average latency
+- Due to the reasoning/thinking feature of our locally hosted qwen models - the average latency is much higher for them than our models served by bedrock.
 
 ::alert[**🏆 Challenge**: Create additional widgets to track metrics that matter to you! Try adding widgets for token usage per model, success rates, or cost per hour. Each widget helps you understand your AI usage patterns better.]{type="success"}
 

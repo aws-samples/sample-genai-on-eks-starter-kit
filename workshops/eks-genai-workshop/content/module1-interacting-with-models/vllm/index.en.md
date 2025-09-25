@@ -22,7 +22,7 @@ kubectl get deployments -n vllm -o wide
 kubectl get pods -n vllm -o wide
 :::
 
-You should see pods like `mistral-7b-int8-neuron-xxx` and `deepseek-r1-llama-8b-int8-neuron-xxx` - these are the exact models you just used in OpenWebUI!
+You should see pods like `qwen3-8b-neuron-xxx` and `deepseek-r1-qwen3-8b-neuron-xxx` - these are the exact models you just used in OpenWebUI!
 
 ### Step 2: Examine the Real Configuration Files
 
@@ -32,16 +32,16 @@ In your VSC IDE, let's explore the actual deployment files:
 # Navigate to vLLM configurations
 ls /workshop/components/llm-model/vllm/
 
-# Look at the Mistral deployment you just used
-cat /workshop/components/llm-model/vllm/model-mistral-7b-int8-neuron.rendered.yaml
+# Look at the Qwen 3 deployment you just used
+cat /workshop/components/llm-model/vllm/model-qwen3-8b-neuron.rendered.yaml
 
 # Compare with the DeepSeek deployment
-cat /workshop/components/llm-model/vllm/model-deepseek-r1-llama-8b-int8-neuron.rendered.yaml
+cat /workshop/components/llm-model/vllm/model-deepseek-r1-qwen3-8b-neuron.rendered.yaml
 :::
 
 ### Step 3: Connect Your Chat Experience to Infrastructure
 
-That response you got from Mistral? Here's exactly how it happened:
+That response you got from Qwen 3 8b? Here's exactly how it happened:
 
 1. **Your message** → Open WebUI → LiteLLM → **This vLLM pod**
 2. **The pod** you're looking at processed your request on AWS Neuron hardware
@@ -68,8 +68,8 @@ Let's watch your models work while you use them! This is where the magic happens
 Open a second terminal in your VSC IDE and run:
 
 :::code{language=bash showCopyAction=true}
-# Watch your Mistral model logs in real-time
-kubectl logs -f --tail=0 -n vllm deployment/deepseek-r1-llama-8b-int8-neuron
+# Watch your Deepseek Qwen 3 model logs in real-time
+kubectl logs -f --tail=0 -n vllm deployment/deepseek-r1-qwen3-8b-neuron
 :::
 
 Now go back to your OpenWebUI tab, change the model to the Deepseek model and send a message to it. Watch the logs - you'll see your request being processed in real-time!
@@ -89,8 +89,8 @@ As soon as you send the message "why would a fly fly into a fly pant", watch you
 - 🔄 **Real-time updates**: Each token being generated live
 
 **Key metrics to notice:**
-- **Prompt throughput**: ~2.8 tokens/s (how fast it reads your question - low because not much to read)
-- **Generation throughput**: ~26 tokens/s (how fast it generates the response)
+- **Prompt throughput**: ~1.3 tokens/s (how fast it reads your question - low because not much to read)
+- **Generation throughput**: ~24 tokens/s (how fast it generates the response)
 - **GPU KV cache usage**: Shows memory utilization
 - **Request processing**: Complete request lifecycle from start to finish
 
@@ -200,22 +200,22 @@ stringData:
 ::::tab{label="Deployment"}
 **Main Deployment Manifest**
 
-Here's the deployment for Mistral 7B with Neuron optimization:
+Here's the deployment for Qwen 3 8B with Neuron optimization:
 
 ::alert[Shortened the deployment manifest file to only show the key details.]{type="warning"}
 
 :::code{language=yaml showCopyAction=true}
-# model-mistral-7b-int8-neuron.yaml (key sections)
+# model-qwen3-8b-neuron.rendered.yaml (key sections)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mistral-7b-int8-neuron
+  name: qwen3-8b-neuron
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mistral-7b-int8-neuron
+      app: qwen3-8b-neuron
   template:
     spec:
       # Node selection for Neuron hardware
@@ -225,13 +225,18 @@ spec:
       
       containers:
         - name: vllm
-          image: public.ecr.aws/t0h7h1e6/vllm-neuron:mistral-7b-int8
+          image: public.ecr.aws/t0h7h1e6/vllm-neuron:qwen3-8b
           command: ["vllm", "serve"]
           args:
-            - --served-model-name=mistral-7b-int8-neuron
+            - --served-model-name=qwen3-8b-neuron
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.90
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+            - --reasoning-parser=qwen3
             - --tensor-parallel-size=2
-            - --max-num-seqs=4
-            - --max-model-len=8192
+            - --max-num-seqs=1
+            - --max-model-len=16384
           resources:
             requests:
               cpu: 3
@@ -254,25 +259,21 @@ spec:
 The Service exposes the vLLM deployment and makes it accessible to other components:
 
 :::code{language=yaml showCopyAction=true}
-# model-mistral-7b-int8-neuron.yaml (In same file as the deployment)
 apiVersion: v1
 kind: Service
 metadata:
-  name: mistral-7b-int8-neuron
+  name: qwen3-8b-neuron
   namespace: vllm
 spec:
   selector:
-    app: mistral-7b-int8-neuron
+    app: qwen3-8b-neuron
   ports:
     - name: http
       port: 8000
-      targetPort: 8000
-      protocol: TCP
-  type: ClusterIP
 :::
 
 **Service Details:**
-- **Selector**: Matches pods with the `app: mistral-7b-int8-neuron` label
+- **Selector**: Matches pods with the `app: qwen3-8b-neuron` label
 - **Port 8000**: Standard vLLM API port for OpenAI-compatible endpoints
 - **ClusterIP**: Internal service accessible only within the cluster
 - **Target**: Routes traffic to the vLLM container port 8000

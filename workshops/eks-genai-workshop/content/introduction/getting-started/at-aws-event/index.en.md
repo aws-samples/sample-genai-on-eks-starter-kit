@@ -12,7 +12,7 @@ Welcome to the workshop! Your GenAI infrastructure has been pre-deployed by the 
 Your workshop environment includes:
 - ✅ **EKS cluster** with Auto Mode enabled
 - ✅ **GenAI platform** components (vLLM, LiteLLM, Langfuse, Open WebUI)
-- ✅ **Pre-loaded models** (Mistral 7b, DeepSeek R1 Llama 8b)
+- ✅ **Pre-loaded models** (Qwen 3 8b, DeepSeek R1 Qwen 3 8b)
 - ✅ **Specialized hardware** (Neuron nodes for inference)
 - ✅ **Observability stack** configured and running
 

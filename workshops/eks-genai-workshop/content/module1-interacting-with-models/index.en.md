@@ -23,7 +23,7 @@ This module is structured into three progressive sections:
 Start by exploring the user interface that connects you to various LLM backends. Learn how we deployed Open WebUI using Helm charts and configured it to work with our model infrastructure.
 
 #### 2. [vLLM - Self-Hosted Model Serving](./vllm)
-Dive deep into hosting your own LLMs on EKS. Examine the Kubernetes manifests, understand Neuron optimization, and interact with Mistral 7B running on AWS Inferentia chips.
+Dive deep into hosting your own LLMs on EKS. Examine the Kubernetes manifests, understand Neuron optimization, and interact with Qwen 3 8B running on AWS Inferentia chips.
 
 #### 3. [AWS Bedrock - Managed AI Services](./bedrock)
 Experience the power of fully-managed AI services. Configure access to Claude 3.7 Sonnet and compare its performance with self-hosted models.
@@ -41,8 +41,8 @@ graph LR
     end
     
     subgraph "Model Backends"
-        VLLM[vLLM<br/>Mistral 7B]
-        VLLMQ[vLLM<br/>DeepSeek R1 Llama 8B]
+        VLLM[vLLM<br/>Qwen 3 8B]
+        VLLMQ[vLLM<br/>DeepSeek R1 Qwen 3 8B]
         BEDROCK[AWS Bedrock<br/>Claude 3.7]
     end
     

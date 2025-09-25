@@ -18,7 +18,7 @@ Open WebUI (formerly known as Ollama WebUI) is an open-source project that provi
 
 ## How We Deployed Open WebUI
 
-We used the official [Open Webui Helm chart](https://github.com/open-webui/helm-charts) to deploy Open Webui on our EKS Automode cluster.
+We used the official [Open Webui Helm chart](https://github.com/open-webui/helm-charts) to deploy Open Webui on our EKS Auto Mode cluster.
 
 ::alert[**Helm** is a package manager for Kubernetes that uses 'charts' as its package format. Charts are collections of YAML files that define Kubernetes resources, with support for Go template syntax to generate manifests dynamically. [Learn more about Helm →](https://helm.sh/)]{type="info"}
 
@@ -98,22 +98,24 @@ The ingress configuration creates an Application Load Balancer (ALB):
 - **User Settings**: Preferences persist across sessions
 - **Reliable Performance**: Consistent I/O performance for the application
 
-::alert[**EKS Auto Mode** automatically provisions EBS storage for persistent volume claims, eliminating the need for manual storage configuration.]{type="info"}
+::alert[**EKS Auto Mode** automatically provisions EBS storage for persistent volume claims once a StorageClass is configured. While you still need to create the StorageClass definition, EKS Auto Mode eliminates the need for manual CSI driver installation and node configuration.]{type="info"}
 
-### Deployment Process
+### How Open WebUI Was Deployed
 
-The deployment process involves several steps that were executed during infrastructure setup:
+The deployment process that was executed during infrastructure setup included:
 
-::alert[**Note**: These commands were already executed during your environment setup. You don't need to run them again.]{type="success"}
+::alert[**Already Completed**: The following commands were executed automatically during your environment setup. This section is for reference only.]{type="success"}
 
-**Step 1: Add Helm Repository**
+**Repository Configuration**
 ```bash
+# Helm repository was added
 helm repo add open-webui https://open-webui.github.io/helm-charts
 helm repo update
 ```
 
-**Step 2: Install with Custom Values**
+**Installation with Custom Values**
 ```bash
+# Open WebUI was installed with custom configuration
 helm upgrade --install openwebui open-webui/open-webui \
   --namespace openwebui \
   --create-namespace \
@@ -160,9 +162,9 @@ Once logged in, you'll see the model selection dropdown at the top:
 
 ![Model Selection](/static/images/module-1/models.png)
 
-**Important**: Select **vllm/mistral-7b-int8-neuron** from the dropdown. You'll see several options:
-- ✅ **vllm/mistral-7b-int8-neuron** (use this one)
-- ✅ **vllm/deepseek-r1-llama-8b-int8-neuron** (also available)
+**Important**: Select **vllm/qwen3-8b-neuron** from the dropdown. You'll see several options:
+- ✅ **vllm/qwen3-8b-neuron** (use this one)
+- ✅ **vllm/deepseek-r1-qwen3-8b-neuron** (also available)
 - ❌ **bedrock/claude-3.7-sonnet** (not configured yet - we'll enable this later)
 
 ::alert[**Model Selection**: Stick with the vLLM models for now. We'll configure Bedrock access in a future section of this module.]{type="warning"}
@@ -180,7 +182,7 @@ You should see a response similar to this:
 
 ![First Chat Response](/static/images/module-1/vllm.png)
 
-Notice how the model provides a detailed, well-structured response about Dung Beetles and Bacteria!
+Notice how the model thinks thoroughly for a whole minute and then provides a detailed, well-structured response about Ants, Dung Beetles and other Insects!
 
 ### Step 5: Explore Response Features
 
@@ -199,7 +201,7 @@ After receiving your first response, explore these interface features:
 Want to see how different models respond to the same question?
 
 1. **Click the "+" button** next to the model name
-2. **Select a second model** (try "vllm/deepseek-r1-llama-8b-int8-neuron")
+2. **Select a second model** (try "vllm/deepseek-r1-qwen3-8b-neuron")
 3. **Ask the same question** to both models
 4. **Compare their responses** side by side
 
@@ -294,7 +296,7 @@ sequenceDiagram
 
 ## What's Next?
 
-Now that you understand the chat interface, let's explore the model serving infrastructure behind it. In the next section, we'll dive deep into vLLM and see how Mistral 7b is served on AWS Neuron hardware.
+Now that you understand the chat interface, let's explore the model serving infrastructure behind it. In the next section, we'll dive deep into vLLM and see how Qwen 3 8b is served on AWS Neuron hardware.
 
 ---
 
