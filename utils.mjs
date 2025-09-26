@@ -9,12 +9,16 @@ let BASE_DIR;
 let config;
 let configLocalPath;
 let COMPONENTS_DIR;
+let eksMode;
+let TERRAFORM_DIR;
 
 const init = (options) => {
   BASE_DIR = options.BASE_DIR;
   config = options.config;
   configLocalPath = options.configLocalPath;
   COMPONENTS_DIR = options.COMPONENTS_DIR;
+  eksMode = options.eksMode;
+  TERRAFORM_DIR = options.TERRAFORM_DIR;
 };
 
 const checkRequiredEnvVars = (requiredEnvVars) => {
@@ -234,10 +238,54 @@ const terraform = (function () {
   return { setupWorkspace, plan, apply, destroy, output, applyWithRetry };
 })();
 
+const cleanupStandardModeResources = async () => {
+  console.log("Initiating cleanup of Standard mode resources...");
+  
+  // Fire-and-forget: Start cleanup processes without waiting for completion
+  // These will continue running in the background while terraform destroy proceeds
+  $`kubectl delete ingress --all --all-namespaces --ignore-not-found`.catch(() => {
+    // Ignore errors - the cluster might be partially destroyed
+  });
+  
+  $`kubectl delete nodepools --all --ignore-not-found`.catch(() => {
+    // Ignore errors - Karpenter might already be gone
+  });
+  
+  $`kubectl delete nodeclaims --all --ignore-not-found`.catch(() => {
+    // Ignore errors - nodes might already be terminating
+  });
+  
+  // Fire-and-forget: Direct EC2 termination of Karpenter-managed nodes
+  const clusterName = process.env.EKS_CLUSTER_NAME;
+  const region = process.env.REGION;
+  
+  if (clusterName && region) {
+    console.log("Initiating termination of Karpenter-managed EC2 instances...");
+    
+    // Find and terminate all EC2 instances with the Karpenter discovery tag
+    // Using fire-and-forget approach - no waiting for termination to complete
+    $`aws ec2 describe-instances \
+      --region ${region} \
+      --filters "Name=tag:karpenter.sh/discovery,Values=${clusterName}" \
+                "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+      --query "Reservations[].Instances[].InstanceId" \
+      --output text | xargs -r aws ec2 terminate-instances --region ${region} --instance-ids`.catch(() => {
+      // Ignore errors - instances might already be terminating or not exist
+    });
+  }
+  
+  // Small delay to let the delete commands register with the API server
+  console.log("Waiting 5 seconds for cleanup to initiate...");
+  await new Promise(resolve => setTimeout(resolve, 5000));
+  
+  console.log("Cleanup initiated, proceeding with terraform destroy...");
+};
+
 export default {
   init,
   checkRequiredEnvVars,
   setK8sContext,
   model,
   terraform,
+  cleanupStandardModeResources,
 };

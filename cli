@@ -23,10 +23,13 @@ if (fs.existsSync(configLocalPath)) {
   config = _.merge(config, configLocal);
 }
 process.env.KUBECONFIG = path.join(DIR, ".kubeconfig");
-const TERRAFORM_DIR = path.join(DIR, "terraform");
+
+// Determine EKS mode from environment or config
+const eksMode = process.env.EKS_MODE || config.eks?.mode || "auto";
+const TERRAFORM_DIR = path.join(DIR, "terraform", eksMode);
 const COMPONENTS_DIR = path.join(DIR, "components");
 const EXAMPLES_DIR = path.join(DIR, "examples");
-utils.init({ BASE_DIR: DIR, config, configLocalPath, COMPONENTS_DIR });
+utils.init({ BASE_DIR: DIR, config, configLocalPath, COMPONENTS_DIR, eksMode, TERRAFORM_DIR });
 
 const componentCategories = [
   { dir: "ai-gateway", name: "AI Gateway", components: [{ dir: "litellm", name: "LiteLLM" }] },
@@ -96,12 +99,23 @@ program
         const envLocalContent = fs.readFileSync(envLocalPath, "utf8");
         envLocalConfig = dotenv.parse(envLocalContent);
       }
-      const questions = Object.keys(envConfig).map((key) => ({
-        type: "input",
-        name: key,
-        message: `Enter value for ${key}:`,
-        default: envLocalConfig[key] || envConfig[key] || "",
-      }));
+      const questions = Object.keys(envConfig).map((key) => {
+        if (key === "EKS_MODE") {
+          return {
+            type: "list",
+            name: key,
+            message: `Select EKS mode:`,
+            choices: ["auto", "standard"],
+            default: envLocalConfig[key] || envConfig[key] || "auto",
+          };
+        }
+        return {
+          type: "input",
+          name: key,
+          message: `Enter value for ${key}:`,
+          default: envLocalConfig[key] || envConfig[key] || "",
+        };
+      });
       const answers = await inquirer.prompt(questions);
       const envLocalContent =
         Object.keys(envConfig)
@@ -395,6 +409,13 @@ program
       };
       await uninstallCategories(exampleCategories, EXAMPLES_DIR);
       await uninstallCategories(componentCategories, COMPONENTS_DIR);
+      
+      // Standard mode pre-cleanup: Remove ALBs and Karpenter nodes
+      if (eksMode === 'standard') {
+        console.log("Cleaning up Standard mode resources before destroying infrastructure...");
+        await utils.cleanupStandardModeResources();
+      }
+      
       await utils.terraform.destroy(TERRAFORM_DIR);
     } catch (error) {
       console.error("Error during cleanup:", error);
