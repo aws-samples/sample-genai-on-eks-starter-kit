@@ -7,6 +7,11 @@ resources:
 
 redis:
   enabled: true
+  image:
+    registry: docker.io
+    repository: redis
+    tag: latest
+    pullPolicy: IfNotPresent
   master:
     resources: 
       requests:
@@ -16,6 +21,11 @@ redis:
         memory: 256Mi
 
 postgresql:
+  image:
+    registry: docker.io
+    repository: postgres
+    tag: latest
+    pullPolicy: IfNotPresent
   primary:
     resources: 
       requests:
@@ -23,6 +33,12 @@ postgresql:
         memory: 256Mi
       limits:
         memory: 256Mi
+    extraVolumeMounts:
+      - name: postgresql-run
+        mountPath: /var/run/postgresql
+    extraVolumes:
+      - name: postgresql-run
+        emptyDir: {}
 
 serviceAccount:
   create: true
