@@ -25,6 +25,15 @@ Before you begin, ensure you have the following tools installed:
 - [Helm](https://helm.sh/docs/intro/install)
 - [Docker](https://docs.docker.com/get-started/) and [Buildx](https://docs.docker.com/build/concepts/overview/#buildx)
 
+## EKS Deployment Modes
+
+This starter kit supports two EKS deployment modes:
+
+- **Auto Mode (Default)**: Uses [EKS Auto Mode](https://docs.aws.amazon.com/eks/latest/userguide/automode.html) for simplified cluster management with automatic compute provisioning. Best for quick setup and standard workloads.
+- **Standard Mode**: Traditional EKS setup with full Karpenter configuration. Provides complete control over node provisioning and advanced customization options.
+
+Select the mode during configuration (`./cli configure`) or set `EKS_MODE` in `.env.local` to either `auto` or `standard`.
+
 ## Initial Setup
 
 1. Install dependencies:
@@ -40,6 +49,7 @@ npm install
 # Example:
 # ✔ Enter value for REGION: us-west-2
 # ✔ Enter value for EKS_CLUSTER_NAME: genai-on-eks
+# ✔ Select EKS mode: auto
 # ? Enter value for DOMAIN:
 ```
 
@@ -47,6 +57,7 @@ This will prompt you to enter values for environment variables. Then, it will sa
 
 - REGION - AWS region to be used to provision the infrastructure
 - EKS_CLUSTER_NAME - Name of the EKS cluster
+- EKS_MODE - Deployment mode (`auto` or `standard`)
 - DOMAIN - Recommend to use a domain name already configured with a Route 53 hosted zone, check [FAQs](#faqs) more details
 - HF_TOKEN - Hugging Face [user access token](https://huggingface.co/docs/hub/en/security-tokens)
 

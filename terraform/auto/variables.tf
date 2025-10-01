@@ -29,7 +29,7 @@ variable "gpu_nodepool_capacity_type" {
 
 variable "gpu_nodepool_instance_family" {
   type    = list(string)
-  default = ["g6e", "g6", "g5g", "p5en", "p5e", "p5", "p4de", "p4d"]
+  default = ["g6e", "g6", "g5g", "p5en", "p5e", "p5", "p4de", "p4d", "p6-b200"]
 }
 
 locals {

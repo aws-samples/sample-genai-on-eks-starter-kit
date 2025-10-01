@@ -77,6 +77,3 @@ provider "kubectl" {
     args        = ["eks", "--region", var.region, "get-token", "--cluster-name", module.eks.cluster_name]
   }
 }
-
-
-
