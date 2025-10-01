@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mineru-u2-5-2509-1-2b
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mineru-u2-5-2509-1-2b
+  template:
+    metadata:
+      labels:
+        app: mineru-u2-5-2509-1-2b
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        eks.amazonaws.com/instance-family: g6e
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.10.2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - opendatalab/MinerU2.5-2509-1.2B
+            - --served-model-name=mineru-u2-5-2509-1-2b
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.95
+            - --max-model-len=16384 # 16k context window for document parsing
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mineru-u2-5-2509-1-2b
+  namespace: vllm
+spec:
+  selector:
+    app: mineru-u2-5-2509-1-2b
+  ports:
+    - name: http
+      port: 8000

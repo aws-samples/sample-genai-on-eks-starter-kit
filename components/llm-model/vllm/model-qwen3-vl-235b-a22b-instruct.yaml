@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-vl-235b-a22b-instruct
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-vl-235b-a22b-instruct
+  template:
+    metadata:
+      labels:
+        app: qwen3-vl-235b-a22b-instruct
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        eks.amazonaws.com/instance-family: p5en
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:nightly
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              echo "Upgrading transformers to support qwen3_vl_moe architecture..."
+              pip install --upgrade git+https://github.com/huggingface/transformers.git
+              
+              echo "Starting vLLM server with Qwen3-VL-235B..."
+              exec vllm serve Qwen/Qwen3-VL-235B-A22B-Instruct \
+                --served-model-name=qwen3-vl-235b-a22b-instruct \
+                --trust-remote-code \
+                --tensor-parallel-size=8 \
+                --mm-encoder-tp-mode=data \
+                --mm-processor-cache-type=shm \
+                --async-scheduling \
+                --gpu-memory-utilization=0.95
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              nvidia.com/gpu: 8
+            limits:
+              nvidia.com/gpu: 8
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen3-vl-235b-a22b-instruct
+  namespace: vllm
+spec:
+  selector:
+    app: qwen3-vl-235b-a22b-instruct
+  ports:
+    - name: http
+      port: 8000
