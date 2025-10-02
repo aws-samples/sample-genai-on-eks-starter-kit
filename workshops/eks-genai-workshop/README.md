@@ -1,4 +1,4 @@
-# EKS GenAI Workshop: From LLMs to Scalable Agent Systems
+# Architect and deploy advanced Agentic AI platforms on Amazon EKS
 
 An 8-hour intermediate-level AWS Workshop Studio project that teaches engineers how to build production-ready Generative AI platforms on Amazon EKS.
 

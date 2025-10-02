@@ -163,7 +163,7 @@ The Loan Processing Agent is the conductor of this orchestra. Let's see how it p
 code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/credit-underwriting-agent.py
 :::
 
-Notice that the instructions provided in the code are in plain english. BAsed on our instructions, the LLM create the workflow as mentioned below. This results in improved agility and easier transition from requirements to code. Agentic workflows are redefining the way we build systems and as the capabilities of LLM grows over time, it will be easier to build systems.
+Notice that the instructions provided in the code are in plain english. Based on our instructions, the LLM create the workflow as mentioned below. This results in improved agility and easier transition from requirements to code. Agentic workflows are redefining the way we build systems and as the capabilities of LLM grows over time, it will be easier to build systems.
 
 ### **The Agent's Workflow for John:**
 
