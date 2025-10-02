@@ -83,6 +83,8 @@ Now you'll access your cloud-based development environment through Workshop Stud
    - Scroll down on the Event page to locate the **"Event Outputs (1)"** section
    - You should see a table with output values from your workshop environment
 
+![Workshop Studio Event Outputs](/static/images/introduction/url.png)
+
 3. **Locate the VSC IDE URL**:
    - In the outputs table, find the row with **Key** = "URL"
    - This URL (highlighted in orange) points to your cloud-based Visual Studio Code environment
