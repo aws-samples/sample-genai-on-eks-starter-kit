@@ -1,5 +1,5 @@
 ---
-title: "EKS GenAI Workshop: From LLMs to Scalable Agent Systems"
+title: "Architect and deploy advanced Agentic AI platforms on Amazon EKS"
 weight: 0
 ---
 

@@ -5,7 +5,7 @@ weight: 70
 
 # Workshop Summary and Next Steps
 
-Congratulations! You've completed the **EKS GenAI Workshop: From LLMs to Scalable Agent Systems**. In just a few hours, you've built a complete GenAI platform on Amazon EKS and used it to create an intelligent business application. This hands-on journey has equipped you with practical skills to deploy and scale GenAI solutions in real-world environments.
+Congratulations! You've completed the **Architect and deploy advanced Agentic AI platforms on Amazon EKS** workshop. In just a few hours, you've built a complete GenAI platform on Amazon EKS and used it to create an intelligent business application. This hands-on journey has equipped you with practical skills to deploy and scale GenAI solutions in real-world environments.
 
 ## 🎯 What You've Accomplished
 

@@ -76,14 +76,12 @@ Now you'll access your cloud-based development environment through Workshop Stud
 
 1. **Navigate to the Event Page**:
    - In your Workshop Studio interface, look at the **top left corner**
-   - Click on the **event title box** that shows "EKS GenAI Accelerator: From LLMs to Scalable Agent Systems event" (Title may be different)
+   - Click on the **event title box** that shows "Architect and deploy advanced Agentic AI platforms on Amazon EKS event" (Title may be different)
    - This takes you to the main Event page with all the workshop details
 
 2. **Find the Event Outputs Section**:
    - Scroll down on the Event page to locate the **"Event Outputs (1)"** section
    - You should see a table with output values from your workshop environment
-
-![Workshop Studio Event Outputs](/static/images/introduction/url.png)
 
 3. **Locate the VSC IDE URL**:
    - In the outputs table, find the row with **Key** = "URL"
