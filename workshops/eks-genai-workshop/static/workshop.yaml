@@ -1685,6 +1685,7 @@ Resources:
                 Resource:
                   - !GetAtt CheckSSMDocLambda.Arn
                   - !GetAtt RunSSMDocLambda.Arn
+                  - !GetAtt CompleteCfnResponseLambda.Arn
 
   # Max 3min x 60 = 3hr per step
   SSMDocsStateMachine:
@@ -1706,6 +1707,7 @@ Resources:
                   "CodeEditorPassword": "${SecretPlaintext.password}",
                   "LinuxFlavor": "${LinuxFlavor}"
                 },
+                "ResultPath": "$.RunCodeEditorResult",
                 "Retry": [{"ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 30, "MaxAttempts": 3}],
                 "Next": "CheckCodeEditorSSMDoc"
               },
@@ -1716,6 +1718,7 @@ Resources:
                   "InstanceId": "${CodeEditorInstance}",
                   "DocumentName": "${CodeEditorSSMDoc}"
                 },
+                "ResultPath": "$.CheckCodeEditorResult",
                 "Retry": [{"ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 180, "MaxAttempts": 60}],
                 "Next": "RunSetupWorkshopSSMDoc"
               },
@@ -1727,6 +1730,7 @@ Resources:
                   "DocumentName": "${SetupWorkshopSSMDoc}",
                   "CloudWatchLogGroupName": "/aws/ssm/${SetupWorkshopSSMDoc}"
                 },
+                "ResultPath": "$.RunSetupWorkshopResult",
                 "Retry": [{"ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 30, "MaxAttempts": 3}],
                 "Next": "CheckSetupWorkshopSSMDoc"
               },
@@ -1737,7 +1741,19 @@ Resources:
                   "InstanceId": "${CodeEditorInstance}",
                   "DocumentName": "${SetupWorkshopSSMDoc}"
                 },
+                "ResultPath": "$.CheckSetupWorkshopResult",
                 "Retry": [{"ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 180, "MaxAttempts": 60}],
+                "Next": "SendCfnResponse"
+              },
+              "SendCfnResponse": {
+                "Type": "Task",
+                "Resource": "${CompleteCfnResponseLambda.Arn}",
+                "Parameters": {
+                  "ResponseURL.$": "$.ResponseURL",
+                  "StackId.$": "$.StackId",
+                  "RequestId.$": "$.RequestId",
+                  "LogicalResourceId.$": "$.LogicalResourceId"
+                },
                 "End": true
               }
             }
@@ -1775,26 +1791,83 @@ Resources:
       Code:
         ZipFile: |
           import boto3
-          import cfnresponse
           import json
 
           def handler(event, context):
-              if event['RequestType'] == 'Create':
-                  stepfunctions = boto3.client('stepfunctions')
-
-                  response = stepfunctions.start_execution(
-                      stateMachineArn=event['ResourceProperties']['StateMachineArn']
-                  )
-
+              if event['RequestType'] != 'Create':
+                  # For Delete/Update, send immediate success
+                  import cfnresponse
                   cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-              else:
-                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              
+              # For Create, start Step Functions and pass CFN callback info
+              stepfunctions = boto3.client('stepfunctions')
+              
+              # Pass CFN callback info to Step Functions
+              execution_input = {
+                  'ResponseURL': event['ResponseURL'],
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId']
+              }
+              
+              response = stepfunctions.start_execution(
+                  stateMachineArn=event['ResourceProperties']['StateMachineArn'],
+                  input=json.dumps(execution_input)
+              )
+              
+              # DO NOT send cfnresponse here - let the state machine handle it
+
+  CompleteCfnResponseLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.13
+      Timeout: 900 
+      Role: !GetAtt SSMDocLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import urllib3
+          import time
+
+          http = urllib3.PoolManager()
+
+          def handler(event, context):
+              # Wait 13 minutes before sending response
+              time.sleep(780)
+              
+              # Send response back to CloudFormation
+              response_url = event['ResponseURL']
+              
+              response_body = {
+                  'Status': 'SUCCESS',
+                  'PhysicalResourceId': context.log_stream_name,
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'],
+                  'Data': {}
+              }
+              
+              json_response_body = json.dumps(response_body)
+              
+              headers = {
+                  'content-type': '',
+                  'content-length': str(len(json_response_body))
+              }
+              
+              response = http.request('PUT', response_url, 
+                                     body=json_response_body, 
+                                     headers=headers)
+              
+              return {'statusCode': 200}
 
   SSMDocsStateMachineExecution:
     Type: Custom::StepFunctionsExecution
     DependsOn: CodeEditorInstance
     Properties:
       ServiceToken: !GetAtt SSMDocsLambda.Arn
+      ServiceTimeout: 3600  # 1 hour timeout
       StateMachineArn: !Ref SSMDocsStateMachine
 
 Outputs:
