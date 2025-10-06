@@ -17,8 +17,9 @@ const init = (options) => {
   config = options.config;
   configLocalPath = options.configLocalPath;
   COMPONENTS_DIR = options.COMPONENTS_DIR;
-  eksMode = options.eksMode;
-  TERRAFORM_DIR = options.TERRAFORM_DIR;
+  
+  eksMode = process.env.EKS_MODE || "auto";
+  TERRAFORM_DIR = path.join(BASE_DIR, "terraform", eksMode);
 };
 
 const checkRequiredEnvVars = (requiredEnvVars) => {
@@ -288,4 +289,6 @@ export default {
   model,
   terraform,
   cleanupStandardModeResources,
+  getEksMode: () => eksMode,
+  getTerraformDir: () => TERRAFORM_DIR,
 };

@@ -24,12 +24,9 @@ if (fs.existsSync(configLocalPath)) {
 }
 process.env.KUBECONFIG = path.join(DIR, ".kubeconfig");
 
-// Determine EKS mode from environment or config
-const eksMode = process.env.EKS_MODE || config.eks?.mode || "auto";
-const TERRAFORM_DIR = path.join(DIR, "terraform", eksMode);
 const COMPONENTS_DIR = path.join(DIR, "components");
 const EXAMPLES_DIR = path.join(DIR, "examples");
-utils.init({ BASE_DIR: DIR, config, configLocalPath, COMPONENTS_DIR, eksMode, TERRAFORM_DIR });
+utils.init({ BASE_DIR: DIR, config, configLocalPath, COMPONENTS_DIR });
 
 const componentCategories = [
   { dir: "ai-gateway", name: "AI Gateway", components: [{ dir: "litellm", name: "LiteLLM" }] },
@@ -134,7 +131,7 @@ program
   .addHelpCommand(false)
   .action(async () => {
     try {
-      await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
+      await utils.terraform.applyWithRetry(utils.getTerraformDir(), 3);
       const installItems = async (items, ITEMS_DIR, itemKey) => {
         const itemPaths = items.map((item) => {
           return path.join(ITEMS_DIR, item.category, item[itemKey], "index.mjs");
@@ -223,7 +220,7 @@ program
         console.log("No components selected. Exiting.");
         return;
       }
-      await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
+      await utils.terraform.applyWithRetry(utils.getTerraformDir(), 3);
       for (const component of selectedComponents) {
         const componentDetail = componentDetails[component];
         const componentModule = await import(componentDetail.path);
@@ -366,7 +363,7 @@ async function addTerraformCommands() {
       .action(async () => {
         try {
           // await utils.setK8sContext();
-          await utils.terraform[command.action](TERRAFORM_DIR);
+          await utils.terraform[command.action](utils.getTerraformDir());
         } catch (error) {
           console.error(`Error running terraform ${command.name}:`, error);
           process.exit(1);
@@ -411,12 +408,12 @@ program
       await uninstallCategories(componentCategories, COMPONENTS_DIR);
       
       // Standard mode pre-cleanup: Remove ALBs and Karpenter nodes
-      if (eksMode === 'standard') {
+      if (utils.getEksMode() === 'standard') {
         console.log("Cleaning up Standard mode resources before destroying infrastructure...");
         await utils.cleanupStandardModeResources();
       }
       
-      await utils.terraform.destroy(TERRAFORM_DIR);
+      await utils.terraform.destroy(utils.getTerraformDir());
     } catch (error) {
       console.error("Error during cleanup:", error);
       process.exit(1);

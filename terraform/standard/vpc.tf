@@ -1,5 +1,5 @@
 locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, 4)
+  azs = slice(data.aws_availability_zones.available.names, 0, min(length(data.aws_availability_zones.available.names), 4))
 }
 
 # AWS VPC
@@ -27,4 +27,3 @@ module "vpc" {
     "karpenter.sh/discovery" = var.name
   }
 }
-

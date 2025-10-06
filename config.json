@@ -1,7 +1,4 @@
 {
-  "eks": {
-    "mode": "auto"
-  },
   "demo": {
     "components": [
       { "category": "llm-model", "component": "vllm" },
