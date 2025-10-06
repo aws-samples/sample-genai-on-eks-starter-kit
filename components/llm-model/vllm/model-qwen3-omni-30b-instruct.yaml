@@ -1,7 +1,7 @@
 apiVersion: leaderworkerset.x-k8s.io/v1
 kind: LeaderWorkerSet
 metadata:
-  name: qwen3-next-80b-thinking-fp8
+  name: qwen3-omni-30b-instruct
   namespace: vllm
 spec:
   replicas: 1
@@ -11,7 +11,7 @@ spec:
     leaderTemplate:
       metadata:
         labels:
-          app: qwen3-next-80b-thinking-fp8
+          app: qwen3-omni-30b-instruct
           role: leader
       spec:
         securityContext:
@@ -38,17 +38,14 @@ spec:
                 bash /vllm-workspace/examples/online_serving/multi-node-serving.sh leader --ray_cluster_size=$(LWS_GROUP_SIZE)
                 python3 -m vllm.entrypoints.openai.api_server \
                 --port 8000 \
-                --model Qwen/Qwen3-Next-80B-A3B-Thinking-FP8 \
-                --served-model-name=qwen3-next-80b-thinking-fp8 \
+                --model Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 \
+                --served-model-name=qwen3-omni-30b-instruct \
                 --trust-remote-code \
                 --gpu-memory-utilization=0.95 \
-                --max-model-len=262144 \
+                --max-model-len=65536 \
                 --tensor-parallel-size=1 \
-                --pipeline-parallel-size=2 \
-                --reasoning-parser=qwen3
-                # --tokenizer-mode=auto \
-                # --no-enable-chunked-prefill \
-                # '--speculative-config={"method": "qwen3_next_mtp", "num_speculative_tokens": 2}'
+                --pipeline_parallel_size=2 \
+                --allowed-local-media-path=/
             env:
               - name: HUGGING_FACE_HUB_TOKEN
                 valueFrom:
@@ -85,7 +82,7 @@ spec:
     workerTemplate:
       metadata:
         labels:
-          app: qwen3-next-80b-thinking-fp8
+          app: qwen3-omni-30b-instruct
           role: worker
       spec:
         securityContext:
@@ -144,11 +141,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: qwen3-next-80b-thinking-fp8
+  name: qwen3-omni-30b-instruct
   namespace: vllm
 spec:
   selector:
-    app: qwen3-next-80b-thinking-fp8
+    app: qwen3-omni-30b-instruct
     role: leader
   ports:
     - name: http

@@ -41,8 +41,7 @@ spec:
             - --max-model-len=131072 # 128K
             # Qwen3 specific
             - --enable-auto-tool-choice
-            - --tool-call-parser=hermes
-            - --reasoning-parser=qwen3
+            - --tool-call-parser=qwen3_coder
           env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
