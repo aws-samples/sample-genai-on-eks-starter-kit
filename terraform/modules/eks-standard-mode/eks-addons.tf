@@ -1,4 +1,108 @@
-# Karpenter
+provider "aws" {
+  alias  = "ecr"
+  region = "us-east-1"
+}
+
+data "aws_ecrpublic_authorization_token" "token" {
+  provider = aws.ecr
+}
+
+data "aws_iam_policy_document" "karpenter_irsa" {
+  statement {
+    sid     = "IRSA"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [module.eks.oidc_provider_arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(module.eks.oidc_provider_arn, "/^(.*provider/)/", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:karpenter"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(module.eks.oidc_provider_arn, "/^(.*provider/)/", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+module "karpenter" {
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "21.3.1"
+
+  cluster_name                            = module.eks.cluster_name
+  iam_role_use_name_prefix                = false
+  iam_role_name                           = "${var.name}-karpenter"
+  node_iam_role_use_name_prefix           = false
+  node_iam_role_name                      = "${var.name}-node"
+  create_pod_identity_association         = false
+  iam_role_source_assume_policy_documents = [data.aws_iam_policy_document.karpenter_irsa.json]
+
+  depends_on = [module.eks]
+}
+
+resource "helm_release" "karpenter" {
+  name                = "karpenter"
+  namespace           = "kube-system"
+  create_namespace    = true
+  repository          = "oci://public.ecr.aws/karpenter"
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+  chart               = "karpenter"
+  version             = "1.6.1"
+  wait                = false
+
+  values = [
+    <<-EOT
+    dnsPolicy: Default
+    settings:
+      clusterName: ${module.eks.cluster_name}
+      clusterEndpoint: ${module.eks.cluster_endpoint}
+      interruptionQueue: ${module.karpenter.queue_name}
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: ${module.karpenter.iam_role_arn}
+    webhook:
+      enabled: false
+    EOT
+  ]
+
+  lifecycle {
+    ignore_changes = [
+      repository_password
+    ]
+  }
+}
+
+resource "kubectl_manifest" "karpenter_ec2_node_class" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  amiSelectorTerms:
+    - alias: bottlerocket@latest
+  role: ${module.karpenter.node_iam_role_name}
+  subnetSelectorTerms:
+    - tags:
+        Name: "${module.eks.cluster_name}-private-*"
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "${module.eks.cluster_name}-*"
+    - tags:
+        Name: "eks-cluster-sg-${module.eks.cluster_name}-*"      
+  tags:
+    karpenter.sh/discovery: ${module.eks.cluster_name}
+  kubelet:
+    maxPods: 110
+  YAML
+
+  depends_on = [helm_release.karpenter]
+}
+
 resource "kubectl_manifest" "karpenter_nodepool_default" {
   yaml_body = <<-YAML
 apiVersion: karpenter.sh/v1
@@ -16,19 +120,18 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
-      expireAfter: 336h
       nodeClassRef:
-        group: eks.amazonaws.com
-        kind: NodeClass
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
         name: default
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["spot", "on-demand"]
-        - key: eks.amazonaws.com/instance-category
+        - key: karpenter.k8s.aws/instance-category
           operator: In
           values: ["c", "m", "r"]
-        - key: eks.amazonaws.com/instance-generation
+        - key: karpenter.k8s.aws/instance-generation
           operator: Gt
           values: ["4"]
         - key: kubernetes.io/arch
@@ -40,7 +143,7 @@ spec:
       terminationGracePeriod: 24h0m0s
   YAML
 
-  depends_on = [module.eks]
+  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_gpu" {
@@ -65,10 +168,9 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
-      expireAfter: 336h
       nodeClassRef:
-        group: eks.amazonaws.com
-        kind: NodeClass
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
         name: default
       requirements:
         - key: karpenter.sh/capacity-type
@@ -77,7 +179,7 @@ spec:
         # - key: node.kubernetes.io/instance-type
         #   operator: In
         #   values: ["g6e.xlarge"]
-        - key: eks.amazonaws.com/instance-family
+        - key: karpenter.k8s.aws/instance-family
           operator: In
           values: ["${join("\", \"", var.gpu_nodepool_instance_family)}"]
         - key: kubernetes.io/arch
@@ -93,7 +195,7 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [module.eks]
+  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_neuron" {
@@ -118,16 +220,15 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
-      expireAfter: 336h
       nodeClassRef:
-        group: eks.amazonaws.com
-        kind: NodeClass
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
         name: default
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["spot", "on-demand"]
-        - key: eks.amazonaws.com/instance-family
+        - key: karpenter.k8s.aws/instance-family
           operator: In
           values: ["inf2", "trn1", "trn2"]
         - key: kubernetes.io/arch
@@ -143,66 +244,30 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [module.eks]
+  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
 }
 
-# EKS add-ons
-resource "aws_iam_role" "external_dns" {
-  name = "${module.eks.cluster_name}-${var.region}-external-dns"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "pods.eks.amazonaws.com"
-        }
-        Action = [
-          "sts:AssumeRole",
-          "sts:TagSession"
-        ]
-      }
-    ]
-  })
-}
-resource "aws_iam_role_policy_attachment" "external_dns_route53" {
-  role       = aws_iam_role.external_dns.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
-}
-resource "aws_eks_pod_identity_association" "external_dns" {
-  cluster_name    = module.eks.cluster_name
-  namespace       = "external-dns"
-  service_account = "external-dns"
-  role_arn        = aws_iam_role.external_dns.arn
-}
+module "irsa_ebs_csi_controller" {
+  source  = "aws-ia/eks-blueprints-addon/aws"
+  version = "1.1.1"
 
-resource "aws_iam_role" "efs_csi_driver" {
-  name = "${module.eks.cluster_name}-${var.region}-efs-csi-driver"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "pods.eks.amazonaws.com"
-        }
-        Action = [
-          "sts:AssumeRole",
-          "sts:TagSession"
-        ]
-      }
-    ]
-  })
-}
-resource "aws_iam_role_policy_attachment" "efs_csi_driver" {
-  role       = aws_iam_role.efs_csi_driver.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
-}
-resource "aws_eks_pod_identity_association" "efs_csi_driver" {
-  cluster_name    = module.eks.cluster_name
-  namespace       = "kube-system"
-  service_account = "efs-csi-controller-sa"
-  role_arn        = aws_iam_role.efs_csi_driver.arn
+  create_release = false
+
+  create_role          = true
+  role_name            = "${var.name}-ebs-csi-controller-irsa"
+  role_name_use_prefix = false
+  create_policy        = false
+  role_policies = {
+    AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  }
+
+  oidc_providers = {
+    this = {
+      provider_arn    = module.eks.oidc_provider_arn
+      namespace       = "kube-system"
+      service_account = "ebs-csi-controller-sa"
+    }
+  }
 }
 
 module "eks_blueprints_addons_core" {
@@ -216,6 +281,10 @@ module "eks_blueprints_addons_core" {
 
   # EKS-managed Add-ons
   eks_addons = {
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      service_account_role_arn = module.irsa_ebs_csi_controller.iam_role_arn
+    }
     aws-efs-csi-driver = { most_recent = true }
     external-dns = {
       most_recent = true
@@ -258,6 +327,17 @@ module "eks_blueprints_addons_core" {
     }
   }
 
+  # Self-managed Add-ons
+  enable_aws_load_balancer_controller = true
+  aws_load_balancer_controller = {
+    chart_version = "1.13.4"
+    values = [
+      <<-EOT
+          vpcId: ${var.vpc_id}
+          region: ${var.region}
+        EOT
+    ]
+  }
   enable_ingress_nginx = true
   ingress_nginx = {
     chart_version = "4.12.3"
@@ -288,7 +368,7 @@ module "eks_blueprints_addons_core" {
 resource "kubectl_manifest" "ingressclassparams_shared_internet_facing_alb" {
   count     = var.domain != "" ? 1 : 0
   yaml_body = <<-YAML
-apiVersion: eks.amazonaws.com/v1
+apiVersion: elbv2.k8s.aws/v1beta1
 kind: IngressClassParams
 metadata:
   name: shared-internet-facing-alb
@@ -311,16 +391,15 @@ metadata:
     ingressclass.kubernetes.io/is-default-class: "true"
   name: shared-internet-facing-alb
 spec:
-  controller: eks.amazonaws.com/alb
+  controller: ingress.k8s.aws/alb
   parameters:
-    apiGroup: eks.amazonaws.com
+    apiGroup: elbv2.k8s.aws
     kind: IngressClassParams
     name: shared-internet-facing-alb
   YAML
 
   depends_on = [kubectl_manifest.ingressclassparams_shared_internet_facing_alb]
 }
-
 
 resource "kubectl_manifest" "ingress_internet_facing_alb" {
   count     = var.domain != "" ? 1 : 0
@@ -348,7 +427,7 @@ spec:
 resource "kubectl_manifest" "ingressclassparams_internet_facing_alb" {
   count     = var.domain == "" ? 1 : 0
   yaml_body = <<-YAML
-apiVersion: eks.amazonaws.com/v1
+apiVersion: elbv2.k8s.aws/v1beta1
 kind: IngressClassParams
 metadata:
   name: internet-facing-alb
@@ -370,9 +449,9 @@ metadata:
     ingressclass.kubernetes.io/is-default-class: "true"
   name: internet-facing-alb
 spec:
-  controller: eks.amazonaws.com/alb
+  controller: elbv2.k8s.aws/alb
   parameters:
-    apiGroup: eks.amazonaws.com
+    apiGroup: elbv2.k8s.aws
     kind: IngressClassParams
     name: internet-facing-alb
   YAML
@@ -389,7 +468,7 @@ metadata:
   name: ebs
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-provisioner: ebs.csi.eks.amazonaws.com
+provisioner: ebs.csi.aws.com
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   type: gp3

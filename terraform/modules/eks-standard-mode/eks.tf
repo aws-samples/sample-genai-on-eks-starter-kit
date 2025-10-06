@@ -12,9 +12,38 @@ module "eks" {
 
   enable_cluster_creator_admin_permissions = true
 
-  compute_config = {
-    enabled    = true
-    node_pools = ["general-purpose"]
+  addons = {
+    coredns                = { most_recent = true }
+    eks-pod-identity-agent = { most_recent = true }
+    kube-proxy             = { most_recent = true }
+    vpc-cni = {
+      before_compute = true
+      most_recent    = true
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+  }
+
+  create_security_group      = true
+  create_node_security_group = true
+
+  fargate_profiles = {
+    default = {
+      selectors = [
+        {
+          namespace = "kube-system"
+          labels    = { "app.kubernetes.io/name" = "karpenter" }
+        },
+        {
+          namespace = "kube-system"
+          labels    = { "eks.amazonaws.com/component" = "coredns" }
+        }
+      ]
+    }
   }
 }
 
