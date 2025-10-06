@@ -21,7 +21,8 @@
       "enableNeuron": false,
       "models": [
         { "name": "dots-ocr", "deploy": true },
-        { "name": "mineru-u2-5-2509-1-2b", "deploy": true },
+        { "name": "mineru-u2-5-2509-1-2b", "deploy": false },
+        { "name": "qwen2-5-vl-7b-instruct", "deploy": true },
         { "name": "qwen3-30b-instruct-fp8", "deploy": false },
         { "name": "qwen3-30b-thinking-fp8", "deploy": false },
         { "name": "qwen3-32b-fp8", "deploy": false },
@@ -31,7 +32,7 @@
         { "name": "qwen3-next-80b-thinking-fp8", "deploy": false },
         { "name": "qwen3-coder-30b-fp8", "deploy": false },
         { "name": "qwen3-coder-480b-fp8", "deploy": false },
-        { "name": "qwen3-vl-235b-a22b-instruct", "deploy": true },
+        { "name": "qwen3-vl-235b-a22b-instruct", "deploy": false },
         { "name": "gpt-oss-20b", "deploy": false },
         { "name": "gpt-oss-120b", "deploy": false },
         { "name": "deepseek-r1-qwen3-8b", "deploy": false },
@@ -92,7 +93,8 @@
         { "name": "claude-4-sonnet", "model": "us.anthropic.claude-sonnet-4-20250514-v1:0" },
         { "name": "claude-3.7-sonnet", "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0" },
         { "name": "llama4-maverick", "model": "us.meta.llama4-maverick-17b-instruct-v1:0" },
-        { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0" }
+        { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0" },
+        { "name": "qwen3-235b-a22b", "model": "qwen.qwen3-235b-a22b-2507-v1:0" }
       ]
     },
     "embedding": { "models": [] }
