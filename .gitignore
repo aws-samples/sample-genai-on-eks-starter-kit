@@ -21,3 +21,4 @@ config.local.json
 *.rendered.yaml
 test*.py
 test*.mjs
+terraform/eks.tf

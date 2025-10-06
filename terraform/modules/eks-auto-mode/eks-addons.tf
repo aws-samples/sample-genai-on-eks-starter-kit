@@ -1,3 +1,4 @@
+# Karpenter
 resource "kubectl_manifest" "karpenter_nodepool_default" {
   yaml_body = <<-YAML
 apiVersion: karpenter.sh/v1
@@ -145,6 +146,7 @@ spec:
   depends_on = [module.eks]
 }
 
+# EKS add-ons
 resource "aws_iam_role" "external_dns" {
   name = "${module.eks.cluster_name}-${var.region}-external-dns"
   assume_role_policy = jsonencode({
@@ -283,6 +285,103 @@ module "eks_blueprints_addons_core" {
   depends_on = [kubectl_manifest.karpenter_nodepool_default]
 }
 
+# ALB
+resource "kubectl_manifest" "ingressclassparams_shared_internet_facing_alb" {
+  count     = var.domain != "" ? 1 : 0
+  yaml_body = <<-YAML
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: shared-internet-facing-alb
+spec:
+  scheme: internet-facing
+  group:
+    name: shared-internet-facing-alb
+  YAML
+
+  depends_on = [module.eks_blueprints_addons_core]
+}
+
+resource "kubectl_manifest" "ingressclass_shared_internet_facing_alb" {
+  count     = var.domain != "" ? 1 : 0
+  yaml_body = <<-YAML
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+  name: shared-internet-facing-alb
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: shared-internet-facing-alb
+  YAML
+
+  depends_on = [kubectl_manifest.ingressclassparams_shared_internet_facing_alb]
+}
+
+
+resource "kubectl_manifest" "ingress_internet_facing_alb" {
+  count     = var.domain != "" ? 1 : 0
+  yaml_body = <<-YAML
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: default
+  namespace: default
+  annotations:
+    alb.ingress.kubernetes.io/group.order: "1000"
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: shared-internet-facing-alb
+  defaultBackend:
+    service:
+      name: default
+      port:
+        number: 80
+  YAML
+
+  depends_on = [kubectl_manifest.ingressclass_shared_internet_facing_alb]
+}
+
+resource "kubectl_manifest" "ingressclassparams_internet_facing_alb" {
+  count     = var.domain == "" ? 1 : 0
+  yaml_body = <<-YAML
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: internet-facing-alb
+spec:
+  scheme: internet-facing
+  YAML
+
+  depends_on = [module.eks_blueprints_addons_core]
+}
+
+resource "kubectl_manifest" "ingressclass_internet_facing_alb" {
+  count = var.domain == "" ? 1 : 0
+
+  yaml_body = <<-YAML
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+  name: internet-facing-alb
+spec:
+  controller: eks.amazonaws.com/alb
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: internet-facing-alb
+  YAML
+
+  depends_on = [kubectl_manifest.ingressclassparams_internet_facing_alb]
+}
+
+# EBS
 resource "kubectl_manifest" "storageclass_ebs" {
   yaml_body = <<-YAML
 apiVersion: storage.k8s.io/v1
@@ -312,7 +411,26 @@ resource "null_resource" "delete_gp2_storageclass" {
   depends_on = [module.eks_blueprints_addons_core]
 }
 
+# EFS
+resource "kubectl_manifest" "storageclass_efs" {
+  yaml_body = <<-YAML
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    metadata:
+      name: efs
+    provisioner: efs.csi.aws.com
+    parameters:
+      provisioningMode: efs-ap
+      fileSystemId: ${var.efs_file_system_id}
+      directoryPerms: "700"
+  YAML
 
+  ignore_fields = ["metadata.uid", "metadata.resourceVersion"]
+
+  depends_on = [module.eks_blueprints_addons_core]
+}
+
+# LWS
 resource "helm_release" "lws" {
   name             = "lws"
   namespace        = "lws-system"

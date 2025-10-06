@@ -1,0 +1,13 @@
+module "eks_{{{EKS_MODE}}}_mode" {
+  source = "./modules/eks-{{{EKS_MODE}}}-mode"
+
+  name                         = var.name
+  region                       = var.region
+  eks_cluster_version          = var.eks_cluster_version
+  vpc_id                       = module.vpc.vpc_id
+  subnet_ids                   = module.vpc.private_subnets
+  domain                       = var.domain
+  efs_file_system_id           = aws_efs_file_system.this.id
+  gpu_nodepool_capacity_type   = var.gpu_nodepool_capacity_type
+  gpu_nodepool_instance_family = var.gpu_nodepool_instance_family
+}

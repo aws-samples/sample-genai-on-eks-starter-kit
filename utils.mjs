@@ -31,6 +31,13 @@ const setK8sContext = async () => {
   const contextName = `${EKS_CLUSTER_NAME}-${REGION}`;
   await $`kubectl config use-context ${contextName}`;
 };
+
+const renderTemplate = (templatePath, renderedPath, vars) => {
+  const templateString = fs.readFileSync(templatePath, "utf8");
+  const template = handlebars.compile(templateString);
+  fs.writeFileSync(renderedPath, template(vars));
+};
+
 // Model Management
 const model = (function () {
   const configureModels = async (models, categoryDir, componentDir) => {
@@ -141,11 +148,12 @@ const model = (function () {
 // Terraform
 const terraform = (function () {
   const setupWorkspace = async function (TERRAFORM_DIR) {
-    const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME"];
+    const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME", "EKS_MODE"];
     checkRequiredEnvVars(requiredEnvVars);
-    const { REGION, EKS_CLUSTER_NAME, DOMAIN } = process.env;
+    const { REGION, EKS_CLUSTER_NAME, EKS_MODE, DOMAIN } = process.env;
     try {
       cd(TERRAFORM_DIR);
+      renderTemplate(`${TERRAFORM_DIR}/eks.tf.template`, `${TERRAFORM_DIR}/eks.tf`, { EKS_MODE });
       await $`terraform init`;
       await $`terraform workspace new ${REGION}`;
     } catch (error) {}
@@ -238,6 +246,7 @@ export default {
   init,
   checkRequiredEnvVars,
   setK8sContext,
+  renderTemplate,
   model,
   terraform,
 };
