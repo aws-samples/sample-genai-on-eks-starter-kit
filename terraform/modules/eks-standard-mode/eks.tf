@@ -28,8 +28,16 @@ module "eks" {
     }
   }
 
-  create_security_group      = true
-  create_node_security_group = true
+  node_security_group_additional_rules = {
+    network = {
+      description = "Allow all traffic from VPC"
+      type        = "ingress"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = [var.vpc_cidr]
+    }
+  }
 
   fargate_profiles = {
     default = {
@@ -44,6 +52,10 @@ module "eks" {
         }
       ]
     }
+  }
+
+  tags = {
+    "karpenter.sh/discovery" = var.name
   }
 }
 

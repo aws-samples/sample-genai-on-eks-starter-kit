@@ -37,7 +37,7 @@ spec:
               type: RuntimeDefault
           args:
             - --model-id=Qwen/Qwen3-Embedding-4B
-            - --huggingface-hub-cache=/root/.cache/huggingface
+            - --huggingface-hub-cache=/root/.cache/huggingface/hub
           env:
             - name: HF_TOKEN
               valueFrom:

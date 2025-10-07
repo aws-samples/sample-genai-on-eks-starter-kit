@@ -2,6 +2,7 @@ variable "name" { type = string }
 variable "region" { type = string }
 variable "eks_cluster_version" { type = string }
 variable "vpc_id" { type = string }
+variable "vpc_cidr" { type = string }
 variable "subnet_ids" { type = list(string) }
 variable "domain" { type = string }
 variable "efs_file_system_id" { type = string }

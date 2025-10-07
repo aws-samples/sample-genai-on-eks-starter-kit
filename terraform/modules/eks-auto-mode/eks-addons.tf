@@ -147,35 +147,6 @@ spec:
 }
 
 # EKS add-ons
-resource "aws_iam_role" "external_dns" {
-  name = "${module.eks.cluster_name}-${var.region}-external-dns"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "pods.eks.amazonaws.com"
-        }
-        Action = [
-          "sts:AssumeRole",
-          "sts:TagSession"
-        ]
-      }
-    ]
-  })
-}
-resource "aws_iam_role_policy_attachment" "external_dns_route53" {
-  role       = aws_iam_role.external_dns.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
-}
-resource "aws_eks_pod_identity_association" "external_dns" {
-  cluster_name    = module.eks.cluster_name
-  namespace       = "external-dns"
-  service_account = "external-dns"
-  role_arn        = aws_iam_role.external_dns.arn
-}
-
 resource "aws_iam_role" "efs_csi_driver" {
   name = "${module.eks.cluster_name}-${var.region}-efs-csi-driver"
   assume_role_policy = jsonencode({
@@ -203,6 +174,35 @@ resource "aws_eks_pod_identity_association" "efs_csi_driver" {
   namespace       = "kube-system"
   service_account = "efs-csi-controller-sa"
   role_arn        = aws_iam_role.efs_csi_driver.arn
+}
+
+resource "aws_iam_role" "external_dns" {
+  name = "${module.eks.cluster_name}-${var.region}-external-dns"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+}
+resource "aws_iam_role_policy_attachment" "external_dns_route53" {
+  role       = aws_iam_role.external_dns.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
+}
+resource "aws_eks_pod_identity_association" "external_dns" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "external-dns"
+  service_account = "external-dns"
+  role_arn        = aws_iam_role.external_dns.arn
 }
 
 module "eks_blueprints_addons_core" {
@@ -422,6 +422,7 @@ resource "kubectl_manifest" "storageclass_efs" {
       provisioningMode: efs-ap
       fileSystemId: ${var.efs_file_system_id}
       directoryPerms: "700"
+      reuseAccessPoint: "true"
   YAML
 
   ignore_fields = ["metadata.uid", "metadata.resourceVersion"]

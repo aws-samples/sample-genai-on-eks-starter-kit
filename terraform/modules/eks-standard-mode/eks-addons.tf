@@ -88,16 +88,25 @@ spec:
   role: ${module.karpenter.node_iam_role_name}
   subnetSelectorTerms:
     - tags:
-        Name: "${module.eks.cluster_name}-private-*"
+        karpenter.sh/discovery: ${module.eks.cluster_name}
   securityGroupSelectorTerms:
     - tags:
-        Name: "${module.eks.cluster_name}-*"
-    - tags:
-        Name: "eks-cluster-sg-${module.eks.cluster_name}-*"      
+        karpenter.sh/discovery: ${module.eks.cluster_name}
   tags:
     karpenter.sh/discovery: ${module.eks.cluster_name}
   kubelet:
     maxPods: 110
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 4Gi
+        volumeType: gp3
+        encrypted: true
+    - deviceName: /dev/xvdb
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        encrypted: true
   YAML
 
   depends_on = [helm_release.karpenter]
@@ -247,27 +256,92 @@ spec:
   depends_on = [kubectl_manifest.karpenter_ec2_node_class]
 }
 
-module "irsa_ebs_csi_controller" {
-  source  = "aws-ia/eks-blueprints-addon/aws"
-  version = "1.1.1"
+# EKS add-ons
+resource "aws_iam_role" "ebs_csi_driver" {
+  name = "${module.eks.cluster_name}-${var.region}-ebs-csi-driver"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+}
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver" {
+  role       = aws_iam_role.ebs_csi_driver.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+}
+resource "aws_eks_pod_identity_association" "ebs_csi_driver" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "kube-system"
+  service_account = "ebs-csi-controller-sa"
+  role_arn        = aws_iam_role.ebs_csi_driver.arn
+}
 
-  create_release = false
+resource "aws_iam_role" "efs_csi_driver" {
+  name = "${module.eks.cluster_name}-${var.region}-efs-csi-driver"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+}
+resource "aws_iam_role_policy_attachment" "efs_csi_driver" {
+  role       = aws_iam_role.efs_csi_driver.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
+}
+resource "aws_eks_pod_identity_association" "efs_csi_driver" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "kube-system"
+  service_account = "efs-csi-controller-sa"
+  role_arn        = aws_iam_role.efs_csi_driver.arn
+}
 
-  create_role          = true
-  role_name            = "${var.name}-ebs-csi-controller-irsa"
-  role_name_use_prefix = false
-  create_policy        = false
-  role_policies = {
-    AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-  }
-
-  oidc_providers = {
-    this = {
-      provider_arn    = module.eks.oidc_provider_arn
-      namespace       = "kube-system"
-      service_account = "ebs-csi-controller-sa"
-    }
-  }
+resource "aws_iam_role" "external_dns" {
+  name = "${module.eks.cluster_name}-${var.region}-external-dns"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+}
+resource "aws_iam_role_policy_attachment" "external_dns_route53" {
+  role       = aws_iam_role.external_dns.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
+}
+resource "aws_eks_pod_identity_association" "external_dns" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "external-dns"
+  service_account = "external-dns"
+  role_arn        = aws_iam_role.external_dns.arn
 }
 
 module "eks_blueprints_addons_core" {
@@ -281,10 +355,7 @@ module "eks_blueprints_addons_core" {
 
   # EKS-managed Add-ons
   eks_addons = {
-    aws-ebs-csi-driver = {
-      most_recent              = true
-      service_account_role_arn = module.irsa_ebs_csi_controller.iam_role_arn
-    }
+    aws-ebs-csi-driver = { most_recent = true }
     aws-efs-csi-driver = { most_recent = true }
     external-dns = {
       most_recent = true
@@ -501,6 +572,7 @@ resource "kubectl_manifest" "storageclass_efs" {
       provisioningMode: efs-ap
       fileSystemId: ${var.efs_file_system_id}
       directoryPerms: "700"
+      reuseAccessPoint: "true"
   YAML
 
   ignore_fields = ["metadata.uid", "metadata.resourceVersion"]

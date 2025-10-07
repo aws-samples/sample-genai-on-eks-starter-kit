@@ -5,6 +5,7 @@ module "eks_{{{EKS_MODE}}}_mode" {
   region                       = var.region
   eks_cluster_version          = var.eks_cluster_version
   vpc_id                       = module.vpc.vpc_id
+  vpc_cidr                     = var.vpc_cidr
   subnet_ids                   = module.vpc.private_subnets
   domain                       = var.domain
   efs_file_system_id           = aws_efs_file_system.this.id

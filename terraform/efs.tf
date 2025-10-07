@@ -13,7 +13,8 @@ resource "aws_security_group" "efs" {
   }
 
   tags = {
-    Name = "${var.name}-efs-sg"
+    Name                     = "${var.name}-efs-sg"
+    "karpenter.sh/discovery" = var.name
   }
 }
 
