@@ -12,7 +12,7 @@ spec:
           type: RuntimeDefault
       automountServiceAccountToken: false
       # nodeSelector:
-      #   eks.amazonaws.com/instance-family: inf2
+      #   {{{KARPENTER_PREFIX}}}/instance-family: inf2
       serviceAccountName: tgi-neuron-build
       containers:
         - name: kaniko

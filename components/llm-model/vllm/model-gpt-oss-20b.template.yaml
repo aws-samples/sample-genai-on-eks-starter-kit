@@ -1,29 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qwen3-8b-neuron
+  name: gpt-oss-20b
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qwen3-8b-neuron
+      app: gpt-oss-20b
   template:
     metadata:
       labels:
-        app: qwen3-8b-neuron
+        app: gpt-oss-20b
     spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
-        {{{KARPENTER_PREFIX}}}/instance-family: inf2
-        # node.kubernetes.io/instance-type: inf2.8xlarge 
-        # karpenter.sh/capacity-type: on-demand
+        {{{KARPENTER_PREFIX}}}/instance-family: g6e
       containers:
         - name: vllm
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+          image: vllm/vllm-openai:gptoss
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -34,63 +32,52 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - Qwen/Qwen3-8B
-            - --served-model-name=qwen3-8b-neuron
+            - openai/gpt-oss-20b
+            - --served-model-name=gpt-oss-20b
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
-            # - --max-model-len=32768 # 32K
-            # Qwen3 specific
-            - --enable-auto-tool-choice
-            - --tool-call-parser=hermes
-            - --reasoning-parser=qwen3
-            # Neuron specific
-            - --tensor-parallel-size=2
-            # - --gpu-memory-utilization=0.95
-            - --max-num-seqs=4
-            - --max-model-len=4096
+            - --max-model-len=32768 # 32K
+            # - --max-model-len=131072 # 128K
           env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
-            - name: NEURON_COMPILED_ARTIFACTS
-              value: /root/.cache/neuron/Qwen/Qwen3-8B
-          ports:
-            - name: http
-              containerPort: 8000
+            - name: VLLM_ATTENTION_BACKEND
+              value: TRITON_ATTN_VLLM_V1
           resources:
             requests:
-              cpu: 24 #75%
-              memory: 96Gi #75%
-              aws.amazon.com/neuroncore: 2
+              cpu: 3 #75%
+              memory: 24Gi #75%
+              nvidia.com/gpu: 1
             limits:
-              aws.amazon.com/neuroncore: 2
+              nvidia.com/gpu: 1
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
-            - name: neuron-cache
-              mountPath: /root/.cache/neuron
+            - name: shm
+              mountPath: /dev/shm
       volumes:
         - name: huggingface-cache
           persistentVolumeClaim:
             claimName: huggingface-cache
-        - name: neuron-cache
-          persistentVolumeClaim:
-            claimName: neuron-cache
+        - name: shm
+          emptyDir:
+            medium: Memory
       tolerations:
-        - key: aws.amazon.com/neuron
+        - key: nvidia.com/gpu
           operator: Exists
           effect: NoSchedule
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: qwen3-8b-neuron
+  name: gpt-oss-20b
   namespace: vllm
 spec:
   selector:
-    app: qwen3-8b-neuron
+    app: gpt-oss-20b
   ports:
     - name: http
       port: 8000

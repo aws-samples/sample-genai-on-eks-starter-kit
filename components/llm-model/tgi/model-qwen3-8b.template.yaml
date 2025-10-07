@@ -1,30 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qwen3-8b-neuron
+  name: qwen3-8b
   namespace: tgi
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qwen3-8b-neuron
+      app: qwen3-8b
   template:
     metadata:
       labels:
-        app: qwen3-8b-neuron
+        app: qwen3-8b
     spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
-        {{{KARPENTER_PREFIX}}}/instance-family: inf2
+        {{{KARPENTER_PREFIX}}}/instance-family: g6e
       containers:
         - name: tgi
-          # image: ghcr.io/huggingface/text-generation-inference:sha-7199074-neuron
-          image: {{{IMAGE}}}
-          imagePullPolicy: Always
-          # imagePullPolicy: IfNotPresent
+          image: ghcr.io/huggingface/text-generation-inference:3.3.4
+          imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -35,38 +33,23 @@ spec:
           args:
             - --model-id=Qwen/Qwen3-8B
             - --trust-remote-code
+            - --huggingface-hub-cache=/root/.cache/huggingface/hub
           env:
             - name: HF_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
-            - name: HUGGINGFACE_HUB_CACHE
-              value: "/root/.cache/huggingface/hub"
-            - name: HF_NUM_CORES
-              value: "2"
-            - name: HF_AUTO_CAST_TYPE
-              value: "bf16"
-            - name: MAX_BATCH_SIZE
-              value: "4"
-            - name: MAX_TOTAL_TOKENS
-              value: "4096"
-            # Need NEURON_RT_VISIBLE_CORES because we cannot pass NEURON_RT_NUM_CORES in as INT.
-            # https://github.com/huggingface/optimum-neuron/blob/main/optimum/neuron/utils/system.py#L40-L78 
-            - name: NEURON_RT_NUM_CORES
-              value: "2"
-            - name: NEURON_RT_VISIBLE_CORES
-              value: "0-1"
           ports:
             - name: http
               containerPort: 80
           resources:
             requests:
-              cpu: 24 #75%
-              memory: 96Gi #75%
-              aws.amazon.com/neuroncore: 2
+              cpu: 3 #75%
+              memory: 24Gi #75%
+              nvidia.com/gpu: 1
             limits:
-              aws.amazon.com/neuroncore: 2
+              nvidia.com/gpu: 1
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
@@ -75,18 +58,18 @@ spec:
           persistentVolumeClaim:
             claimName: huggingface-cache
       tolerations:
-        - key: aws.amazon.com/neuron
+        - key: nvidia.com/gpu
           operator: Exists
           effect: NoSchedule
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: qwen3-8b-neuron
+  name: qwen3-8b
   namespace: tgi
 spec:
   selector:
-    app: qwen3-8b-neuron
+    app: qwen3-8b
   ports:
     - name: http
       port: 80
