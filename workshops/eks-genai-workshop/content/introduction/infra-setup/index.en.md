@@ -36,10 +36,17 @@ kubectl get nodes -L eks.amazonaws.com/compute-type
 
 Your cluster includes specialized node pools optimized for different workload types:
 
-#### 1. **General Purpose Nodes**
-- **Instance Types**: Mixed instances (t3, m5, c5 families)
+#### 1. **General Purpose Nodes (Multi-Architecture)**
+- **Instance Types**: Latest generation compute (C), memory (M), and general purpose (R) optimized instances
+  - **AWS Graviton (ARM64)**: ARM-based instances providing up to 40% better price-performance
+  - **x86 (AMD/Intel)**: Traditional x86 architecture instances
+- **Architecture Support**: Multi-arch (amd64/arm64) with automatic selection based on workload compatibility
 - **Purpose**: Running general workloads, web services, and control plane components
-- **Scaling**: Automatically scales based on pod requirements
+- **Cost Optimization**: 
+  - Graviton instances provide up to 40% better price-performance vs comparable x86
+  - Spot and On-Demand capacity types for additional savings
+  - Karpenter automatically selects the most cost-effective instance type from available options
+- **Scaling**: Automatically scales based on pod requirements and consolidates underutilized nodes
 
 #### 2. **GPU-Accelerated Nodes** 
 - **Instance Types**: NVIDIA GPUs (g5, g6, p4 & p5 families)
