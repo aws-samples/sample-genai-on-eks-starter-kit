@@ -10,6 +10,8 @@ spec:
     kubernetes.io/arch: amd64
     eks.amazonaws.com/instance-category: m
     eks.amazonaws.com/instance-generation: "7"
+    # karpenter.k8s.aws/instance-category: m
+    # karpenter.k8s.aws/instance-generation: "7"
     karpenter.sh/capacity-type: on-demand
   containers:
     - name: ubuntu
@@ -63,6 +65,7 @@ metadata:
 spec:
   nodeSelector:
     eks.amazonaws.com/instance-family: inf2
+    # karpenter.k8s.aws/instance-family: inf2
     node.kubernetes.io/instance-type: inf2.xlarge
     karpenter.sh/capacity-type: on-demand
   containers:

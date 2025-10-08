@@ -47,6 +47,7 @@ This will prompt you to enter values for environment variables. Then, it will sa
 
 - REGION - AWS region to be used to provision the infrastructure
 - EKS_CLUSTER_NAME - Name of the EKS cluster
+- EKS_MODE - EKS mode, `auto` (default) or `standard`
 - DOMAIN - Recommend to use a domain name already configured with a Route 53 hosted zone, check [FAQs](#faqs) more details
 - HF_TOKEN - Hugging Face [user access token](https://huggingface.co/docs/hub/en/security-tokens)
 

@@ -18,7 +18,7 @@ spec:
           type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
-        eks.amazonaws.com/instance-family: inf2
+        {{{KARPENTER_PREFIX}}}/instance-family: inf2
       containers:
         - name: tgi
           # image: ghcr.io/huggingface/text-generation-inference:sha-7199074-neuron

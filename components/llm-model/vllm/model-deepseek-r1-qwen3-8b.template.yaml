@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deepseek-r1-qwen3-8b
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deepseek-r1-qwen3-8b
+  template:
+    metadata:
+      labels:
+        app: deepseek-r1-qwen3-8b
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        {{{KARPENTER_PREFIX}}}/instance-family: g6e
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.10.2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+            - --served-model-name=deepseek-r1-qwen3-8b
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.90
+            - --max-model-len=32768 # 32K
+            # DeepSeek-R1 specific
+            - --reasoning-parser=deepseek_r1
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 3 #75%
+              memory: 24Gi #75%
+              nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deepseek-r1-qwen3-8b
+  namespace: vllm
+spec:
+  selector:
+    app: deepseek-r1-qwen3-8b
+  ports:
+    - name: http
+      port: 8000

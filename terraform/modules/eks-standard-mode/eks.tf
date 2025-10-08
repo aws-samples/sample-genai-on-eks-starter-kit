@@ -1,0 +1,119 @@
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "21.3.1"
+
+  name                   = var.name
+  kubernetes_version     = var.eks_cluster_version
+  endpoint_public_access = true
+
+  vpc_id     = var.vpc_id
+  subnet_ids = var.subnet_ids
+  # control_plane_subnet_ids = module.vpc.intra_subnets
+
+  enable_cluster_creator_admin_permissions = true
+
+  addons = {
+    coredns                = { most_recent = true }
+    eks-pod-identity-agent = { most_recent = true }
+    kube-proxy             = { most_recent = true }
+    vpc-cni = {
+      before_compute = true
+      most_recent    = true
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+  }
+
+  node_security_group_additional_rules = {
+    network = {
+      description = "Allow all traffic from VPC"
+      type        = "ingress"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = [var.vpc_cidr]
+    }
+  }
+
+  fargate_profiles = {
+    default = {
+      selectors = [
+        {
+          namespace = "kube-system"
+          labels    = { "app.kubernetes.io/name" = "karpenter" }
+        },
+        {
+          namespace = "kube-system"
+          labels    = { "eks.amazonaws.com/component" = "coredns" }
+        }
+      ]
+    }
+  }
+
+  tags = {
+    "karpenter.sh/discovery" = var.name
+  }
+}
+
+resource "null_resource" "update_kubeconfig" {
+  provisioner "local-exec" {
+    command = <<EOT
+      # Update Global Config
+      ORIGINAL_CONTEXT=$(kubectl config current-context)
+      KUBECONFIG=$HOME/.kube/config aws --region ${var.region} eks update-kubeconfig --name ${module.eks.cluster_name} --alias ${module.eks.cluster_name}-${var.region}
+      kubectl config use-context $ORIGINAL_CONTEXT
+      # Update Project Config
+      aws --region ${var.region} eks update-kubeconfig --name ${module.eks.cluster_name} --alias ${module.eks.cluster_name}-${var.region}
+    EOT
+  }
+
+  depends_on = [module.eks]
+}
+
+output "eks_update_kubeconfig" {
+  value = "aws --region ${var.region} eks update-kubeconfig --name ${module.eks.cluster_name} --alias ${module.eks.cluster_name}-${var.region}"
+}
+
+output "eks_cluster_name" {
+  value = module.eks.cluster_name
+}
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "--region", var.region, "get-token", "--cluster-name", module.eks.cluster_name]
+  }
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "--region", var.region, "get-token", "--cluster-name", module.eks.cluster_name]
+    }
+  }
+}
+
+provider "kubectl" {
+  apply_retry_count      = 5
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+  load_config_file       = false
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "--region", var.region, "get-token", "--cluster-name", module.eks.cluster_name]
+  }
+}

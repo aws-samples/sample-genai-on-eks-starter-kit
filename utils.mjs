@@ -31,6 +31,13 @@ const setK8sContext = async () => {
   const contextName = `${EKS_CLUSTER_NAME}-${REGION}`;
   await $`kubectl config use-context ${contextName}`;
 };
+
+const renderTemplate = (templatePath, renderedPath, vars) => {
+  const templateString = fs.readFileSync(templatePath, "utf8");
+  const template = handlebars.compile(templateString);
+  fs.writeFileSync(renderedPath, template(vars));
+};
+
 // Model Management
 const model = (function () {
   const configureModels = async (models, categoryDir, componentDir) => {
@@ -63,24 +70,21 @@ const model = (function () {
       IMAGE = `${ecrRepoUrl}:latest`;
     }
     for (const model of models) {
+      const { EKS_MODE } = process.env;
+      const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
+      const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
+      let modelVars = {
+        IMAGE,
+        KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
+      };
       if (model.neuron) {
-        const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
-        const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
-        const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
-        const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE, compile: !!model.compile };
-        fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
-        if (model.deploy) {
-          await $`kubectl apply -f ${modelRenderedPath}`;
-        } else {
-          await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
-        }
-        continue;
+        modelVars = { ...modelVars, ...{ compile: !!model.compile } };
       }
+      renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
       if (model.deploy) {
-        await $`kubectl apply -f ${path.join(MODELS_DIR, `model-${model.name}.yaml`)}`;
+        await $`kubectl apply -f ${modelRenderedPath}`;
       } else {
-        await $`kubectl delete -f ${path.join(MODELS_DIR, `model-${model.name}.yaml`)} --ignore-not-found`;
+        await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
       }
     }
   };
@@ -98,17 +102,18 @@ const model = (function () {
       if (!model.deploy) {
         continue;
       }
+      const { EKS_MODE } = process.env;
+      const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
+      const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
+      let modelVars = {
+        IMAGE,
+        KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
+      };
       if (model.neuron) {
-        const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
-        const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
-        const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
-        const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE, compile: !!model.compile };
-        fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
-        await $`kubectl apply -f ${modelRenderedPath}`;
-        continue;
+        modelVars = { ...modelVars, ...{ compile: !!model.compile } };
       }
-      await $`kubectl apply -f ${path.join(MODELS_DIR, `model-${model.name}.yaml`)}`;
+      renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
+      await $`kubectl apply -f ${modelRenderedPath}`;
     }
   };
 
@@ -122,17 +127,18 @@ const model = (function () {
       IMAGE = `${ecrRepoUrl}:latest`;
     }
     for (const model of models) {
+      const { EKS_MODE } = process.env;
+      const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
+      const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
+      let modelVars = {
+        IMAGE,
+        KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
+      };
       if (model.neuron) {
-        const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
-        const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
-        const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
-        const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE, compile: !!model.compile };
-        fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
-        await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
-        continue;
+        modelVars = { ...modelVars, ...{ compile: !!model.compile } };
       }
-      await $`kubectl delete -f ${path.join(MODELS_DIR, `model-${model.name}.yaml`)} --ignore-not-found`;
+      renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
+      await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
     }
   };
   return { configureModels, updateModels, addModels, removeAllModels };
@@ -141,11 +147,12 @@ const model = (function () {
 // Terraform
 const terraform = (function () {
   const setupWorkspace = async function (TERRAFORM_DIR) {
-    const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME"];
+    const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME", "EKS_MODE"];
     checkRequiredEnvVars(requiredEnvVars);
-    const { REGION, EKS_CLUSTER_NAME, DOMAIN } = process.env;
+    const { REGION, EKS_CLUSTER_NAME, EKS_MODE, DOMAIN } = process.env;
     try {
       cd(TERRAFORM_DIR);
+      renderTemplate(`${TERRAFORM_DIR}/eks.tf.template`, `${TERRAFORM_DIR}/eks.tf`, { EKS_MODE });
       await $`terraform init`;
       await $`terraform workspace new ${REGION}`;
     } catch (error) {}
@@ -238,6 +245,7 @@ export default {
   init,
   checkRequiredEnvVars,
   setK8sContext,
+  renderTemplate,
   model,
   terraform,
 };
