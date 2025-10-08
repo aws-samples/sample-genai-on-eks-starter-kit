@@ -20,7 +20,12 @@ let config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 const configLocalPath = path.join(DIR, "config.local.json");
 if (fs.existsSync(configLocalPath)) {
   const configLocal = JSON.parse(fs.readFileSync(configLocalPath, "utf8"));
-  config = _.merge(config, configLocal);
+  // config = _.merge(config, configLocal);
+  config = _.mergeWith(config, configLocal, (objValue, srcValue) => {
+    if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+      return srcValue;
+    }
+  });
 }
 process.env.KUBECONFIG = path.join(DIR, ".kubeconfig");
 const TERRAFORM_DIR = path.join(DIR, "terraform");
@@ -82,6 +87,26 @@ const exampleCategories = [
 
 const program = new Command();
 program.name("cli").description("CLI for GenAI on EKS Starter Kit").addHelpCommand(false).version("1.0.0");
+program.option("-e, --env <file path>", "Additional .env file");
+program.option("-c, --config <file path>", "Additional config.json file");
+program.hook("preAction", (thisCommand, actionCommand) => {
+  const { env: envPath, config: configPath } = actionCommand.optsWithGlobals();
+  if (!!envPath) {
+    dotenv.config({ path: path.join(DIR, envPath), override: true });
+  }
+  if (!!configPath) {
+    // config = _.merge(config, JSON.parse(fs.readFileSync(path.join(DIR, configPath), "utf8")));
+    config = _.mergeWith(
+      config,
+      JSON.parse(fs.readFileSync(path.join(DIR, configPath), "utf8")),
+      (objValue, srcValue) => {
+        if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+          return srcValue;
+        }
+      },
+    );
+  }
+});
 
 program
   .command("configure")
