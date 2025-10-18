@@ -1,0 +1,5 @@
+FROM public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+
+COPY ./huggingface/hub/models--Qwen--Qwen3-8B /root/.cache/huggingface/hub/models--Qwen--Qwen3-8B
+
+COPY ./neuron/Qwen/Qwen3-8B /root/.cache/neuron/Qwen/Qwen3-8B

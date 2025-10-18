@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: buildah
+  namespace: vllm
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: buildah
+  namespace: vllm
+spec:
+  serviceAccountName: buildah
+  automountServiceAccountToken: false
+  nodeSelector:
+    karpenter.sh/nodepool: custom
+    kubernetes.io/arch: amd64
+    eks.amazonaws.com/instance-category: m
+    eks.amazonaws.com/instance-generation: "7"
+    karpenter.sh/capacity-type: on-demand
+  containers:
+    - name: buildah
+      image: registry.access.redhat.com/ubi8/buildah:latest
+      command: ["sleep", "infinity"]
+      securityContext:
+        privileged: true
+        allowPrivilegeEscalation: true
+        runAsUser: 0
+      tty: true
+      stdin: true
+      env:
+        - name: STORAGE_DRIVER
+          value: overlay
+      resources:
+        requests:
+          cpu: 3 #75%
+          memory: 12Gi #75%
+      volumeMounts:
+        - name: huggingface-cache
+          mountPath: /root/.cache/huggingface
+        - name: neuron-cache
+          mountPath: /root/.cache/neuron
+  volumes:
+    - name: huggingface-cache
+      persistentVolumeClaim:
+        claimName: huggingface-cache
+    - name: neuron-cache
+      persistentVolumeClaim:
+        claimName: neuron-cache
+  tolerations:
+    - key: karpenter.sh/nodepool
+      operator: Equal
+      value: custom
+      effect: NoSchedule
+# Terminal 1
+# yum install -y unzip less
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+# unzip awscliv2.zip
+# ./aws/install
+# cd /root/.cache
+
+# vi Dockerfile.qwen3-4b-instruct-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.qwen3-4b-instruct-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-4b-instruct .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-4b-instruct
+
+# vi Dockerfile.qwen3-4b-thinking-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.qwen3-4b-thinking-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-4b-thinking .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-4b-thinking
+
+# vi Dockerfile.qwen3-8b-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.qwen3-8b-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-8b .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-8b
+
+# vi Dockerfile.deepseek-r1-qwen3-8b-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.deepseek-r1-qwen3-8b-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:deepseek-r1-qwen3-8b .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:deepseek-r1-qwen3-8b
+
+# vi Dockerfile.model-llama-3-1-8b-int8-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.model-llama-3-1-8b-int8-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:llama-3-1-8b-int8 .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:llama-3-1-8b-int8
+
+# vi Dockerfile.model-qwen3-4b-instruct-fp8-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.model-qwen3-4b-instruct-fp8-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-4b-instruct-fp8 .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:qwen3-4b-instruct-fp8
+
+# vi Dockerfile.deepseek-r1-llama-8b-int8-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.deepseek-r1-llama-8b-int8-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:deepseek-r1-llama-8b-int8 .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:deepseek-r1-llama-8b-int8
+
+# vi Dockerfile.mistral-7b-int8-neuron
+# public_ecr_alias=t0h7h1e6
+# buildah build -f Dockerfile.mistral-7b-int8-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:mistral-7b-int8 .
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+# buildah push public.ecr.aws/$public_ecr_alias/vllm-neuron:mistral-7b-int8
+

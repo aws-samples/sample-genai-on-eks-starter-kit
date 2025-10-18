@@ -68,7 +68,10 @@ const model = (function () {
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
         const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE, compile: !!model.compile };
+        if (model.image) {
+          IMAGE = model.image;
+        }
+        const modelVars = { IMAGE, compile: !!model.compile, modelPath: model.modelPath, neuronPath: model.neuronPath };
         fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
         if (model.deploy) {
           await $`kubectl apply -f ${modelRenderedPath}`;
@@ -103,7 +106,10 @@ const model = (function () {
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
         const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE, compile: !!model.compile };
+        if (model.image) {
+          IMAGE = model.image;
+        }
+        const modelVars = { IMAGE, compile: !!model.compile, modelPath: model.modelPath, neuronPath: model.neuronPath };
         fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
         await $`kubectl apply -f ${modelRenderedPath}`;
         continue;
@@ -127,7 +133,10 @@ const model = (function () {
         const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
         const modelTemplateString = fs.readFileSync(modelTemplatePath, "utf8");
         const modelTemplate = handlebars.compile(modelTemplateString);
-        const modelVars = { IMAGE, compile: !!model.compile };
+        if (model.image) {
+          IMAGE = model.image;
+        }
+        const modelVars = { IMAGE, compile: !!model.compile, modelPath: model.modelPath, neuronPath: model.neuronPath };
         fs.writeFileSync(modelRenderedPath, modelTemplate(modelVars));
         await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
         continue;
@@ -154,7 +163,11 @@ const terraform = (function () {
       await $`mkdir -p workspaces/${REGION}`;
       let content = `region = "${REGION}"\n` + `name = "${EKS_CLUSTER_NAME}"\n` + `domain = "${DOMAIN}"\n`;
       for (const [key, value] of Object.entries(config.terraform.vars)) {
-        content += `${key} = "${value}"\n`;
+        if (Array.isArray(value)) {
+          content += `${key} = ${JSON.stringify(value)}\n`;
+        } else {
+          content += `${key} = "${value}"\n`;
+        }
       }
       fs.writeFileSync(`workspaces/${REGION}/terraform.tfvars`, content);
       await $`terraform workspace select ${REGION}`;
