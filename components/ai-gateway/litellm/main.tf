@@ -31,6 +31,7 @@ module "pod_identity" {
       actions = [
         "bedrock:InvokeModel",
         "bedrock:InvokeModelWithResponseStream",
+        "aws-marketplace:Subscribe"
       ]
       resources = ["*"]
     }
