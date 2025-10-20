@@ -16,6 +16,8 @@ module "eks" {
     enabled    = true
     node_pools = ["general-purpose"]
   }
+
+  tags = var.common_tags
 }
 
 resource "null_resource" "update_kubeconfig" {

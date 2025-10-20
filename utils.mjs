@@ -153,6 +153,14 @@ const terraform = (function () {
       cd(TERRAFORM_DIR);
       await $`mkdir -p workspaces/${REGION}`;
       let content = `region = "${REGION}"\n` + `name = "${EKS_CLUSTER_NAME}"\n` + `domain = "${DOMAIN}"\n`;
+      
+      // Add common tags with environment-specific information
+      content += `common_tags = {\n`;
+      content += `  "environment" = "${REGION}"\n`;
+      content += `  "cluster-name" = "${EKS_CLUSTER_NAME}"\n`;
+      content += `  "created-by" = "genai-on-eks-cli"\n`;
+      content += `}\n`;
+      
       for (const [key, value] of Object.entries(config.terraform.vars)) {
         content += `${key} = "${value}"\n`;
       }

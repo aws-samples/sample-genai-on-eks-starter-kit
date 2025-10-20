@@ -162,6 +162,8 @@ resource "aws_iam_role" "external_dns" {
       }
     ]
   })
+
+  tags = var.common_tags
 }
 resource "aws_iam_role_policy_attachment" "external_dns_route53" {
   role       = aws_iam_role.external_dns.name
@@ -191,6 +193,8 @@ resource "aws_iam_role" "efs_csi_driver" {
       }
     ]
   })
+
+  tags = var.common_tags
 }
 resource "aws_iam_role_policy_attachment" "efs_csi_driver" {
   role       = aws_iam_role.efs_csi_driver.name
@@ -211,6 +215,8 @@ module "eks_blueprints_addons_core" {
   cluster_endpoint  = module.eks.cluster_endpoint
   cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
+
+  tags = var.common_tags
 
   # EKS-managed Add-ons
   eks_addons = {

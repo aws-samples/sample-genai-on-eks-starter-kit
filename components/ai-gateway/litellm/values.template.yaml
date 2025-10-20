@@ -1,3 +1,7 @@
+global:
+  security:
+    allowInsecureImages: true
+    
 resources:
   requests:
     cpu: 1 

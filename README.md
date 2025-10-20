@@ -25,6 +25,38 @@ Before you begin, ensure you have the following tools installed:
 - [Helm](https://helm.sh/docs/intro/install)
 - [Docker](https://docs.docker.com/get-started/) and [Buildx](https://docs.docker.com/build/concepts/overview/#buildx)
 
+## Pre-config
+
+1. Run this workshop setup from the Cloud9 Or AL2023 EC2 instance where awscli and Docker is preinstalled
+2. Install Buildx
+```
+# Create plugins directory
+mkdir -p ~/.docker/cli-plugins
+
+# Download latest buildx for Linux AMD64
+BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep tag_name | cut -d '"' -f 4)
+curl -L "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64" -o ~/.docker/cli-plugins/docker-buildx
+
+# Make it executable
+chmod +x ~/.docker/cli-plugins/docker-buildx
+
+# Verify buildx installation
+docker buildx version
+````
+
+3. Create multi platform builder
+```
+# Create a new builder instance with docker-container driver
+docker buildx create --name multiplatform --driver docker-container --use --bootstrap
+
+# Verify the builder supports multi-platform
+docker buildx inspect --bootstrap
+```
+
+4. Configure your own user credentials `aws configure` and edit config file to remove session token line.
+
+Continue with following setup steps.
+
 ## Initial Setup
 
 1. Install dependencies:
