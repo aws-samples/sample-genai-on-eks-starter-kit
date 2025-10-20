@@ -25,6 +25,134 @@ Before you begin, ensure you have the following tools installed:
 - [Helm](https://helm.sh/docs/intro/install)
 - [Docker](https://docs.docker.com/get-started/) and [Buildx](https://docs.docker.com/build/concepts/overview/#buildx)
 
+## Pre-config
+
+1. Run this workshop setup from the Cloud9 Or AL2023 EC2 instance where awscli preinstalled
+2. Install Terraform
+
+```bash
+# Update system
+sudo dnf update -y
+
+# Install required packages
+sudo dnf install -y dnf-plugins-core
+
+# Add HashiCorp repository
+sudo dnf config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+
+# Install Terraform
+sudo dnf install -y terraform
+
+# Verify installation
+terraform --version
+```
+3. Intall Node.js
+
+```bash
+# Download and install nvm:
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+# in lieu of restarting the shell
+\. "$HOME/.nvm/nvm.sh"
+
+# Download and install Node.js:
+nvm install 22
+
+# Verify the Node.js version:
+node -v # Should print "v22.20.0".
+
+# Verify npm version:
+npm -v # Should print "10.9.3".
+
+```
+4. Install Docker
+
+```bash
+# Update system
+sudo dnf update -y
+
+# Install Docker
+sudo dnf install -y docker
+
+# Start Docker service
+sudo systemctl start docker
+
+# Enable Docker to start on boot
+sudo systemctl enable docker
+
+# Add your user to docker group (to run docker without sudo)
+sudo usermod -a -G docker $USER
+
+# Apply group changes (or logout/login)
+newgrp docker
+
+# Verify installation
+docker --version
+docker info
+
+```
+
+5. Install Buildx
+```bash
+# Create plugins directory
+mkdir -p ~/.docker/cli-plugins
+
+# Download latest buildx for Linux AMD64
+BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep tag_name | cut -d '"' -f 4)
+curl -L "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64" -o ~/.docker/cli-plugins/docker-buildx
+
+# Make it executable
+chmod +x ~/.docker/cli-plugins/docker-buildx
+
+# Verify buildx installation
+docker buildx version
+````
+
+6. Create multi platform builder
+```
+# Create a new builder instance with docker-container driver
+docker buildx create --name multiplatform --driver docker-container --use --bootstrap
+
+# Verify the builder supports multi-platform
+docker buildx inspect --bootstrap
+```
+
+7. Configure your own user credentials `aws configure` and edit config file to remove session token line.
+8. Install kubectl
+
+```bash
+# Download kubectl binary
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+# Make it executable
+chmod +x kubectl
+
+# Move to system PATH
+sudo mv kubectl /usr/local/bin/
+
+# Verify installation
+kubectl version --client
+
+```
+
+9. Install Helm
+```bash
+# Download and install Helm
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Verify installation
+helm version
+```
+
+10. Git clone repo and cd into the repo
+
+```bash
+git clone https://github.com/aws-samples/sample-genai-on-eks-starter-kit.git
+cd sample-genai-on-eks-starter-kit
+```
+
+Continue with following setup steps.
+
 ## Initial Setup
 
 1. Install dependencies:

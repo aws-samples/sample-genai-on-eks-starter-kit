@@ -32,6 +32,12 @@ variable "gpu_nodepool_instance_family" {
   default = ["g6e", "g6", "g5g", "p5en", "p5e", "p5", "p4de", "p4d"]
 }
 
+variable "common_tags" {
+  description = "Additional tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+
 locals {
   account_id = data.aws_caller_identity.current.account_id
 }
@@ -67,5 +73,15 @@ terraform {
   }
 }
 
-provider "aws" { region = var.region }
+provider "aws" { 
+  region = var.region 
+  
+  default_tags {
+    tags = {
+      "auto-delete" = "no"
+      "project"     = "genai-on-eks"
+      "managed-by"  = "terraform"
+    }
+  }
+}
 

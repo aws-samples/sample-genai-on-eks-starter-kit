@@ -12,9 +12,9 @@ resource "aws_security_group" "efs" {
     cidr_blocks = module.vpc.private_subnets_cidr_blocks
   }
 
-  tags = {
+  tags = merge(var.common_tags, {
     Name = "${module.eks.cluster_name}-efs-sg"
-  }
+  })
 }
 
 resource "aws_efs_file_system" "this" {
@@ -28,9 +28,9 @@ resource "aws_efs_file_system" "this" {
   lifecycle_policy {
     transition_to_primary_storage_class = "AFTER_1_ACCESS"
   }
-  tags = {
+  tags = merge(var.common_tags, {
     Name = "${module.eks.cluster_name}-efs"
-  }
+  })
 }
 
 resource "aws_efs_mount_target" "this" {
