@@ -27,7 +27,7 @@ Before you begin, ensure you have the following tools installed:
 
 ## Pre-config
 
-1. Run this workshop setup from the Cloud9 Or AL2023 EC2 instance where awscli and Docker is preinstalled
+1. Run this workshop setup from the Cloud9 Or AL2023 EC2 instance where awscli preinstalled
 2. Install Terraform
 
 ```bash
