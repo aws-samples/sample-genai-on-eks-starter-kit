@@ -1,0 +1,5 @@
+FROM public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+
+COPY ./huggingface/hub/models--deepseek-ai--DeepSeek-R1-0528-Qwen3-8B /root/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-R1-0528-Qwen3-8B
+
+COPY ./neuron/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B /root/.cache/neuron/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B

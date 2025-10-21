@@ -13,14 +13,29 @@ const __filename = fileURLToPath(import.meta.url);
 const DIR = path.dirname(__filename);
 const envPath = path.join(DIR, ".env");
 dotenv.config({ path: envPath });
+const envWorkshopPath = path.join(DIR, ".env.workshop");
+dotenv.config({ path: envWorkshopPath, override: true });
 const envLocalPath = path.join(DIR, ".env.local");
 dotenv.config({ path: envLocalPath, override: true });
 const configPath = path.join(DIR, "config.json");
 let config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+const configWorkshopPath = path.join(DIR, "config.workshop.json");
+if (fs.existsSync(configWorkshopPath)) {
+  const configWorkshop = JSON.parse(fs.readFileSync(configWorkshopPath, "utf8"));
+  _.mergeWith(config, configWorkshop, (objValue, srcValue) => {
+    if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+      return srcValue;
+    }
+  });
+}
 const configLocalPath = path.join(DIR, "config.local.json");
 if (fs.existsSync(configLocalPath)) {
   const configLocal = JSON.parse(fs.readFileSync(configLocalPath, "utf8"));
-  config = _.merge(config, configLocal);
+  _.mergeWith(config, configLocal, (objValue, srcValue) => {
+    if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+      return srcValue;
+    }
+  });
 }
 process.env.KUBECONFIG = path.join(DIR, ".kubeconfig");
 const TERRAFORM_DIR = path.join(DIR, "terraform");

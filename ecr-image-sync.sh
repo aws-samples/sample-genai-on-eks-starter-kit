@@ -48,18 +48,10 @@ process_image() {
         echo "  ECR repository exists: $repo_name"
     fi
     
-    # Pull source image
-    echo "  Pulling source image: $image"
-    docker pull $image
-    
-    # Tag for ECR
+    # Use buildx imagetools to copy multi-arch image with manifest list
     local ecr_image="public.ecr.aws/$ECR_REGISTRY_ALIAS/$repo_name:$tag"
-    echo "  Tagging as: $ecr_image"
-    docker tag $image $ecr_image
-    
-    # Push to ECR
-    echo "  Pushing to ECR: $ecr_image"
-    docker push $ecr_image
+    echo "  Copying multi-arch image to: $ecr_image"
+    docker buildx imagetools create --tag $ecr_image $image
     
     echo "  ✓ Completed: $image"
     echo ""
