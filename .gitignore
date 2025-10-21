@@ -12,6 +12,7 @@ node_modules/
 __pycache__/
 
 # Project
+.DS_Store
 .kiro/
 .backup/
 .temp/

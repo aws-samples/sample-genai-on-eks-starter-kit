@@ -13,7 +13,7 @@ let COMPONENTS_DIR;
 const init = (options) => {
   BASE_DIR = options.BASE_DIR;
   config = options.config;
-  configLocalPath = options.configLocalPath;
+  configLocalPath = path.join(BASE_DIR, "config.local.json");
   COMPONENTS_DIR = options.COMPONENTS_DIR;
 };
 
@@ -161,7 +161,11 @@ const terraform = (function () {
       await $`mkdir -p workspaces/${REGION}`;
       let content = `region = "${REGION}"\n` + `name = "${EKS_CLUSTER_NAME}"\n` + `domain = "${DOMAIN}"\n`;
       for (const [key, value] of Object.entries(config.terraform.vars)) {
-        content += `${key} = "${value}"\n`;
+        if (Array.isArray(value)) {
+          content += `${key} = ${JSON.stringify(value)}\n`;
+        } else {
+          content += `${key} = "${value}"\n`;
+        }
       }
       fs.writeFileSync(`workspaces/${REGION}/terraform.tfvars`, content);
       await $`terraform workspace select ${REGION}`;

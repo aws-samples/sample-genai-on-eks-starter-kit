@@ -1,3 +1,8 @@
+global:
+  security:
+    # -- Allow insecure images to use our ECR images.
+    allowInsecureImages: true
+
 langfuse:
   salt:
     value: salt
@@ -42,6 +47,11 @@ langfuse:
       memory: 2Gi
 
 postgresql:
+  image:
+    registry: public.ecr.aws
+    repository: v2f5y6u4/postgresql
+    tag: 17.5.0-debian-12-r8
+    pullPolicy: IfNotPresent
   auth:
     username: admin
     password: password123
@@ -54,6 +64,11 @@ postgresql:
         memory: 256Mi
 
 clickhouse:
+  image:
+    registry: public.ecr.aws
+    repository: v2f5y6u4/clickhouse
+    tag: 25.2.1-debian-12-r0
+    pullPolicy: IfNotPresent
   auth:
     password: password123
   replicaCount: 1
@@ -66,6 +81,11 @@ clickhouse:
       memory: 3Gi
       ephemeral-storage: 2Gi
   zookeeper:
+    image:
+      registry: public.ecr.aws
+      repository: v2f5y6u4/zookeeper
+      tag: 3.9.3-debian-12-r8
+      pullPolicy: IfNotPresent
     replicaCount: 1
     resources: 
       requests:
@@ -77,6 +97,11 @@ clickhouse:
         ephemeral-storage: 2Gi 
 
 redis:
+  image:
+    registry: public.ecr.aws
+    repository: v2f5y6u4/valkey
+    tag: 8.0.2-debian-12-r2
+    pullPolicy: IfNotPresent
   auth:
     password: password123
   primary:
@@ -88,6 +113,11 @@ redis:
         memory: 256Mi
 
 s3:
+  image:
+    registry: public.ecr.aws
+    repository: v2f5y6u4/minio
+    tag: 2024.12.18-debian-12-r1
+    pullPolicy: IfNotPresent
   auth:
     rootPassword: password123
   resources:

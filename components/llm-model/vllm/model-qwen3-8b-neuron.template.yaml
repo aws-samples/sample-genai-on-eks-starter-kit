@@ -21,9 +21,15 @@ spec:
         {{{KARPENTER_PREFIX}}}/instance-family: inf2
         # node.kubernetes.io/instance-type: inf2.8xlarge 
         # karpenter.sh/capacity-type: on-demand
+        {{#if compile}}
+        node.kubernetes.io/instance-type: inf2.8xlarge
+        karpenter.sh/capacity-type: on-demand
+        {{else}}
+        node.kubernetes.io/instance-type: inf2.xlarge
+        {{/if}}
       containers:
         - name: vllm
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+          image: public.ecr.aws/t0h7h1e6/vllm-neuron:qwen3-8b
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -34,7 +40,7 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - Qwen/Qwen3-8B
+            - /root/.cache/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218
             - --served-model-name=qwen3-8b-neuron
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
@@ -46,19 +52,22 @@ spec:
             # Neuron specific
             - --tensor-parallel-size=2
             # - --gpu-memory-utilization=0.95
-            - --max-num-seqs=4
-            - --max-model-len=4096
+            - --max-num-seqs=1
+            - --max-model-len=16384
           env:
+            {{#if compile}}
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
+            {{/if}}
             - name: NEURON_COMPILED_ARTIFACTS
               value: /root/.cache/neuron/Qwen/Qwen3-8B
           ports:
             - name: http
               containerPort: 8000
+          {{#if compile}}
           resources:
             requests:
               cpu: 24 #75%
@@ -66,6 +75,16 @@ spec:
               aws.amazon.com/neuroncore: 2
             limits:
               aws.amazon.com/neuroncore: 2
+          {{else}}
+          resources:
+            requests:
+              cpu: 3 #75%
+              memory: 12Gi #75%
+              aws.amazon.com/neuroncore: 2
+            limits:
+              aws.amazon.com/neuroncore: 2
+          {{/if}}
+      {{#if compile}}
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
@@ -78,6 +97,7 @@ spec:
         - name: neuron-cache
           persistentVolumeClaim:
             claimName: neuron-cache
+      {{/if}}
       tolerations:
         - key: aws.amazon.com/neuron
           operator: Exists

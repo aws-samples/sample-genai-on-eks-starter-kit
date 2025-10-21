@@ -1,3 +1,8 @@
+global:
+  security:
+    # -- Allow insecure images to use our ECR images.
+    allowInsecureImages: true
+
 resources:
   requests:
     cpu: 1 
@@ -8,9 +13,9 @@ resources:
 redis:
   enabled: true
   image:
-    registry: docker.io
-    repository: redis
-    tag: latest
+    registry: public.ecr.aws
+    repository: v2f5y6u4/redis
+    tag: 8.2.1-debian-12-r0
     pullPolicy: IfNotPresent
   master:
     resources: 
@@ -22,9 +27,9 @@ redis:
 
 postgresql:
   image:
-    registry: docker.io
-    repository: postgres
-    tag: latest
+    registry: public.ecr.aws
+    repository: v2f5y6u4/postgresql
+    tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
   primary:
     resources: 
@@ -33,12 +38,6 @@ postgresql:
         memory: 256Mi
       limits:
         memory: 256Mi
-    extraVolumeMounts:
-      - name: postgresql-run
-        mountPath: /var/run/postgresql
-    extraVolumes:
-      - name: postgresql-run
-        emptyDir: {}
 
 serviceAccount:
   create: true
