@@ -324,28 +324,28 @@ module "eks_blueprints_addons_core" {
     }
   }
 
-  enable_ingress_nginx = true
-  ingress_nginx = {
-    chart_version = "4.12.3"
-    values = [
-      yamlencode({
-        controller = {
-          service = {
-            type = "ClusterIP"
-          }
-          resources = {
-            requests = {
-              cpu    = "100m"
-              memory = "256Mi"
-            }
-            limits = {
-              memory = "256Mi"
-            }
-          }
-        }
-      })
-    ]
-  }
+  enable_ingress_nginx = false
+  # ingress_nginx = {
+  #   chart_version = "4.12.3"
+  #   values = [
+  #     yamlencode({
+  #       controller = {
+  #         service = {
+  #           type = "ClusterIP"
+  #         }
+  #         resources = {
+  #           requests = {
+  #             cpu    = "100m"
+  #             memory = "256Mi"
+  #           }
+  #           limits = {
+  #             memory = "256Mi"
+  #           }
+  #         }
+  #       }
+  #     })
+  #   ]
+  # }
 
   depends_on = [kubectl_manifest.karpenter_nodepool_default]
 }
@@ -497,13 +497,13 @@ resource "kubectl_manifest" "storageclass_efs" {
 }
 
 # LWS
-resource "helm_release" "lws" {
-  name             = "lws"
-  namespace        = "lws-system"
-  repository       = "oci://registry.k8s.io/lws/charts"
-  chart            = "lws"
-  version          = "0.7.0"
-  create_namespace = true
+# resource "helm_release" "lws" {
+#   name             = "lws"
+#   namespace        = "lws-system"
+#   repository       = "oci://registry.k8s.io/lws/charts"
+#   chart            = "lws"
+#   version          = "0.7.0"
+#   create_namespace = true
 
-  depends_on = [module.eks_blueprints_addons_core]
-}
+#   depends_on = [module.eks_blueprints_addons_core]
+# }
