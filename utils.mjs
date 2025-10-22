@@ -152,7 +152,11 @@ const terraform = (function () {
     const { REGION, EKS_CLUSTER_NAME, EKS_MODE, DOMAIN } = process.env;
     try {
       cd(TERRAFORM_DIR);
-      renderTemplate(`${TERRAFORM_DIR}/eks.tf.template`, `${TERRAFORM_DIR}/eks.tf`, { EKS_MODE });
+      // Only render eks.tf.template if it exists (main infra only)
+      const templatePath = `${TERRAFORM_DIR}/eks.tf.template`;
+      if (fs.existsSync(templatePath)) {
+        renderTemplate(templatePath, `${TERRAFORM_DIR}/eks.tf`, { EKS_MODE });
+	    }
       await $`terraform init`;
       await $`terraform workspace new ${REGION}`;
     } catch (error) {}
@@ -245,6 +249,33 @@ const terraform = (function () {
   return { setupWorkspace, plan, apply, destroy, output, applyWithRetry };
 })();
 
+// Standard Mode Cleanup
+const cleanupStandardModeResources = async () => {
+  try {
+    await setK8sContext();
+  } catch {
+    return; // Skip if cluster unreachable
+  }
+
+  const { EKS_CLUSTER_NAME, REGION } = process.env;
+
+  // Fire-and-forget cleanup
+  $`kubectl delete ingress --all --all-namespaces --ignore-not-found`.catch(() => {});
+  $`kubectl delete nodepools --all --ignore-not-found`.catch(() => {});
+  $`kubectl delete nodeclaims --all --ignore-not-found`.catch(() => {});
+
+  if (EKS_CLUSTER_NAME && REGION) {
+    $`aws ec2 describe-instances \
+      --region ${REGION} \
+      --filters "Name=tag:karpenter.sh/discovery,Values=${EKS_CLUSTER_NAME}" \
+                "Name=instance-state-name,Values=running,pending,stopping,stopped" \
+      --query "Reservations[].Instances[].InstanceId" \
+      --output text | xargs -r aws ec2 terminate-instances --region ${REGION} --instance-ids`.catch(() => {});
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 5000));
+};
+
 export default {
   init,
   checkRequiredEnvVars,
@@ -252,4 +283,5 @@ export default {
   renderTemplate,
   model,
   terraform,
+  cleanupStandardModeResources,
 };

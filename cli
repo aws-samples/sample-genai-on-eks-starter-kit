@@ -419,6 +419,12 @@ program
       };
       await uninstallCategories(exampleCategories, EXAMPLES_DIR);
       await uninstallCategories(componentCategories, COMPONENTS_DIR);
+      
+      // Standard mode cleanup
+      if (process.env.EKS_MODE === 'standard') {
+        await utils.cleanupStandardModeResources();
+      }
+      
       await utils.terraform.destroy(TERRAFORM_DIR);
     } catch (error) {
       console.error("Error during cleanup:", error);
