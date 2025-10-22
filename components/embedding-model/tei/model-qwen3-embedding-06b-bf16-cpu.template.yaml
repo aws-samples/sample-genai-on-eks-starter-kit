@@ -22,11 +22,11 @@ spec:
         # karpenter.sh/capacity-type: on-demand
         # {{{KARPENTER_PREFIX}}}/instance-category: m
         # {{{KARPENTER_PREFIX}}}/instance-generation: "7"
-        {{{KARPENTER_PREFIX}}}/instance-family: m7i
-        # node.kubernetes.io/instance-type: m7i.large
+        {{{KARPENTER_PREFIX}}}/instance-family: r7i
+        # node.kubernetes.io/instance-type: r7i.xlarge
       containers:
         - name: tei
-          image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8
+          image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.8.2
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,6 +38,7 @@ spec:
           args:
             - --model-id=Qwen/Qwen3-Embedding-0.6B
             - --huggingface-hub-cache=/root/.cache/huggingface/hub
+            - --max-batch-tokens=8192
           env:
             - name: HF_TOKEN
               valueFrom:
@@ -49,11 +50,11 @@ spec:
               containerPort: 80
           resources:
             requests:
-              cpu: 1.6 #80%
-              memory: 6Gi #80%
+              cpu: 3.6 #90%
+              memory: 29Gi #90%
             limits:
-              cpu: 1.6 #80%
-              memory: 6Gi #80%
+              cpu: 3.6 #90%
+              memory: 29Gi #90%
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface

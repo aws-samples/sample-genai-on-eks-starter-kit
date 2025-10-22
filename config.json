@@ -71,11 +71,9 @@
   "embedding-model": {
     "tei": {
       "models": [
-        { "name": "qwen3-embedding-06b-bf16-cpu", "deploy": false },
+        { "name": "qwen3-embedding-06b-bf16-cpu", "deploy": true },
         { "name": "qwen3-embedding-06b-bf16", "deploy": false },
-        { "name": "qwen3-embedding-4b-bf16-cpu", "deploy": true },
         { "name": "qwen3-embedding-4b-bf16", "deploy": false },
-        { "name": "qwen3-embedding-8b-bf16-cpu", "deploy": false },
         { "name": "qwen3-embedding-8b-bf16", "deploy": false }
       ]
     }
