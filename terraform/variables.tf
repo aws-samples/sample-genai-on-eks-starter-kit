@@ -12,7 +12,7 @@ variable "vpc_cidr" {
 }
 variable "eks_cluster_version" {
   type    = string
-  default = "1.33"
+  default = "1.34"
 }
 variable "domain" {
   type    = string
@@ -46,11 +46,11 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.96.0"
+      version = "~> 6.15.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.36.0"
+      version = "~> 2.38.0"
     }
     helm = {
       source  = "hashicorp/helm"
@@ -62,7 +62,7 @@ terraform {
     }
     local = {
       source  = "hashicorp/local"
-      version = "~> 2.5.2"
+      version = "~> 2.5.3"
     }
   }
 }

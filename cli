@@ -17,31 +17,29 @@ const envWorkshopPath = path.join(DIR, ".env.workshop");
 dotenv.config({ path: envWorkshopPath, override: true });
 const envLocalPath = path.join(DIR, ".env.local");
 dotenv.config({ path: envLocalPath, override: true });
+
+function mergeConfig(fileName) {
+  const configPath = path.join(DIR, fileName);
+  if (fs.existsSync(configPath)) {
+    const newConfig = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    // config = _.merge(config, newConfig);
+    config = _.mergeWith(config, newConfig, (objValue, srcValue) => {
+      if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+        return srcValue;
+      }
+    });
+  }
+}
+
 const configPath = path.join(DIR, "config.json");
 let config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-const configWorkshopPath = path.join(DIR, "config.workshop.json");
-if (fs.existsSync(configWorkshopPath)) {
-  const configWorkshop = JSON.parse(fs.readFileSync(configWorkshopPath, "utf8"));
-  _.mergeWith(config, configWorkshop, (objValue, srcValue) => {
-    if (Array.isArray(objValue) && Array.isArray(srcValue)) {
-      return srcValue;
-    }
-  });
-}
-const configLocalPath = path.join(DIR, "config.local.json");
-if (fs.existsSync(configLocalPath)) {
-  const configLocal = JSON.parse(fs.readFileSync(configLocalPath, "utf8"));
-  _.mergeWith(config, configLocal, (objValue, srcValue) => {
-    if (Array.isArray(objValue) && Array.isArray(srcValue)) {
-      return srcValue;
-    }
-  });
-}
+mergeConfig("config.workshop.json");
+mergeConfig("config.local.json");
 process.env.KUBECONFIG = path.join(DIR, ".kubeconfig");
 const TERRAFORM_DIR = path.join(DIR, "terraform");
 const COMPONENTS_DIR = path.join(DIR, "components");
 const EXAMPLES_DIR = path.join(DIR, "examples");
-utils.init({ BASE_DIR: DIR, config, configLocalPath, COMPONENTS_DIR });
+utils.init({ BASE_DIR: DIR, config, COMPONENTS_DIR });
 
 const componentCategories = [
   { dir: "ai-gateway", name: "AI Gateway", components: [{ dir: "litellm", name: "LiteLLM" }] },
@@ -97,6 +95,17 @@ const exampleCategories = [
 
 const program = new Command();
 program.name("cli").description("CLI for GenAI on EKS Starter Kit").addHelpCommand(false).version("1.0.0");
+program.option("-e, --env <file path>", "Additional .env file");
+program.option("-c, --config <file path>", "Additional config.json file");
+program.hook("preAction", (thisCommand, actionCommand) => {
+  const { env: envPath, config: configPath } = actionCommand.optsWithGlobals();
+  if (!!envPath) {
+    dotenv.config({ path: path.join(DIR, envPath), override: true });
+  }
+  if (!!configPath) {
+    mergeConfig(configPath);
+  }
+});
 
 program
   .command("configure")
@@ -410,6 +419,12 @@ program
       };
       await uninstallCategories(exampleCategories, EXAMPLES_DIR);
       await uninstallCategories(componentCategories, COMPONENTS_DIR);
+      
+      // Standard mode cleanup
+      if (process.env.EKS_MODE === 'standard') {
+        await utils.cleanupStandardModeResources();
+      }
+      
       await utils.terraform.destroy(TERRAFORM_DIR);
     } catch (error) {
       console.error("Error during cleanup:", error);

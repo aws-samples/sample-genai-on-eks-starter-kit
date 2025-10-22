@@ -12,6 +12,7 @@ node_modules/
 __pycache__/
 
 # Project
+.DS_Store
 .kiro/
 .backup/
 .temp/
@@ -21,4 +22,4 @@ config.local.json
 *.rendered.yaml
 test*.py
 test*.mjs
-.DS_Store
+terraform/eks.tf

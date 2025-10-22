@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-coder-30b-fp8
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-coder-30b-fp8
+  template:
+    metadata:
+      labels:
+        app: qwen3-coder-30b-fp8
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        {{{KARPENTER_PREFIX}}}/instance-family: g6e
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.10.2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - Qwen/Qwen3-Coder-30B-A3B-Instruct-FP8
+            - --served-model-name=qwen3-coder-30b-fp8
+            - --trust-remote-code
+            # - --gpu-memory-utilization=0.90
+            - --gpu-memory-utilization=0.95
+            # - --max-model-len=32768 # 32K
+            - --max-model-len=131072 # 128K
+            # Qwen3 specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=qwen3_coder
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 3 #75%
+              memory: 24Gi #75%
+              nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen3-coder-30b-fp8
+  namespace: vllm
+spec:
+  selector:
+    app: qwen3-coder-30b-fp8
+  ports:
+    - name: http
+      port: 8000

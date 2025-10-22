@@ -1,6 +1,6 @@
 # EFS Security Group
 resource "aws_security_group" "efs" {
-  name        = "${module.eks.cluster_name}-efs-sg"
+  name        = "${var.name}-efs-sg"
   description = "Security group for EFS"
   vpc_id      = module.vpc.vpc_id
 
@@ -13,12 +13,13 @@ resource "aws_security_group" "efs" {
   }
 
   tags = {
-    Name = "${module.eks.cluster_name}-efs-sg"
+    Name                     = "${var.name}-efs-sg"
+    "karpenter.sh/discovery" = var.name
   }
 }
 
 resource "aws_efs_file_system" "this" {
-  creation_token  = "${module.eks.cluster_name}-efs"
+  creation_token  = "${var.name}-efs"
   encrypted       = true
   throughput_mode = var.efs_throughput_mode
 
@@ -29,7 +30,7 @@ resource "aws_efs_file_system" "this" {
     transition_to_primary_storage_class = "AFTER_1_ACCESS"
   }
   tags = {
-    Name = "${module.eks.cluster_name}-efs"
+    Name = "${var.name}-efs"
   }
 }
 
@@ -39,22 +40,4 @@ resource "aws_efs_mount_target" "this" {
   file_system_id  = aws_efs_file_system.this.id
   subnet_id       = module.vpc.private_subnets[count.index]
   security_groups = [aws_security_group.efs.id]
-}
-
-resource "kubectl_manifest" "storageclass_efs" {
-  yaml_body = <<-YAML
-    apiVersion: storage.k8s.io/v1
-    kind: StorageClass
-    metadata:
-      name: efs
-    provisioner: efs.csi.aws.com
-    parameters:
-      provisioningMode: efs-ap
-      fileSystemId: ${aws_efs_file_system.this.id}
-      directoryPerms: "700"
-  YAML
-
-  ignore_fields = ["metadata.uid", "metadata.resourceVersion"]
-
-  depends_on = [module.eks_blueprints_addons_core]
 }
