@@ -16,6 +16,9 @@
 cluster:
   enabled: false
 
+serviceAccount:
+  create: true
+
 etcd:
   replicaCount: 1
   resources:
@@ -26,15 +29,17 @@ etcd:
       memory: 256Mi
 
 minio:
-  mode: standalone
-  resources:
-    requests:
-      cpu: 250m    
-      memory: 256Mi
-      ephemeral-storage: 50Mi
-    limits:
-      memory: 256Mi
-      ephemeral-storage: 2Gi
+  enabled: false
+  externalS3:
+    enabled: true
+    host: "s3.{{AWS_REGION}}.amazonaws.com"
+    port: "443"
+    useSSL: true
+    bucketName: "{{MILVUS_BUCKET_NAME}}"
+    rootPath: "milvus"
+    useIAM: true
+    cloudProvider: "aws"
+    region: "{{AWS_REGION}}"
 
 pulsarv3:
   components:

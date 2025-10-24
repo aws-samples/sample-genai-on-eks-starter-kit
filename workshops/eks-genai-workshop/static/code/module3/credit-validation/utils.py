@@ -10,10 +10,8 @@ import base64
 import secrets
 
 
-S3_ENDPOINT_URL = os.getenv('S3_ENDPOINT_URL')  # e.g., 'http://minio.minio.svc.cluster.local:9000'
-S3_ACCESS_KEY = os.getenv('S3_ACCESS_KEY')
-S3_SECRET_KEY = os.getenv('S3_SECRET_KEY')
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'loan-buddy-bucket')
+AWS_REGION = os.getenv('AWS_REGION', 'us-west-2')
 
 
 # Configure logging
@@ -22,31 +20,11 @@ logging.basicConfig(level=logging.INFO)
 
 # --- S3 Client Initialization ---
 s3_client = None
-if S3_ENDPOINT_URL and S3_ACCESS_KEY and S3_SECRET_KEY:
-    try:
-        s3_client = boto3.client(
-            's3',
-            endpoint_url=S3_ENDPOINT_URL,
-            aws_access_key_id=S3_ACCESS_KEY,
-            aws_secret_access_key=S3_SECRET_KEY,
-            config=boto3.session.Config(signature_version='s3v4')
-        )
-        logger.info(f"Successfully created S3 client for endpoint {S3_ENDPOINT_URL}")
-
-        # # Check if bucket exists, and create if it doesn't
-        # try:
-        #     s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
-        # except ClientError as e:
-        #     if e.response['Error']['Code'] == '404':
-        #         logger.info(f"Bucket '{S3_BUCKET_NAME}' does not exist. Creating it now.")
-        #         s3_client.create_bucket(Bucket=S3_BUCKET_NAME)
-        #     else:
-        #         raise  # Re-raise other client errors
-    except Exception as e:
-        logger.error(f"Failed to initialize S3 client or create bucket: {e}")
-        s3_client = None
-else:
-    logger.warning("S3/MinIO environment variables not set. S3 functions will not work.")
+try:
+    s3_client = boto3.client('s3', region_name=AWS_REGION)
+except Exception as e:
+    logger.error(f"Failed to initialize S3 client or create bucket: {e}")
+    s3_client = None
 
 
 

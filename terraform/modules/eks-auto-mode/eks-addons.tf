@@ -507,3 +507,89 @@ resource "helm_release" "lws" {
 
   depends_on = [module.eks_blueprints_addons_core]
 }
+
+# S3
+
+# Langfuse
+resource "aws_iam_role" "langfuse_s3_access" {
+  name = "${module.eks.cluster_name}-${var.region}-langfuse-s3-access"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "pods.eks.amazonaws.com"
+      }
+      Action = ["sts:AssumeRole", "sts:TagSession"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "langfuse_s3_access" {
+  role = aws_iam_role.langfuse_s3_access.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        "arn:aws:s3:::${var.name}-bucket-langfuse-*",
+        "arn:aws:s3:::${var.name}-bucket-langfuse-*/*"
+      ]
+    }]
+  })
+}
+
+resource "aws_eks_pod_identity_association" "langfuse_s3" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "langfuse"  
+  service_account = "langfuse-langfuse"  
+  role_arn        = aws_iam_role.langfuse_s3_access.arn
+}
+
+# Milvus
+resource "aws_iam_role" "milvus_s3_access" {
+  name = "${module.eks.cluster_name}-${var.region}-milvus-s3-access"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "pods.eks.amazonaws.com"
+      }
+      Action = ["sts:AssumeRole", "sts:TagSession"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "milvus_s3_access" {
+  role = aws_iam_role.milvus_s3_access.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        "arn:aws:s3:::${var.name}-bucket-milvus-*",
+        "arn:aws:s3:::${var.name}-bucket-milvus-*/*"
+      ]
+    }]
+  })
+}
+
+resource "aws_eks_pod_identity_association" "milvus_s3" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "milvus"    
+  service_account = "milvus"    
+  role_arn        = aws_iam_role.milvus_s3_access.arn
+}
