@@ -17,7 +17,7 @@ spec:
       serviceAccountName: langfuse-langfuse
       containers:
       - name: loan-buddy-agent
-        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
+        image: public.ecr.aws/agentic-ai-platforms-on-k8s/loan-buddy-example:1.0.0
         imagePullPolicy: Always
         command: ["python", "/app/credit-underwriting-agent.py"]
         env:
@@ -70,7 +70,7 @@ spec:
     spec:
       containers:
       - name: mcp-address-validator
-        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
+        image: public.ecr.aws/agentic-ai-platforms-on-k8s/loan-buddy-example:1.0.0
         imagePullPolicy: Always
         command: ["python", "/app/mcp-address-validator.py"]
         resources:
@@ -98,7 +98,7 @@ spec:
     spec:
       containers:
       - name: mcp-employment-validator
-        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
+        image: public.ecr.aws/agentic-ai-platforms-on-k8s/loan-buddy-example:1.0.0
         command: ["python", "/app/mcp-income-employment-validator.py"]
         imagePullPolicy: Always        
         resources:
@@ -127,7 +127,7 @@ spec:
       serviceAccountName: langfuse-langfuse
       containers:
       - name: mcp-image-processor
-        image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
+        image: public.ecr.aws/agentic-ai-platforms-on-k8s/loan-buddy-example:1.0.0
         command: ["python", "/app/mcp-image-processor.py"]
         imagePullPolicy: Always        
         env:
