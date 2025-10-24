@@ -14,7 +14,7 @@ redis:
   enabled: true
   image:
     registry: public.ecr.aws
-    repository: v2f5y6u4/redis
+    repository: agentic-ai-platforms-on-k8s/redis
     tag: 8.2.1-debian-12-r0
     pullPolicy: IfNotPresent
   master:
@@ -28,7 +28,7 @@ redis:
 postgresql:
   image:
     registry: public.ecr.aws
-    repository: v2f5y6u4/postgresql
+    repository: agentic-ai-platforms-on-k8s/postgresql
     tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
   primary:

@@ -49,7 +49,7 @@ langfuse:
 postgresql:
   image:
     registry: public.ecr.aws
-    repository: v2f5y6u4/postgresql
+    repository: agentic-ai-platforms-on-k8s/postgresql
     tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
   auth:
@@ -66,7 +66,7 @@ postgresql:
 clickhouse:
   image:
     registry: public.ecr.aws
-    repository: v2f5y6u4/clickhouse
+    repository: agentic-ai-platforms-on-k8s/clickhouse
     tag: 25.2.1-debian-12-r0
     pullPolicy: IfNotPresent
   auth:
@@ -83,7 +83,7 @@ clickhouse:
   zookeeper:
     image:
       registry: public.ecr.aws
-      repository: v2f5y6u4/zookeeper
+      repository: agentic-ai-platforms-on-k8s/zookeeper
       tag: 3.9.3-debian-12-r8
       pullPolicy: IfNotPresent
     replicaCount: 1
@@ -99,7 +99,7 @@ clickhouse:
 redis:
   image:
     registry: public.ecr.aws
-    repository: v2f5y6u4/valkey
+    repository: agentic-ai-platforms-on-k8s/valkey
     tag: 8.0.2-debian-12-r2
     pullPolicy: IfNotPresent
   auth:
@@ -115,7 +115,7 @@ redis:
 s3:
   image:
     registry: public.ecr.aws
-    repository: v2f5y6u4/minio
+    repository: agentic-ai-platforms-on-k8s/minio
     tag: 2024.12.18-debian-12-r1
     pullPolicy: IfNotPresent
   auth:
