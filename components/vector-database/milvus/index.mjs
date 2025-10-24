@@ -28,6 +28,8 @@ export async function install() {
   const valuesTemplate = handlebars.compile(valuesTemplateString);
   const valuesVars = {
     DOMAIN: process.env.DOMAIN,
+    MILVUS_BUCKET_NAME: process.env.MILVUS_BUCKET_NAME,  
+    AWS_REGION: process.env.AWS_REGION,  
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install milvus milvus/milvus --namespace milvus --create-namespace -f ${valuesRenderedPath}`;
