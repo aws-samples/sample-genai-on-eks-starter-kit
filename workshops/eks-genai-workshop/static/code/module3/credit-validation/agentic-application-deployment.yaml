@@ -14,6 +14,7 @@ spec:
       labels:
         app: loan-buddy-agent
     spec:
+      serviceAccountName: langfuse-langfuse
       containers:
       - name: loan-buddy-agent
         image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
@@ -31,13 +32,9 @@ spec:
         - name: GATEWAY_MODEL_ACCESS_KEY
           value: "sk-4qgicypE01dIhc5mPsBWDQ"
         - name: S3_BUCKET_NAME
-          value: "langfuse"
-        - name: S3_ENDPOINT_URL
-          value: "http://langfuse-s3.langfuse.svc.cluster.local:9000"
-        - name: S3_ACCESS_KEY
-          value: "minio"
-        - name: S3_SECRET_KEY
-          value: "password123"
+          value: "<>"
+        - name: AWS_REGION
+          value: "<>"
         - name: MCP_ADDRESS_VALIDATOR
           value: "http://mcp-address-validator:8000"
         - name: MCP_EMPLOYMENT_VALIDATOR
@@ -127,6 +124,7 @@ spec:
       labels:
         app: mcp-image-processor
     spec:
+      serviceAccountName: langfuse-langfuse
       containers:
       - name: mcp-image-processor
         image: public.ecr.aws/p7b6k2h9/eks-genai/python-common:1.0.2
@@ -138,13 +136,9 @@ spec:
         - name: GATEWAY_MODEL_ACCESS_KEY
           value: "sk-SSar1N3WA6zAmTIHzmkxIg"  
         - name: S3_BUCKET_NAME
-          value: "langfuse"
-        - name: S3_ENDPOINT_URL
-          value: "http://langfuse-s3.langfuse.svc.cluster.local:9000"
-        - name: S3_ACCESS_KEY
-          value: "minio"
-        - name: S3_SECRET_KEY
-          value: "password123"
+          value: "<>"
+        - name: AWS_REGION
+          value: "<>"
 
         resources:
           requests:
