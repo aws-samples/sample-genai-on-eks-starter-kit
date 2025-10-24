@@ -42,9 +42,7 @@
         { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": false, "neuron": true },
         { "name": "deepseek-r1-llama-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
         { "name": "llama-3-1-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
-        { "name": "mistral-7b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
-        { "name": "qwen3-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true },
-        { "name": "deepseek-r1-qwen3-8b-int8-neuron", "deploy": false, "neuron": true, "compile": true }
+        { "name": "mistral-7b-int8-neuron", "deploy": false, "neuron": true, "compile": true }
       ]
     },
     "sglang": {
