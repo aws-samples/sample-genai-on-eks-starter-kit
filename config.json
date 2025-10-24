@@ -96,7 +96,7 @@
         "env": {
           "USE_BEDROCK": false,
           "BEDROCK_MODEL": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-fp8",
+          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-instruct-fp8",
           "USE_MCP_TOOLS": true
         }
       }
@@ -106,7 +106,7 @@
         "env": {
           "USE_BEDROCK": false,
           "BEDROCK_MODEL": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
-          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-fp8",
+          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-instruct-fp8",
           "USE_MCP_TOOLS": true,
           "USE_MCP_GATEWAY": true
         }
