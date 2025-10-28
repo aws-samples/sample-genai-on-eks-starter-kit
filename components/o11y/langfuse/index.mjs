@@ -23,6 +23,10 @@ export async function init(_BASE_DIR, _config, _utils) {
 export async function install() {
   const requiredEnvVars = ["LANGFUSE_USERNAME", "LANGFUSE_PASSWORD", "LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"];
   utils.checkRequiredEnvVars(requiredEnvVars);
+  
+  await utils.terraform.apply(DIR);
+  const tfOutput = await utils.terraform.output(DIR);
+  const langfuseBucketName = tfOutput.langfuse_bucket_name.value;
 
   await $`helm repo add langfuse https://langfuse.github.io/langfuse-k8s`;
   await $`helm repo update`;
@@ -37,7 +41,7 @@ export async function install() {
     LANGFUSE_PASSWORD: process.env.LANGFUSE_PASSWORD,
     LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY,
     LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY,
-    LANGFUSE_BUCKET_NAME: process.env.LANGFUSE_BUCKET_NAME,
+    LANGFUSE_BUCKET_NAME: langfuseBucketName,
     AWS_REGION: process.env.AWS_REGION,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));

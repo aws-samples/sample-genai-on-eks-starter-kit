@@ -22,13 +22,17 @@ export async function install() {
   const requiredEnvVars = ["MILVUS_USERNAME", "MILVUS_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
+  await utils.terraform.apply(DIR);
+  const tfOutput = await utils.terraform.output(DIR);
+  const milvusBucketName = tfOutput.milvus_bucket_name.value;
+
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
   const valuesTemplateString = fs.readFileSync(valuesTemplatePath, "utf8");
   const valuesTemplate = handlebars.compile(valuesTemplateString);
   const valuesVars = {
     DOMAIN: process.env.DOMAIN,
-    MILVUS_BUCKET_NAME: process.env.MILVUS_BUCKET_NAME,  
+    MILVUS_BUCKET_NAME: milvusBucketName,  
     AWS_REGION: process.env.AWS_REGION,  
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
