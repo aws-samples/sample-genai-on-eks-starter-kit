@@ -86,6 +86,6 @@ resource "aws_iam_role_policy" "langfuse_s3_access" {
 resource "aws_eks_pod_identity_association" "langfuse_s3" {
   cluster_name    = var.name
   namespace       = "langfuse"  
-  service_account = "langfuse-langfuse"  
+  service_account = "langfuse"  
   role_arn        = aws_iam_role.langfuse_s3_access.arn
 }

@@ -14,7 +14,7 @@ spec:
       labels:
         app: loan-buddy-agent
     spec:
-      serviceAccountName: langfuse-langfuse
+      serviceAccountName: langfuse
       containers:
       - name: loan-buddy-agent
         image: public.ecr.aws/agentic-ai-platforms-on-k8s/loan-buddy-example:1.0.0
@@ -124,7 +124,7 @@ spec:
       labels:
         app: mcp-image-processor
     spec:
-      serviceAccountName: langfuse-langfuse
+      serviceAccountName: langfuse
       containers:
       - name: mcp-image-processor
         image: public.ecr.aws/agentic-ai-platforms-on-k8s/loan-buddy-example:1.0.0
