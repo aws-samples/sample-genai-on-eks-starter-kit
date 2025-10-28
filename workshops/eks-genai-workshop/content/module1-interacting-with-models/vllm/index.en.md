@@ -225,7 +225,7 @@ spec:
       
       containers:
         - name: vllm
-          image: public.ecr.aws/t0h7h1e6/vllm-neuron:qwen3-8b
+          image: public.ecr.aws/agentic-ai-platforms-on-k8s/vllm-neuron:qwen3-8b
           command: ["vllm", "serve"]
           args:
             - --served-model-name=qwen3-8b-neuron
