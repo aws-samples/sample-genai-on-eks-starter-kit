@@ -25,7 +25,7 @@ export async function install() {
   utils.checkRequiredEnvVars(requiredEnvVars);
   
   await utils.terraform.apply(DIR);
-  const tfOutput = await utils.terraform.output(DIR);
+  const tfOutput = await utils.terraform.output(DIR, {});
   const langfuseBucketName = tfOutput.langfuse_bucket_name.value;
 
   await $`helm repo add langfuse https://langfuse.github.io/langfuse-k8s`;

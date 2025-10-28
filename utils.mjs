@@ -215,7 +215,8 @@ const terraform = (function () {
         const result = await $`terraform output -raw ${options.outputName}`;
         return result.stdout;
       } else {
-        await $`terraform output`;
+        const result = await $`terraform output -json`;
+        return JSON.parse(result.stdout);
       }
     } catch (error) {
       throw new Error(error);
