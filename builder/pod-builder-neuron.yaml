@@ -14,7 +14,7 @@ spec:
     karpenter.sh/capacity-type: on-demand
   containers:
     - name: ubuntu
-      image: public.ecr.aws/neuron/pytorch-inference-neuronx:2.7.0-neuronx-py310-sdk2.25.0-ubuntu22.04
+      image: public.ecr.aws/neuron/pytorch-inference-neuronx:2.8.0-neuronx-py311-sdk2.26.0-ubuntu22.04
       tty: true
       stdin: true
       env:
