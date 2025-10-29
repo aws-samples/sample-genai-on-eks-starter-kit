@@ -113,18 +113,26 @@ redis:
         memory: 256Mi
 
 s3:
-  image:
-    registry: public.ecr.aws
-    repository: agentic-ai-platforms-on-k8s/minio
-    tag: 2024.12.18-debian-12-r1
-    pullPolicy: IfNotPresent
-  auth:
-    rootPassword: password123
-  resources:
-    requests:
-      cpu: 250m    
-      memory: 256Mi
-      ephemeral-storage: 50Mi
-    limits:
-      memory: 256Mi
-      ephemeral-storage: 2Gi
+  deploy: false
+
+  bucket: "{{LANGFUSE_BUCKET_NAME}}"
+  region: "{{AWS_REGION}}"
+  endpoint: "" 
+  forcePathStyle: false
+
+  eventUpload:
+    bucket: "{{LANGFUSE_BUCKET_NAME}}"
+    prefix: "events/"
+    region: "{{AWS_REGION}}"
+
+  batchExport:
+    enabled: true
+    bucket: "{{LANGFUSE_BUCKET_NAME}}"
+    prefix: "batch-exports/"
+    region: "{{AWS_REGION}}"
+
+  mediaUpload:
+    enabled: true
+    bucket: "{{LANGFUSE_BUCKET_NAME}}"
+    prefix: "media/"
+    region: "{{AWS_REGION}}"
