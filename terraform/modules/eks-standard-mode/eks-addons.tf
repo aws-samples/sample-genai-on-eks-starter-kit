@@ -76,7 +76,7 @@ resource "helm_release" "karpenter" {
   }
 }
 
-resource "kubectl_manifest" "karpenter_ec2_node_class" {
+resource "kubectl_manifest" "karpenter_ec2nodeclass_default" {
   yaml_body = <<-YAML
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
@@ -129,6 +129,7 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
+      expireAfter: 336h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -152,7 +153,7 @@ spec:
       terminationGracePeriod: 24h0m0s
   YAML
 
-  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_gpu" {
@@ -177,6 +178,7 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
+      expireAfter: 336h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -204,7 +206,7 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_neuron" {
@@ -229,6 +231,7 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
+      expireAfter: 336h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -253,7 +256,83 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
+}
+
+resource "kubectl_manifest" "karpenter_ec2nodeclass_custom" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: custom
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: ${module.karpenter.node_iam_role_name}
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: ${module.eks.cluster_name}
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: ${module.eks.cluster_name}
+  tags:
+    karpenter.sh/discovery: ${module.eks.cluster_name}
+  kubelet:
+    maxPods: 110
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 500Gi
+        volumeType: gp3
+        encrypted: true
+  YAML
+
+  depends_on = [helm_release.karpenter]
+}
+
+resource "kubectl_manifest" "karpenter_nodepool_custom" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: custom
+spec:
+  disruption:
+    budgets:
+      - nodes: 100%
+        reasons:
+          - Empty
+      - nodes: 0%
+        reasons:
+          - Underutilized
+          - Drifted
+    consolidateAfter: 30s
+    consolidationPolicy: WhenEmptyOrUnderutilized
+  template:
+    spec:
+      expireAfter: 336h
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: custom
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+      terminationGracePeriod: 24h0m0s
+      taints:
+        - key: karpenter.sh/nodepool
+          value: "custom"
+          effect: NoSchedule
+  YAML
+
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_custom]
 }
 
 # EKS add-ons
