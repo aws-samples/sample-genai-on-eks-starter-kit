@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: buildkit
+  namespace: vllm
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: buildkit
+  namespace: vllm
+spec:
+  serviceAccountName: buildkit
+  automountServiceAccountToken: false
+  nodeSelector:
+    karpenter.sh/nodepool: custom
+    kubernetes.io/arch: amd64
+    karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: r7i.2xlarge
+  containers:
+    - name: buildkitd
+      image: moby/buildkit:master
+      securityContext:
+        privileged: true
+        allowPrivilegeEscalation: true
+        runAsUser: 0
+      tty: true
+      stdin: true
+      resources:
+        requests:
+          cpu: 3.6
+          memory: 29Gi
+        limits:
+          memory: 60Gi
+      volumeMounts:
+        - name: huggingface-cache
+          mountPath: /root/.cache/huggingface
+        - name: neuron-cache
+          mountPath: /root/.cache/neuron
+  volumes:
+    - name: huggingface-cache
+      persistentVolumeClaim:
+        claimName: huggingface-cache
+    - name: neuron-cache
+      persistentVolumeClaim:
+        claimName: neuron-cache
+  tolerations:
+    - key: karpenter.sh/nodepool
+      operator: Equal
+      value: custom
+      effect: NoSchedule
+# Terminal 1
+# cd /root/.cache
+
+# apk add aws-cli
+
+# export ECR_PASSWORD=$(aws ecr-public get-login-password --region us-east-1)
+# export AUTH=$(echo -n "AWS:${ECR_PASSWORD}" | base64 -w 0)
+
+# mkdir -p ~/.docker
+# cat << EOF > ~/.docker/config.json
+# {
+#   "auths": {
+#     "public.ecr.aws": {
+#       "auth": "${AUTH}"
+#     }
+#   }
+# }
+# EOF
+
+# git clone https://github.com/huggingface/optimum-neuron.git
+
+
+
+# aws ecr-public get-login-password --region us-east-1 | buildah login --username AWS --password-stdin public.ecr.aws
+
+# apk add curl
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+# unzip awscliv2.zip
+# ./aws/install -b /usr/local/bin
+
+# yum install -y unzip less
+# curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+# unzip awscliv2.zip
+# ./aws/install
+# cd /root/.cache
+
+# vi Dockerfile.optimum-neuron
+# public_ecr_alias=t0h7h1e6
+# buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. --output type=image,name=public.ecr.aws/$public_ecr_alias/vllm-neuron:optimum-neuron,push=true
+
+# buildkit build -f Dockerfile.optimum-neuron -t public.ecr.aws/$public_ecr_alias/vllm-neuron:optimum-neuron .
+# aws ecr-public get-login-password --region us-east-1 | buildkit login --username AWS --password-stdin public.ecr.aws
+# buildkit push public.ecr.aws/$public_ecr_alias/vllm-neuron:optimum-neuron
+
+public_ecr_alias=t0h7h1e6
+buildctl build --frontend dockerfile.v0 --local context=. --local dockerfile=. --output type=image,name=public.ecr.aws/$public_ecr_alias/vllm-neuron:nginx,push=true
