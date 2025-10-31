@@ -50,6 +50,7 @@ kind: NodePool
 metadata:
   name: gpu
 spec:
+  weight: 100
   limits:
     nvidia.com/gpu: 50
   disruption:
@@ -140,72 +141,6 @@ spec:
       taints:
         - key: aws.amazon.com/neuron
           value: "true"
-          effect: NoSchedule
-  YAML
-
-  depends_on = [module.eks]
-}
-
-resource "kubectl_manifest" "karpenter_nodeclass_custom" {
-  yaml_body = <<-YAML
-apiVersion: eks.amazonaws.com/v1
-kind: NodeClass
-metadata:
-  name: custom
-spec:
-  subnetSelectorTerms:
-    - tags:
-        Name: "${module.eks.cluster_name}-private-*"
-  securityGroupSelectorTerms:
-    - tags:
-        "aws:eks:cluster-name": ${module.eks.cluster_name}
-  role: ${module.eks.node_iam_role_name}
-  ephemeralStorage:
-    size: 500Gi
-  YAML
-
-  depends_on = [module.eks]
-}
-
-resource "kubectl_manifest" "karpenter_nodepool_custom" {
-  yaml_body = <<-YAML
-apiVersion: karpenter.sh/v1
-kind: NodePool
-metadata:
-  name: custom
-spec:
-  disruption:
-    budgets:
-      - nodes: 100%
-        reasons:
-          - Empty
-      - nodes: 0%
-        reasons:
-          - Underutilized
-          - Drifted
-    consolidateAfter: 30s
-    consolidationPolicy: WhenEmptyOrUnderutilized
-  template:
-    spec:
-      expireAfter: 336h
-      nodeClassRef:
-        group: eks.amazonaws.com
-        kind: NodeClass
-        name: custom
-      requirements:
-        - key: karpenter.sh/capacity-type
-          operator: In
-          values: ["on-demand"]
-        - key: kubernetes.io/arch
-          operator: In
-          values: ["amd64"]
-        - key: kubernetes.io/os
-          operator: In
-          values: ["linux"]
-      terminationGracePeriod: 24h0m0s
-      taints:
-        - key: karpenter.sh/nodepool
-          value: "custom"
           effect: NoSchedule
   YAML
 

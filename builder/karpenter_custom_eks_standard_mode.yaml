@@ -1,0 +1,59 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: custom
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+  role: genai-on-eks-node
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: genai-on-eks
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: genai-on-eks
+  tags:
+    karpenter.sh/discovery: genai-on-eks
+  kubelet:
+    maxPods: 110
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 500Gi
+        volumeType: gp3
+        encrypted: true
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: custom
+spec:
+  disruption:
+    budgets:
+      - nodes: 100%
+        reasons:
+          - Empty
+      - nodes: 0%
+        reasons:
+          - Underutilized
+          - Drifted
+    consolidateAfter: 30s
+    consolidationPolicy: WhenEmptyOrUnderutilized
+  template:
+    spec:
+      expireAfter: 336h
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: custom
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+      terminationGracePeriod: 24h0m0s
