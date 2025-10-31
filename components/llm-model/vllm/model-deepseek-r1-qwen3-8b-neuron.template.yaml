@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deepseek-r1-qwen3-8b-neuron
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deepseek-r1-qwen3-8b-neuron
+  template:
+    metadata:
+      labels:
+        app: deepseek-r1-qwen3-8b-neuron
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        node.kubernetes.io/instance-type: inf2.xlarge
+      containers:
+        - name: vllm
+          image: public.ecr.aws/t0h7h1e6/vllm-neuron:deepseek-r1-qwen3-8b-optimum-neuron
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - /root/.cache/neuron/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+            - --served-model-name=deepseek-r1-qwen3-8b-neuron
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.90
+            # - --max-model-len=32768 # 32K
+            # DeepSeek-R1 specific
+            - --reasoning-parser=deepseek_r1
+            # Neuron specific
+            - --tensor-parallel-size=2
+            # - --gpu-memory-utilization=0.95
+            - --max-num-seqs=2
+            - --max-model-len=8192
+          env:
+            - name: HF_HOME
+              value: /root/.cache/huggingface
+            - name: HF_HUB_CACHE
+              value: /root/.cache/huggingface/hub
+            - name: NEURON_RT_NUM_CORES
+              value: "2"
+            - name: NEURON_RT_VISIBLE_CORES
+              value: "0-1"
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 3 #75%
+              memory: 12Gi #75%
+              aws.amazon.com/neuroncore: 2
+            limits:
+              aws.amazon.com/neuroncore: 2
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deepseek-r1-qwen3-8b-neuron
+  namespace: vllm
+spec:
+  selector:
+    app: deepseek-r1-qwen3-8b-neuron
+  ports:
+    - name: http
+      port: 8000

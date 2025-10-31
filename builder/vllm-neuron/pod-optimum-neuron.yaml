@@ -1,20 +1,17 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: builder-optimum-neuron
+  name: optimum-neuron
   namespace: vllm
-  # namespace: sglang
-  # namespace: tgi
 spec:
   nodeSelector:
-    # karpenter.sh/nodepool: custom
+    karpenter.sh/nodepool: builder-bottlerocket
     karpenter.sh/capacity-type: on-demand
     node.kubernetes.io/instance-type: inf2.8xlarge
   containers:
-    - name: ubuntu
+    - name: optimum-neuron
       image: ghcr.io/huggingface/optimum-neuron-vllm:0.4.1
-      command: ["/bin/bash"]
-      args: ["-c", "while true; do sleep 30; done;"]
+      command: ["sleep", "infinity"]
       tty: true
       stdin: true
       env:
@@ -33,10 +30,11 @@ spec:
           value: "0-1"
       resources:
         requests:
-          cpu: 24 #75%
-          memory: 96Gi #75%
+          cpu: 30
+          memory: 115Gi
           aws.amazon.com/neuroncore: 2
         limits:
+          memory: 115Gi
           aws.amazon.com/neuroncore: 2
       volumeMounts:
         - name: huggingface-cache
@@ -47,18 +45,10 @@ spec:
     - name: huggingface-cache
       persistentVolumeClaim:
         claimName: huggingface-cache
-    - name: shm
-      emptyDir:
-        medium: Memory
     - name: neuron-cache
       persistentVolumeClaim:
         claimName: neuron-cache
   tolerations:
-    # - key: karpenter.sh/nodepool
-    #   operator: Equal
-    #   value: custom
-    #   effect: NoSchedule
     - key: aws.amazon.com/neuron
       operator: Exists
       effect: NoSchedule
-# Terminal 1

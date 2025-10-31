@@ -1,7 +1,7 @@
 apiVersion: eks.amazonaws.com/v1
 kind: NodeClass
 metadata:
-  name: custom
+  name: builder-bottlerocket
 spec:
   subnetSelectorTerms:
     - tags:
@@ -16,7 +16,7 @@ spec:
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: custom
+  name: builder-bottlerocket
 spec:
   disruption:
     budgets:
@@ -35,7 +35,7 @@ spec:
       nodeClassRef:
         group: eks.amazonaws.com
         kind: NodeClass
-        name: custom
+        name: builder-bottlerocket
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
