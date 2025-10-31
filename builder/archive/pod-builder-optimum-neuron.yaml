@@ -1,19 +1,20 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: builder-neuron
+  name: builder-optimum-neuron
   namespace: vllm
   # namespace: sglang
   # namespace: tgi
 spec:
-  hostUsers: false
   nodeSelector:
-    karpenter.sh/nodepool: custom
+    # karpenter.sh/nodepool: custom
     karpenter.sh/capacity-type: on-demand
-    node.kubernetes.io/instance-type: inf2.xlarge
+    node.kubernetes.io/instance-type: inf2.8xlarge
   containers:
     - name: ubuntu
-      image: public.ecr.aws/neuron/pytorch-inference-neuronx:2.8.0-neuronx-py311-sdk2.26.0-ubuntu22.04
+      image: ghcr.io/huggingface/optimum-neuron-vllm:0.4.1
+      command: ["/bin/bash"]
+      args: ["-c", "while true; do sleep 30; done;"]
       tty: true
       stdin: true
       env:
@@ -24,18 +25,22 @@ spec:
               key: token
         - name: HF_HOME
           value: /root/.cache/huggingface
+        - name: HF_HUB_CACHE
+          value: /root/.cache/huggingface/hub
+        - name: NEURON_RT_NUM_CORES
+          value: "2"
+        - name: NEURON_RT_VISIBLE_CORES
+          value: "0-1"
       resources:
         requests:
-          cpu: 3.6
-          memory: 14Gi
+          cpu: 24 #75%
+          memory: 96Gi #75%
           aws.amazon.com/neuroncore: 2
         limits:
           aws.amazon.com/neuroncore: 2
       volumeMounts:
         - name: huggingface-cache
           mountPath: /root/.cache/huggingface
-        - name: shm
-          mountPath: /dev/shm
         - name: neuron-cache
           mountPath: /root/.cache/neuron
   volumes:
@@ -49,19 +54,11 @@ spec:
       persistentVolumeClaim:
         claimName: neuron-cache
   tolerations:
-    - key: karpenter.sh/nodepool
-      operator: Equal
-      value: custom
-      effect: NoSchedule
+    # - key: karpenter.sh/nodepool
+    #   operator: Equal
+    #   value: custom
+    #   effect: NoSchedule
     - key: aws.amazon.com/neuron
       operator: Exists
       effect: NoSchedule
 # Terminal 1
-# pip install optimum-neuron[neuronx]
-
-# pip show neuronx-cc
-# pip show optimum-neuron
-# optimum-cli neuron cache lookup Qwen/Qwen3-8B
-
-# curl -fsSL https://get.docker.com -o get-docker.sh
-# sh get-docker.sh

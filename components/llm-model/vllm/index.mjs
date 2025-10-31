@@ -36,32 +36,6 @@ export async function install() {
   };
   fs.writeFileSync(secretRenderedPath, secretTemplate(secretVars));
   await $`kubectl apply -f ${secretRenderedPath}`;
-  const { models, enableNeuron } = config["llm-model"]["vllm"];
-  // if (enableNeuron) {
-  //   try {
-  //     await $`kubectl -n vllm get job vllm-neuron-build`;
-  //     console.log("vLLM Neuron build job already exists, skipping build...");
-  //   } catch (err) {
-  //     await utils.terraform.apply(DIR);
-  //     const ecrRepoUrl = await utils.terraform.output(DIR, { outputName: "ecr_repository_url" });
-  //     cd(DIR);
-  //     const jobTemplatePath = path.join(DIR, `job-vllm-neuron-build.template.yaml`);
-  //     const jobRenderedPath = path.join(DIR, `job-vllm-neuron-build.rendered.yaml`);
-  //     const jobTemplateString = fs.readFileSync(jobTemplatePath, "utf8");
-  //     const jobTemplate = handlebars.compile(jobTemplateString);
-  //     const jobVars = { IMAGE: `${ecrRepoUrl}:latest` };
-  //     fs.writeFileSync(jobRenderedPath, jobTemplate(jobVars));
-  //     await $`kubectl -n vllm delete job vllm-neuron-build --ignore-not-found=true`;
-  //     await $`kubectl apply -f ${jobRenderedPath}`;
-  //     console.log("Waiting for vLLM Neuron build job to complete, up to 30 mins...");
-  //     try {
-  //       await $`kubectl -n vllm wait --for=condition=complete job vllm-neuron-build --timeout=1800s`;
-  //       console.log("vLLM Neuron build job completed successfully!");
-  //     } catch (err) {
-  //       console.error("vLLM Neuron build job did not complete in time or failed:", err);
-  //     }
-  //   }
-  // }
   await utils.model.addModels(models, "llm-model", "vllm");
 }
 

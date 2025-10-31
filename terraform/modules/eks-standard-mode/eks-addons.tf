@@ -514,6 +514,33 @@ module "eks_blueprints_addons_core" {
   depends_on = [kubectl_manifest.karpenter_nodepool_default]
 }
 
+resource "kubernetes_namespace_v1" "neuron_healthcheck_system" {
+  metadata {
+    name = "neuron-healthcheck-system"
+  }
+
+  depends_on = [module.eks_blueprints_addons_core]
+}
+
+resource "helm_release" "neuron" {
+  name                = "neuron"
+  namespace           = "kube-system"
+  repository          = "oci://public.ecr.aws/neuron"
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+  chart               = "neuron-helm-chart"
+  version             = "1.3.0"
+  create_namespace    = false
+
+  lifecycle {
+    ignore_changes = [
+      repository_password
+    ]
+  }
+
+  depends_on = [kubernetes_namespace_v1.neuron_healthcheck_system]
+}
+
 # ALB
 resource "kubectl_manifest" "ingressclassparams_shared_internet_facing_alb" {
   count     = var.domain != "" ? 1 : 0
