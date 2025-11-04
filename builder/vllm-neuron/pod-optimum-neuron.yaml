@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: optimum-neuron
+  namespace: vllm
+spec:
+  nodeSelector:
+    karpenter.sh/nodepool: builder-bottlerocket
+    karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: inf2.8xlarge
+  containers:
+    - name: optimum-neuron
+      image: ghcr.io/huggingface/optimum-neuron-vllm:0.4.1
+      command: ["sleep", "infinity"]
+      tty: true
+      stdin: true
+      env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-token
+              key: token
+        - name: HF_HOME
+          value: /root/.cache/huggingface
+        - name: HF_HUB_CACHE
+          value: /root/.cache/huggingface/hub
+        - name: NEURON_RT_NUM_CORES
+          value: "2"
+        - name: NEURON_RT_VISIBLE_CORES
+          value: "0-1"
+      resources:
+        requests:
+          cpu: 30
+          memory: 115Gi
+          aws.amazon.com/neuroncore: 2
+        limits:
+          memory: 115Gi
+          aws.amazon.com/neuroncore: 2
+      volumeMounts:
+        - name: huggingface-cache
+          mountPath: /root/.cache/huggingface
+        - name: neuron-cache
+          mountPath: /root/.cache/neuron
+  volumes:
+    - name: huggingface-cache
+      persistentVolumeClaim:
+        claimName: huggingface-cache
+    - name: neuron-cache
+      persistentVolumeClaim:
+        claimName: neuron-cache
+  tolerations:
+    - key: aws.amazon.com/neuron
+      operator: Exists
+      effect: NoSchedule

@@ -6,15 +6,13 @@ metadata:
   # namespace: sglang
   # namespace: tgi
 spec:
-  hostUsers: false
   nodeSelector:
     karpenter.sh/nodepool: custom
-    eks.amazonaws.com/instance-family: inf2
-    node.kubernetes.io/instance-type: inf2.xlarge
     karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: inf2.8xlarge
   containers:
     - name: ubuntu
-      image: public.ecr.aws/neuron/pytorch-inference-neuronx:2.7.0-neuronx-py310-sdk2.25.0-ubuntu22.04
+      image: public.ecr.aws/neuron/pytorch-inference-neuronx:2.8.0-neuronx-py311-sdk2.26.0-ubuntu22.04
       tty: true
       stdin: true
       env:
@@ -27,8 +25,8 @@ spec:
           value: /root/.cache/huggingface
       resources:
         requests:
-          cpu: 3 #75%
-          memory: 12Gi #75%
+          cpu: 24 #75%
+          memory: 96Gi #75%
           aws.amazon.com/neuroncore: 2
         limits:
           aws.amazon.com/neuroncore: 2

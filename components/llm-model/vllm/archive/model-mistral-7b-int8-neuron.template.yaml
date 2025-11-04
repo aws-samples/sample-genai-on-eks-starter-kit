@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: deepseek-r1-llama-8b-neuron
+  name: mistral-7b-int8-neuron
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: deepseek-r1-llama-8b-neuron
+      app: mistral-7b-int8-neuron
   template:
     metadata:
       labels:
-        app: deepseek-r1-llama-8b-neuron
+        app: mistral-7b-int8-neuron
     spec:
       securityContext:
         seccompProfile:
@@ -19,11 +19,15 @@ spec:
       automountServiceAccountToken: false
       nodeSelector:
         {{{KARPENTER_PREFIX}}}/instance-family: inf2
-        # node.kubernetes.io/instance-type: inf2.8xlarge 
-        # karpenter.sh/capacity-type: on-demand
+        {{#if compile}}
+        node.kubernetes.io/instance-type: inf2.8xlarge 
+        karpenter.sh/capacity-type: on-demand
+        {{else}}
+        node.kubernetes.io/instance-type: inf2.xlarge
+        {{/if}}
       containers:
         - name: vllm
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py311-sdk2.26.0-ubuntu22.04
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -34,18 +38,25 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - deepseek-ai/DeepSeek-R1-Distill-Llama-8B
-            - --served-model-name=deepseek-r1-llama-8b-neuron
+            - mistralai/Mistral-7B-Instruct-v0.3
+            - --served-model-name=mistral-7b-int8-neuron
             - --trust-remote-code
-            # - --gpu-memory-utilization=0.90
+            - --gpu-memory-utilization=0.90
             # - --max-model-len=32768 # 32K
-            # DeepSeek-R1 specific
-            - --reasoning-parser=deepseek_r1
+            # Mistral specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=mistral
+            - --chat-template=examples/tool_chat_template_mistral.jinja
+            - --tokenizer-mode=mistral
+            - --load-format=mistral
+            - --config-format=mistral
             # Neuron specific
             - --tensor-parallel-size=2
-            - --gpu-memory-utilization=0.95
-            - --max-num-seqs=3
-            - --max-model-len=8192
+            - --max-num-seqs=4
+            - --max-model-len=8192 #8K
+            {{#unless compile}}
+            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--mistralai--Mistral-7B-Instruct-v0.3/snapshots/e0bc86c23ce5aae1db576c8cca6f06f1f73af2db", "kv_cache_quant": true}'
+            {{/unless}}            
           env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
@@ -53,10 +64,11 @@ spec:
                   name: hf-token
                   key: token
             - name: NEURON_COMPILED_ARTIFACTS
-              value: /root/.cache/neuron/deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+              value: /root/.cache/neuron/mistralai/Mistral-7B-Instruct-v0.3-int8
           ports:
             - name: http
               containerPort: 8000
+          {{#if compile}}
           resources:
             requests:
               cpu: 24 #75%
@@ -64,6 +76,15 @@ spec:
               aws.amazon.com/neuroncore: 2
             limits:
               aws.amazon.com/neuroncore: 2
+          {{else}}
+          resources:
+            requests:
+              cpu: 3 #75%
+              memory: 12Gi #75%
+              aws.amazon.com/neuroncore: 2
+            limits:
+              aws.amazon.com/neuroncore: 2
+          {{/if}}
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
@@ -84,11 +105,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: deepseek-r1-llama-8b-neuron
+  name: mistral-7b-int8-neuron
   namespace: vllm
 spec:
   selector:
-    app: deepseek-r1-llama-8b-neuron
+    app: mistral-7b-int8-neuron
   ports:
     - name: http
       port: 8000

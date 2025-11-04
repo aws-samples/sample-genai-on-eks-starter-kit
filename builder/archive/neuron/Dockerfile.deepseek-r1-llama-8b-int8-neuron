@@ -1,4 +1,4 @@
-FROM public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+FROM public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py311-sdk2.26.0-ubuntu22.04
 
 COPY ./huggingface/hub/models--deepseek-ai--DeepSeek-R1-Distill-Llama-8B /opt/vllm/huggingface-cache/DeepSeek-R1-Distill-Llama-8B
 

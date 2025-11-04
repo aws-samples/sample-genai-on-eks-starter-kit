@@ -9,9 +9,8 @@ spec:
   nodeSelector:
     karpenter.sh/nodepool: custom
     kubernetes.io/arch: amd64
-    eks.amazonaws.com/instance-category: m
-    eks.amazonaws.com/instance-generation: "7"
     karpenter.sh/capacity-type: on-demand
+    node.kubernetes.io/instance-type: r7i.2xlarge
   containers:
     - name: ubuntu
       image: ubuntu
@@ -28,8 +27,10 @@ spec:
           value: /root/.cache/huggingface
       resources:
         requests:
-          cpu: 3 #75%
-          memory: 12Gi #75%
+          cpu: 3.6
+          memory: 29Gi
+        limits:
+          memory: 60Gi
       volumeMounts:
         - name: huggingface-cache
           mountPath: /root/.cache/huggingface
@@ -51,14 +52,14 @@ spec:
 # apt update && DEBIAN_FRONTEND=noninteractive apt install -y python3-venv python3-full htop
 # python3 -m venv ~/myenv
 # source ~/myenv/bin/activate
-# pip install -U "huggingface_hub[cli]"
-# huggingface-cli download Qwen/Qwen3-4B-Instruct-2507
-# huggingface-cli download Qwen/Qwen3-4B-Thinking-2507
-# huggingface-cli download Qwen/Qwen3-8B
-# huggingface-cli download deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
-# huggingface-cli download Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
-# huggingface-cli download openai/gpt-oss-120b
-# huggingface-cli download moonshotai/Kimi-K2-Instruct
+# pip install -U "huggingface_hub"
+# hf download Qwen/Qwen3-4B-Instruct-2507
+# hf download Qwen/Qwen3-4B-Thinking-2507
+# hf download Qwen/Qwen3-8B
+# hf download deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+# hf download Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
+# hf download openai/gpt-oss-120b
+# hf download moonshotai/Kimi-K2-Instruct
 # Terminal 2
 # cd /root/.cache/huggingface/hub
 # htop

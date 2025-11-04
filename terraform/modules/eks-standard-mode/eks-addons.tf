@@ -76,7 +76,7 @@ resource "helm_release" "karpenter" {
   }
 }
 
-resource "kubectl_manifest" "karpenter_ec2_node_class" {
+resource "kubectl_manifest" "karpenter_ec2nodeclass_default" {
   yaml_body = <<-YAML
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
@@ -129,6 +129,7 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
+      expireAfter: 336h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -152,7 +153,7 @@ spec:
       terminationGracePeriod: 24h0m0s
   YAML
 
-  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_gpu" {
@@ -162,6 +163,7 @@ kind: NodePool
 metadata:
   name: gpu
 spec:
+  weight: 100
   limits:
     nvidia.com/gpu: 50
   disruption:
@@ -177,6 +179,7 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
+      expireAfter: 336h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -204,7 +207,7 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_neuron" {
@@ -229,6 +232,7 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
   template:
     spec:
+      expireAfter: 336h
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
@@ -253,7 +257,7 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [kubectl_manifest.karpenter_ec2_node_class]
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
 }
 
 # EKS add-ons
@@ -433,6 +437,33 @@ module "eks_blueprints_addons_core" {
   }
 
   depends_on = [kubectl_manifest.karpenter_nodepool_default]
+}
+
+resource "kubernetes_namespace_v1" "neuron_healthcheck_system" {
+  metadata {
+    name = "neuron-healthcheck-system"
+  }
+
+  depends_on = [module.eks_blueprints_addons_core]
+}
+
+resource "helm_release" "neuron" {
+  name                = "neuron"
+  namespace           = "kube-system"
+  repository          = "oci://public.ecr.aws/neuron"
+  repository_username = data.aws_ecrpublic_authorization_token.token.user_name
+  repository_password = data.aws_ecrpublic_authorization_token.token.password
+  chart               = "neuron-helm-chart"
+  version             = "1.3.0"
+  create_namespace    = false
+
+  lifecycle {
+    ignore_changes = [
+      repository_password
+    ]
+  }
+
+  depends_on = [kubernetes_namespace_v1.neuron_healthcheck_system]
 }
 
 # ALB

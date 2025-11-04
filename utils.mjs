@@ -63,23 +63,13 @@ const model = (function () {
   const updateModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
-    const { enableNeuron } = config[categoryDir][componentDir];
-    let IMAGE;
-    if (enableNeuron) {
-      const ecrRepoUrl = await terraform.output(MODELS_DIR, { outputName: "ecr_repository_url" });
-      IMAGE = `${ecrRepoUrl}:latest`;
-    }
     for (const model of models) {
       const { EKS_MODE } = process.env;
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
       let modelVars = {
-        IMAGE,
         KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
       };
-      if (model.neuron) {
-        modelVars = { ...modelVars, ...{ compile: !!model.compile } };
-      }
       renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
       if (model.deploy) {
         await $`kubectl apply -f ${modelRenderedPath}`;
@@ -92,12 +82,6 @@ const model = (function () {
   const addModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
-    const { enableNeuron } = config[categoryDir][componentDir];
-    let IMAGE;
-    if (enableNeuron) {
-      const ecrRepoUrl = await terraform.output(MODELS_DIR, { outputName: "ecr_repository_url" });
-      IMAGE = `${ecrRepoUrl}:latest`;
-    }
     for (const model of models) {
       if (!model.deploy) {
         continue;
@@ -106,12 +90,8 @@ const model = (function () {
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
       let modelVars = {
-        IMAGE,
         KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
       };
-      if (model.neuron) {
-        modelVars = { ...modelVars, ...{ compile: !!model.compile } };
-      }
       renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
       await $`kubectl apply -f ${modelRenderedPath}`;
     }
@@ -120,23 +100,13 @@ const model = (function () {
   const removeAllModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
-    const { enableNeuron } = config[categoryDir][componentDir];
-    let IMAGE;
-    if (enableNeuron) {
-      const ecrRepoUrl = await terraform.output(MODELS_DIR, { outputName: "ecr_repository_url" });
-      IMAGE = `${ecrRepoUrl}:latest`;
-    }
     for (const model of models) {
       const { EKS_MODE } = process.env;
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
       let modelVars = {
-        IMAGE,
         KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
       };
-      if (model.neuron) {
-        modelVars = { ...modelVars, ...{ compile: !!model.compile } };
-      }
       renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
       await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
     }
@@ -156,7 +126,7 @@ const terraform = (function () {
       const templatePath = `${TERRAFORM_DIR}/eks.tf.template`;
       if (fs.existsSync(templatePath)) {
         renderTemplate(templatePath, `${TERRAFORM_DIR}/eks.tf`, { EKS_MODE });
-	    }
+      }
       await $`terraform init`;
       await $`terraform workspace new ${REGION}`;
     } catch (error) {}
@@ -274,7 +244,7 @@ const cleanupStandardModeResources = async () => {
       --output text | xargs -r aws ec2 terminate-instances --region ${REGION} --instance-ids`.catch(() => {});
   }
 
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise((resolve) => setTimeout(resolve, 5000));
 };
 
 export default {

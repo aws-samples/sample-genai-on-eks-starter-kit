@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qwen3-8b-fp8-neuron
+  name: deepseek-r1-qwen3-8b-fp8-neuron
   namespace: vllm
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qwen3-8b-fp8-neuron
+      app: deepseek-r1-qwen3-8b-fp8-neuron
   template:
     metadata:
       labels:
-        app: qwen3-8b-fp8-neuron
+        app: deepseek-r1-qwen3-8b-fp8-neuron
     spec:
       securityContext:
         seccompProfile:
@@ -27,7 +27,7 @@ spec:
         {{/if}}
       containers:
         - name: vllm
-          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py310-sdk2.25.0-ubuntu22.04
+          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.9.1-neuronx-py311-sdk2.26.0-ubuntu22.04
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,22 +38,20 @@ spec:
               type: RuntimeDefault
           command: ["vllm", "serve"]
           args:
-            - Qwen/Qwen3-8B
-            - --served-model-name=qwen3-8b-fp8-neuron
+            - deepseek-ai/DeepSeek-R1-0528-Qwen3-8B
+            - --served-model-name=deepseek-r1-qwen3-8b-fp8-neuron
             - --trust-remote-code
             # - --gpu-memory-utilization=0.90
             # - --max-model-len=32768 # 32K
-            # Qwen3 specific
-            - --enable-auto-tool-choice
-            - --tool-call-parser=hermes
-            - --reasoning-parser=qwen3
+            # DeepSeek-R1 specific
+            - --reasoning-parser=deepseek_r1
             # Neuron specific
             - --tensor-parallel-size=2
             - --gpu-memory-utilization=0.95
             - --max-num-seqs=4
             - --max-model-len=4096
             {{#unless compile}}
-            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--Qwen--Qwen3-8B/snapshots/b968826d9c46dd6066d109eabc6255188de91218", "kv_cache_quant": true, "quantization_dtype": "f8e4m3"}'
+            - '--override-neuron-config={"quantized": true, "quantized_checkpoints_path": "/root/.cache/huggingface/hub/models--deepseek-ai--DeepSeek-R1-0528-Qwen3-8B/snapshots/6e8885a6ff5c1dc5201574c8fd700323f23c25fa", "kv_cache_quant": true, "quantization_dtype": "f8e4m3"}'
             {{/unless}}
           env:
             - name: HUGGING_FACE_HUB_TOKEN
@@ -62,7 +60,7 @@ spec:
                   name: hf-token
                   key: token
             - name: NEURON_COMPILED_ARTIFACTS
-              value: /root/.cache/neuron/Qwen/Qwen3-8B-fp8
+              value: /root/.cache/neuron/deepseek-ai/DeepSeek-R1-0528-Qwen3-8B-fp8
             - name: XLA_HANDLE_SPECIAL_SCALAR
               value: "1"
           ports:
@@ -105,11 +103,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: qwen3-8b-fp8-neuron
+  name: deepseek-r1-qwen3-8b-fp8-neuron
   namespace: vllm
 spec:
   selector:
-    app: qwen3-8b-fp8-neuron
+    app: deepseek-r1-qwen3-8b-fp8-neuron
   ports:
     - name: http
       port: 8000
