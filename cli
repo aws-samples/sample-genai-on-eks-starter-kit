@@ -41,57 +41,7 @@ const COMPONENTS_DIR = path.join(DIR, "components");
 const EXAMPLES_DIR = path.join(DIR, "examples");
 utils.init({ BASE_DIR: DIR, config, COMPONENTS_DIR });
 
-const componentCategories = [
-  { dir: "ai-gateway", name: "AI Gateway", components: [{ dir: "litellm", name: "LiteLLM" }] },
-  {
-    dir: "llm-model",
-    name: "LLM Model",
-    components: [
-      { dir: "vllm", name: "vLLM" },
-      { dir: "sglang", name: "SGLang" },
-      { dir: "tgi", name: "TGI" },
-      { dir: "ollama", name: "Ollama" },
-    ],
-  },
-  {
-    dir: "embedding-model",
-    name: "Embedding Model",
-    components: [{ dir: "tei", name: "Text Embedding Inference (TEI)" }],
-  },
-  {
-    dir: "o11y",
-    name: "Observability",
-    components: [
-      { dir: "langfuse", name: "Langfuse" },
-      { dir: "phoenix", name: "Phoenix" },
-    ],
-  },
-  { dir: "gui-app", name: "GUI App", components: [{ dir: "openwebui", name: "Open WebUI" }] },
-  {
-    dir: "vector-database",
-    name: "Vector Database",
-    components: [
-      { dir: "qdrant", name: "Qdrant" },
-      { dir: "chroma", name: "Chroma" },
-      { dir: "milvus", name: "Milvus" },
-    ],
-  },
-  { dir: "workflow-automation", name: "Workflow Automation", components: [{ dir: "n8n", name: "n8n" }] },
-];
-
-const exampleCategories = [
-  { dir: "mcp-server", name: "MCP Server", examples: [{ dir: "calculator", name: "Calculator" }] },
-  {
-    dir: "strands-agents",
-    name: "Strands Agents",
-    examples: [{ dir: "calculator-agent", name: "Calculator Agent" }],
-  },
-  {
-    dir: "agno",
-    name: "Agno",
-    examples: [{ dir: "calculator-agent", name: "Calculator Agent" }],
-  },
-];
+const { componentCategories, exampleCategories } = JSON.parse(fs.readFileSync(path.join(DIR, "cli-menu.json"), "utf8"));
 
 const program = new Command();
 program.name("cli").description("CLI for GenAI on EKS Starter Kit").addHelpCommand(false).version("1.0.0");
@@ -419,12 +369,12 @@ program
       };
       await uninstallCategories(exampleCategories, EXAMPLES_DIR);
       await uninstallCategories(componentCategories, COMPONENTS_DIR);
-      
+
       // Standard mode cleanup
-      if (process.env.EKS_MODE === 'standard') {
+      if (process.env.EKS_MODE === "standard") {
         await utils.cleanupStandardModeResources();
       }
-      
+
       await utils.terraform.destroy(TERRAFORM_DIR);
     } catch (error) {
       console.error("Error during cleanup:", error);
