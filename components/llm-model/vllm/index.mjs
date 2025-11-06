@@ -36,6 +36,7 @@ export async function install() {
   };
   fs.writeFileSync(secretRenderedPath, secretTemplate(secretVars));
   await $`kubectl apply -f ${secretRenderedPath}`;
+  const { models } = config["llm-model"]["vllm"];
   await utils.model.addModels(models, "llm-model", "vllm");
 }
 
