@@ -21,21 +21,40 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
+  const requiredEnvVars = ["KONG_API_KEY", "KONG_API_KEY_HEADER"];
   utils.checkRequiredEnvVars(requiredEnvVars);
+  const { DOMAIN, KONG_API_KEY, KONG_API_KEY_HEADER } = process.env;
+
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
-  const valuesTemplateString = fs.readFileSync(valuesTemplatePath, "utf8");
-  const valuesTemplate = handlebars.compile(valuesTemplateString);
-  const { DOMAIN } = process.env;
   const valuesVars = {
     DOMAIN,
   };
-  fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
+  utils.renderTemplate(valuesTemplatePath, valuesRenderedPath, valuesVars);
   await $`helm repo add kong https://charts.konghq.com`;
   await $`helm upgrade --install kong kong/kong --namespace kong --create-namespace -f ${valuesRenderedPath}`;
+
+  const kongTemplatePath = path.join(DIR, "kong.template.yaml");
+  const kongRenderedPath = path.join(DIR, "kong.rendered.yaml");
+  const kongVars = {
+    DOMAIN,
+    KONG_API_KEY,
+    KONG_API_KEY_HEADER,
+  };
+  utils.renderTemplate(kongTemplatePath, kongRenderedPath, kongVars);
+  await $`kubectl apply -f ${kongRenderedPath}`;
 }
 
 export async function uninstall() {
+  const { DOMAIN, KONG_API_KEY, KONG_API_KEY_HEADER } = process.env;
+  const kongTemplatePath = path.join(DIR, "kong.template.yaml");
+  const kongRenderedPath = path.join(DIR, "kong.rendered.yaml");
+  const kongVars = {
+    DOMAIN,
+    KONG_API_KEY,
+    KONG_API_KEY_HEADER,
+  };
+  utils.renderTemplate(kongTemplatePath, kongRenderedPath, kongVars);
+  await $`kubectl delete -f ${kongRenderedPath} --ignore-not-found`;
   await $`helm uninstall kong --namespace kong`;
 }

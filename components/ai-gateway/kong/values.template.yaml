@@ -1,5 +1,6 @@
 proxy:
   enabled: true
+  type: ClusterIP
   ingress:
     enabled: true
     hostname: kong.{{{DOMAIN}}}
