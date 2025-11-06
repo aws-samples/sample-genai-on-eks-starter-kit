@@ -1,0 +1,77 @@
+proxy:
+  enabled: true
+  type: ClusterIP
+  ingress:
+    enabled: true
+    hostname: kong.{{{DOMAIN}}}
+    path: /
+    pathType: Prefix
+    ingressClassName: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
+    annotations:
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+  http:
+    enabled: true
+  tls:
+    enabled: false
+
+# Note. Kong Enterprise RBAC is required to securely expose Kong Manager via Ingress.
+#       Since Kong Manager call Kong Admin API directly from the browser, we cannot just put them behind Nginx Ingress.
+# Using:
+#       kubectl -n kong port-forward svc/kong-kong-admin 8001:800
+#       kubectl -n kong port-forward svc/kong-kong-manager 8002:8002
+manager:
+  enabled: true
+  type: ClusterIP
+  # ingress:
+  #   enabled: true
+  #   hostname: kong-manager.{{{DOMAIN}}}
+  #   path: /
+  #   pathType: Prefix
+  #   ingressClassName: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
+  #   annotations:
+  #     alb.ingress.kubernetes.io/target-type: ip
+  #     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+  http:
+    enabled: true
+  tls:
+    enabled: false
+
+admin:
+  enabled: true
+  type: ClusterIP
+  # ingress:
+  #   enabled: true
+  #   hostname: kong-admin.{{{DOMAIN}}}
+  #   path: /
+  #   pathType: Prefix
+  #   ingressClassName: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
+  #   annotations:
+  #     alb.ingress.kubernetes.io/target-type: ip
+  #     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+  http:
+    enabled: true
+  tls:
+    enabled: false
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: Pass@123
+    password: Pass@123
+  image:  
+    registry: public.ecr.aws
+    repository: agentic-ai-platforms-on-k8s/postgresql
+    tag: 17.5.0-debian-12-r8
+    
+env:
+  database: postgres
+#   admin_gui_url: https://kong-manager.{{{DOMAIN}}}
+#   admin_gui_api_url: https://kong-admin.{{{DOMAIN}}}
+#   admin_gui_session_conf: '{"secret":"secret","storage":"kong","cookie_secure":false}'
+#   password: {{{KONG_MANAGER_PASSWORD}}}
+
+# enterprise:
+#   rbac:
+#     enabled: true
+#     admin_gui_auth: basic-auth

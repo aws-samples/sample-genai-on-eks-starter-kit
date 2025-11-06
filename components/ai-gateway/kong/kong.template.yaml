@@ -1,0 +1,37 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongClusterPlugin
+metadata:
+  name: key-auth
+  namespace: kong
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    global: "true"
+plugin: key-auth
+config:
+  key_in_query: false
+  key_names: ["{{{KONG_API_KEY_HEADER}}}"]
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: default-credential
+  namespace: kong
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    konghq.com/credential: key-auth
+type: Opaque
+stringData:
+  key: {{{KONG_API_KEY}}} 
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: default
+  namespace: kong
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: default
+credentials:
+  - default-credential

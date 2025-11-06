@@ -4,7 +4,7 @@ A starter kit for deploying and managing GenAI components and examples on Amazon
 
 The starter kit includes the configurable components and examples from several categories:
 
-- AI Gateway - [LiteLLM](https://www.litellm.ai)
+- AI Gateway - [LiteLLM](https://www.litellm.ai), [Kong AI Gateway OSS](https://github.com/Kong/kong)
 - LLM Model - [vLLM](https://docs.vllm.ai), [SGLang](https://docs.sglang.ai), [Ollama](https://ollama.com)
 - Embedding Model - [Text Embedding Inference (TEI)](https://huggingface.co/docs/text-embeddings-inference)
 - Observability (o11y) - [Langfuse](https://langfuse.com), [Phoenix](https://phoenix.arize.com)

@@ -1,0 +1,77 @@
+# Chat Completions
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ai-proxy-qwen3-30b-instruct-fp8-chat
+  namespace: vllm
+  annotations:
+    kubernetes.io/ingress.class: kong
+plugin: ai-proxy
+config:
+  logging:
+    log_statistics: true
+  model:
+    name: qwen3-30b-instruct-fp8
+    options:
+      upstream_url: http://qwen3-30b-instruct-fp8.vllm:8000/v1/chat/completions
+    provider: openai
+  route_type: llm/v1/chat
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kong-qwen3-30b-instruct-fp8-chat
+  namespace: vllm
+  annotations:
+    konghq.com/plugins: ai-proxy-qwen3-30b-instruct-fp8-chat
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /v1/chat/completions
+            pathType: Prefix
+            backend:
+              service:
+                name: qwen3-30b-instruct-fp8
+                port:
+                  number: 8000
+---
+# Completions
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ai-proxy-qwen3-30b-instruct-fp8-completions
+  namespace: vllm
+  annotations:
+    kubernetes.io/ingress.class: kong
+plugin: ai-proxy
+config:
+  logging:
+    log_statistics: true
+  model:
+    name: qwen3-30b-instruct-fp8
+    options:
+      upstream_url: http://qwen3-30b-instruct-fp8.vllm:8000/v1/completions
+    provider: openai
+  route_type: llm/v1/completions
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kong-qwen3-30b-instruct-fp8-completions
+  namespace: vllm
+  annotations:
+    konghq.com/plugins: ai-proxy-qwen3-30b-instruct-fp8-completions
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /v1/completions
+            pathType: Prefix
+            backend:
+              service:
+                name: qwen3-30b-instruct-fp8
+                port:
+                  number: 8000
