@@ -75,6 +75,11 @@ resource "aws_bedrock_guardrail" "this" {
       type      = "RELEVANCE"
     }
   }
+  word_policy_config {
+    managed_word_lists_config {
+      type = "PROFANITY"
+    }
+  }
 }
 output "bedrock_guardrail_id" {
   value = var.enable_bedrock_guardrail ? aws_bedrock_guardrail.this[0].guardrail_id : ""
