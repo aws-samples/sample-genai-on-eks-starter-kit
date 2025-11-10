@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guardrails-ai
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guard
+  namespace: guardrails-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guard
+  template:
+    metadata:
+      labels:
+        app: guard
+    spec:
+      {{#unless useBuildx}}
+      nodeSelector:
+        kubernetes.io/arch: {{{arch}}}
+      {{/unless}}
+      containers:
+        - name: guard
+          image: {{{IMAGE}}}
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 1.5
+              memory: 12Gi
+            limits:
+              memory: 12Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guard
+  namespace: guardrails-ai
+spec:
+  selector:
+    app: guard
+  ports:
+    - name: http
+      port: 8000
+

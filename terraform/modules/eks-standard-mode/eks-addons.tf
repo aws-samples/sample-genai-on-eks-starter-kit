@@ -51,7 +51,7 @@ resource "helm_release" "karpenter" {
   repository_username = data.aws_ecrpublic_authorization_token.token.user_name
   repository_password = data.aws_ecrpublic_authorization_token.token.password
   chart               = "karpenter"
-  version             = "1.6.1"
+  version             = "1.8.2"
   wait                = false
 
   values = [
@@ -415,7 +415,7 @@ module "eks_blueprints_addons_core" {
   }
   enable_ingress_nginx = true
   ingress_nginx = {
-    chart_version = "4.12.3"
+    chart_version = "4.14.0"
     values = [
       yamlencode({
         controller = {
