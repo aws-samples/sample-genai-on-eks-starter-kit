@@ -116,7 +116,7 @@ const model = (function () {
 
 // Terraform
 const terraform = (function () {
-  const setupWorkspace = async function (TERRAFORM_DIR) {
+  const setupWorkspace = async function (TERRAFORM_DIR, options = {}) {
     const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME", "EKS_MODE"];
     checkRequiredEnvVars(requiredEnvVars);
     const { REGION, EKS_CLUSTER_NAME, EKS_MODE, DOMAIN } = process.env;
@@ -134,12 +134,18 @@ const terraform = (function () {
       cd(TERRAFORM_DIR);
       await $`mkdir -p workspaces/${REGION}`;
       let content = `region = "${REGION}"\n` + `name = "${EKS_CLUSTER_NAME}"\n` + `domain = "${DOMAIN}"\n`;
-      for (const [key, value] of Object.entries(config.terraform.vars)) {
-        if (Array.isArray(value)) {
-          content += `${key} = ${JSON.stringify(value)}\n`;
-        } else {
-          content += `${key} = "${value}"\n`;
+      const addVars = (vars) => {
+        for (const [key, value] of Object.entries(vars)) {
+          if (Array.isArray(value)) {
+            content += `${key} = ${JSON.stringify(value)}\n`;
+          } else {
+            content += `${key} = "${value}"\n`;
+          }
         }
+      };
+      addVars(config.terraform.vars);
+      if (!!options.vars) {
+        addVars(options.vars);
       }
       fs.writeFileSync(`workspaces/${REGION}/terraform.tfvars`, content);
       await $`terraform workspace select ${REGION}`;
@@ -148,39 +154,39 @@ const terraform = (function () {
     }
   };
 
-  const plan = async function (TERRAFORM_DIR) {
+  const plan = async function (TERRAFORM_DIR, options = {}) {
     const { REGION } = process.env;
     try {
-      await setupWorkspace(TERRAFORM_DIR);
+      await setupWorkspace(TERRAFORM_DIR, options);
       await $`terraform plan --var-file="workspaces/${REGION}/terraform.tfvars"`;
     } catch (error) {
       throw new Error(error);
     }
   };
 
-  const apply = async function (TERRAFORM_DIR) {
+  const apply = async function (TERRAFORM_DIR, options = {}) {
     const { REGION } = process.env;
     try {
-      await setupWorkspace(TERRAFORM_DIR);
+      await setupWorkspace(TERRAFORM_DIR, options);
       await $`terraform apply --var-file="workspaces/${REGION}/terraform.tfvars" --auto-approve`;
     } catch (error) {
       throw new Error(error);
     }
   };
 
-  const destroy = async function (TERRAFORM_DIR) {
+  const destroy = async function (TERRAFORM_DIR, options = {}) {
     const { REGION } = process.env;
     try {
-      await setupWorkspace(TERRAFORM_DIR);
+      await setupWorkspace(TERRAFORM_DIR, options);
       await $`terraform destroy --var-file="workspaces/${REGION}/terraform.tfvars" --auto-approve`;
     } catch (error) {
       throw new Error(error);
     }
   };
 
-  const output = async function (TERRAFORM_DIR, options) {
+  const output = async function (TERRAFORM_DIR, options = {}) {
     try {
-      await setupWorkspace(TERRAFORM_DIR);
+      await setupWorkspace(TERRAFORM_DIR, options);
       if (options.outputName) {
         const result = await $`terraform output -raw ${options.outputName}`;
         return result.stdout;

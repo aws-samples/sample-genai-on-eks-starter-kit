@@ -24,9 +24,15 @@ export async function install() {
   const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
-  await utils.terraform.apply(DIR);
+  const { enableBedrockGuardrail } = config["litellm"];
+  await utils.terraform.apply(DIR, {
+    vars: {
+      bedrock_region: config["bedrock"]["region"] || process.env.REGION,
+      enable_bedrock_guardrail: enableBedrockGuardrail,
+    },
+  });
 
-  const integration = { "llm-model": {}, "embedding-model": {}, "mcp-servers": [], o11y: {} };
+  const integration = { "llm-model": {}, "embedding-model": {}, "mcp-servers": [], o11y: {}, guardrail: {} };
   integration["bedrock"] = {
     region: config["bedrock"]["region"],
     llm: config["bedrock"]["llm"]["models"],
@@ -93,6 +99,11 @@ export async function install() {
     integration.o11y.config["failure_callback"] = '["langfuse"]';
   } else if (integration.o11y["phoenix"]) {
     integration.o11y.config["callbacks"] = '["arize_phoenix"]';
+  }
+  if (enableBedrockGuardrail) {
+    const id = await utils.terraform.output(DIR, { outputName: "bedrock_guardrail_id" });
+    const version = await utils.terraform.output(DIR, { outputName: "bedrock_guardrail_version" });
+    integration.guardrail["bedrock"] = { id, version };
   }
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
