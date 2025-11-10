@@ -15,7 +15,7 @@ Validate this email address - genai-on-eks@example.com
 
 Validate this IP address - 50.0.10.1
 
-Validate this phone number - 123-456-7890
+Validate this phone number - 829-456-7890
 ```
 
 - Via curl to Guardrails Server pod:

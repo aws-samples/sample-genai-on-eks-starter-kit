@@ -24,7 +24,7 @@ export async function install() {
   const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
-  const { enableBedrockGuardrail } = config["litellm"];
+  const { enableBedrockGuardrail, enableGuardrailsAI } = config["litellm"];
   await utils.terraform.apply(DIR, {
     vars: {
       bedrock_region: config["bedrock"]["region"] || process.env.REGION,
@@ -105,6 +105,7 @@ export async function install() {
     const version = await utils.terraform.output(DIR, { outputName: "bedrock_guardrail_version" });
     integration.guardrail["bedrock"] = { id, version };
   }
+  integration.guardrail["guardrailsAI"] = enableGuardrailsAI;
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
   const valuesTemplateString = fs.readFileSync(valuesTemplatePath, "utf8");

@@ -82,7 +82,8 @@
     "embedding": { "models": [] }
   },
   "litellm": {
-    "enableBedrockGuardrail": false
+    "enableBedrockGuardrail": false,
+    "enableGuardrailsAI": false
   },
   "examples": {
     "agno": {
