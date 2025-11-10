@@ -160,4 +160,20 @@ proxy_config:
       auth_type: "api_key"
       spec_version: "2025-03-26"
     {{/each}}
-  {{/if}}    
+  {{/if}}
+  # Guardrails
+  guardrails:
+    {{#with integration.guardrail}}
+    {{#if bedrock}}
+    - guardrail_name: "bedrock-guardrail"
+      litellm_params:
+        guardrail: bedrock
+        mode: "post_call"
+        default_on: true
+        guardrailIdentifier: "{{{bedrock.id}}}"
+        guardrailVersion: "{{{bedrock.version}}}"
+        {{#if @root.integration.bedrock.region}}
+        aws_region_name: {{{@root.integration.bedrock.region}}}
+        {{/if}}
+    {{/if}}    
+    {{/with}}

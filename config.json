@@ -81,6 +81,9 @@
     },
     "embedding": { "models": [] }
   },
+  "litellm": {
+    "enableBedrockGuardrail": false
+  },
   "examples": {
     "agno": {
       "calculator-agent": {
