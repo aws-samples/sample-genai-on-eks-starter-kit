@@ -32,8 +32,8 @@ export async function install() {
   const valuesTemplate = handlebars.compile(valuesTemplateString);
   const valuesVars = {
     DOMAIN: process.env.DOMAIN,
-    MILVUS_BUCKET_NAME: milvusBucketName,  
-    AWS_REGION: process.env.AWS_REGION,  
+    MILVUS_BUCKET_NAME: milvusBucketName,
+    AWS_REGION: process.env.AWS_REGION,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install milvus milvus/milvus --namespace milvus --create-namespace -f ${valuesRenderedPath}`;
@@ -65,4 +65,5 @@ export async function uninstall() {
   await $`kubectl delete -f ${path.join(DIR, "ingress.rendered.yaml")} --ignore-not-found`;
   await $`kubectl delete -f ${path.join(DIR, "secret.rendered.yaml")} --ignore-not-found`;
   await $`helm uninstall milvus --namespace milvus`;
+  await utils.terraform.destroy(DIR);
 }

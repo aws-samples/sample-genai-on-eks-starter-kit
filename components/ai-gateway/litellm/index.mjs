@@ -125,4 +125,11 @@ export async function install() {
 
 export async function uninstall() {
   await $`helm uninstall litellm --namespace litellm`;
+  const { enableBedrockGuardrail } = config["litellm"];
+  await utils.terraform.destroy(DIR, {
+    vars: {
+      bedrock_region: config["bedrock"]["region"] || process.env.REGION,
+      enable_bedrock_guardrail: enableBedrockGuardrail,
+    },
+  });
 }
