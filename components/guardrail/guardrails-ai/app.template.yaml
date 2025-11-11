@@ -3,6 +3,15 @@ kind: Namespace
 metadata:
   name: guardrails-ai
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: guardrails-ai-secret
+  namespace: guardrails-ai
+type: Opaque
+stringData:
+  token: "{{{GUARDRAILS_TOKEN}}}"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,6 +34,12 @@ spec:
       containers:
         - name: guard
           image: {{{IMAGE}}}
+          env:
+            - name: GUARDRAILS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: guardrails-ai-secret
+                  key: token
           ports:
             - name: http
               containerPort: 8000
@@ -46,4 +61,3 @@ spec:
   ports:
     - name: http
       port: 8000
-

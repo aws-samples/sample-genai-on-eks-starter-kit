@@ -1,9 +1,5 @@
 FROM public.ecr.aws/docker/library/python:3.12-slim
 
-# Accept a build arg for the Guardrails token
-# We'll add this to the config using the configure command below
-ARG GUARDRAILS_TOKEN
-
 # Create app directory
 WORKDIR /app
 
@@ -32,20 +28,15 @@ ENV NLTK_DATA=/opt/nltk_data
 # Download punkt data
 RUN python -m nltk.downloader -d /opt/nltk_data punkt
 
-# Run the Guardrails configure command to create a .guardrailsrc file
-RUN guardrails configure --disable-metrics --enable-remote-inferencing  --token $GUARDRAILS_TOKEN
-
-# Install any validators from the hub you want
-RUN guardrails hub install hub://guardrails/detect_pii
-
-# Copy the rest over
+# Copy the rest over (including entrypoint script)
 # We use a .dockerignore to keep unwanted files exluded
 COPY . .
 
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 EXPOSE 8000
 
-# This is our start command; yours might be different.
-# The guardrails-api is a standard Flask application.
-# You can use whatever production server you want that support Flask.
-# Here we use gunicorn
-CMD gunicorn --bind 0.0.0.0:8000 --timeout=90 --workers=4 'guardrails_api.app:create_app(None, "config.py")'
+# Use entrypoint script that will configure guardrails and install hub validators at runtime
+# The GUARDRAILS_TOKEN will be provided as an environment variable from Kubernetes
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
