@@ -558,7 +558,8 @@ code /workshop/components/ai-gateway/litellm/values.rendered.yaml
         aws_region_name: us-west-2
 :::
 
-Should look like this:
+Should look like this:  
+
 ![Add GPT to values](/static/images/module-2/value-rendered.png)
 
 ### Step 4: Apply the Configuration Changes
