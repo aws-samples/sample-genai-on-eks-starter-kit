@@ -7,7 +7,7 @@
       { "category": "vector-database", "component": "qdrant" },
       { "category": "embedding-model", "component": "tei" },
       { "category": "ai-gateway", "component": "litellm" },
-      { "category": "guardrail", "component": "guardrails-ai" } 
+      { "category": "guardrail", "component": "disabled" }
     ],
     "examples": [
       { "category": "mcp-server", "example": "calculator" },

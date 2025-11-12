@@ -96,9 +96,11 @@ program
     try {
       await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
       const installItems = async (items, ITEMS_DIR, itemKey) => {
-        const itemPaths = items.map((item) => {
-          return path.join(ITEMS_DIR, item.category, item[itemKey], "index.mjs");
-        });
+        const itemPaths = items
+          .filter(item => item[itemKey] !== 'disabled')
+          .map((item) => {
+            return path.join(ITEMS_DIR, item.category, item[itemKey], "index.mjs");
+          });
         for (const itemPath of itemPaths) {
           const itemModule = await import(itemPath);
           await itemModule.init(DIR, config, utils);
