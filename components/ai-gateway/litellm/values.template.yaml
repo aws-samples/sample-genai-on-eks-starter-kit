@@ -5,7 +5,7 @@ global:
 
 {{#if @root.integration.o11y.mlflow}}
 image:
-  repository: public.ecr.aws/t0h7h1e6/litellm
+  repository: public.ecr.aws/agentic-ai-platforms-on-k8s/litellm
   tag: v1.79.1-mlflow
 {{/if}}
 
