@@ -3,6 +3,12 @@ global:
     # -- Allow insecure images to use our ECR images.
     allowInsecureImages: true
 
+{{#if @root.integration.o11y.mlflow}}
+image:
+  repository: public.ecr.aws/t0h7h1e6/litellm
+  tag: v1.79.1-mlflow
+{{/if}}
+
 resources:
   requests:
     cpu: 1 
@@ -47,14 +53,26 @@ envVars:
   # SERVER_ROOT_PATH: /litellm # Same as Ingress path
   # UI_BASE_PATH: /litellm/ui # Move UI path but still need to build Docker image https://docs.litellm.ai/docs/proxy/deploy#1-custom-server-root-path-proxy-base-url
   # DOCS_URL: /docs/ # Move docs path but not working yet since LiteLLM hardcodes Swagger resource paths https://github.com/BerriAI/litellm/blob/main/litellm/proxy/proxy_server.py#L794-L796
+  # LITELLM_LOG: DEBUG
   UI_USERNAME: {{{LITELLM_UI_USERNAME}}}
   UI_PASSWORD: {{{LITELLM_UI_PASSWORD}}}
+  {{#if @root.integration.o11y.langfuse}}
   LANGFUSE_HOST: http://langfuse-web.langfuse:3000
   LANGFUSE_PUBLIC_KEY: {{{LANGFUSE_PUBLIC_KEY}}}
   LANGFUSE_SECRET_KEY: {{{LANGFUSE_SECRET_KEY}}}
+  {{/if}}
+  {{#if @root.integration.o11y.mlflow}}
+  MLFLOW_TRACKING_URI: http://mlflow.mlflow
+  MLFLOW_TRACKING_USERNAME: {{{MLFLOW_USERNAME}}}
+  MLFLOW_TRACKING_PASSWORD: {{{MLFLOW_PASSWORD}}}
+  MLFLOW_EXPERIMENT_NAME: Default
+  MLFLOW_EXPERIMENT_ID: 0
+  {{/if}}
+  {{#if @root.integration.o11y.phoenix}}
   PHOENIX_API_KEY: {{{PHOENIX_API_KEY}}}
   PHOENIX_COLLECTOR_ENDPOINT: http://phoenix-svc.phoenix:4317/v1/traces
   PHOENIX_COLLECTOR_HTTP_ENDPOINT: http://phoenix-svc.phoenix:6006/v1/traces
+  {{/if}}
 
 ingress:
   enabled: true

@@ -16,7 +16,8 @@ ingress:
       host: mlflow.{{{DOMAIN}}}
 
 extraEnvVars:
-  MLFLOW_SERVER_ALLOWED_HOSTS: "localhost,10.*,mlflow.{{{DOMAIN}}}"
+  MLFLOW_SERVER_ALLOWED_HOSTS: "localhost:*,10.*,mlflow.mlflow,mlflow.{{{DOMAIN}}}"
+  # MLFLOW_LOGGING_LEVEL: "DEBUG"
 
 auth:
   enabled: true

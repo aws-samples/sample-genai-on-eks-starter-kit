@@ -2,14 +2,14 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: buildkit
-  namespace: vllm
+  namespace: litellm
 automountServiceAccountToken: false
 ---
 apiVersion: v1
 kind: Pod
 metadata:
   name: buildkit
-  namespace: vllm
+  namespace: litellm
 spec:
   serviceAccountName: buildkit
   automountServiceAccountToken: false
@@ -32,15 +32,3 @@ spec:
           memory: 58Gi
         limits:
           memory: 58Gi
-      volumeMounts:
-        - name: huggingface-cache
-          mountPath: /root/.cache/huggingface
-        - name: neuron-cache
-          mountPath: /root/.cache/neuron
-  volumes:
-    - name: huggingface-cache
-      persistentVolumeClaim:
-        claimName: huggingface-cache
-    - name: neuron-cache
-      persistentVolumeClaim:
-        claimName: neuron-cache
