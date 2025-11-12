@@ -81,6 +81,8 @@ async def extract_credit_application_data(image_id: str) -> str:
         # System prompt for credit application data extraction
         extraction_system_prompt = """You are an expert in extracting credit application data from images.
         
+        IMPORTANT: Today's date is 1st September 2024. Use this as your reference when evaluating dates on documents.
+        
         Extract ONLY the following data from this credit application image and return it in JSON format:
         {
             "name": "full name of applicant",
@@ -204,6 +206,8 @@ async def validate_document_authenticity(image_id: str) -> str:
         # System prompt for document validation
         validation_system_prompt = """You are an expert in document authenticity validation for credit applications.
         
+        IMPORTANT: Today's date is 1st September 2024. Use this as your reference when evaluating dates on documents. Any dates before today are in the past and should not be flagged as future dates.
+        
         Analyze this credit application document and return validation results in JSON format:
         {
             "document_quality": "excellent|good|fair|poor",
@@ -222,6 +226,7 @@ async def validate_document_authenticity(image_id: str) -> str:
         - Signs of tampering or alteration
         - Consistency in fonts and formatting
         - Logical data relationships
+        - Do NOT flag dates before September 1, 2024 as future dates
         
         Return ONLY valid JSON, no other text.
         """
