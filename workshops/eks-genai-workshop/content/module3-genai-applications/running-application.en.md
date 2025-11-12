@@ -29,9 +29,34 @@ echo "Langfuse URL: http://$(kubectl get ingress -n langfuse langfuse -o jsonpat
 
 ::alert[**Platform Required**: All pods should show "Running" status. If any components are missing, please complete Modules 1 & 2 first.]{type="warning"}
 
-## 🔧 Step 1: Configure Your Deployment
+## 🔧 Step 1: Understanding the Configuration
 
-### Retrieve Your Platform Credentials
+Before we deploy, let's understand what Loan Buddy needs to connect to your GenAI platform:
+
+### Required Configuration
+
+1. **🪣 S3 Bucket** - Where to store uploaded loan documents
+   - Automatically created by Terraform when Langfuse was deployed
+   - Retrieved from: `terraform output langfuse_bucket_name`
+
+2. **🌍 AWS Region** - Where your resources are located
+   - Configured in your `.env` file as `REGION`
+   - Used for S3 and other AWS service calls
+
+3. **🔑 LiteLLM API Key** - Your Virtual Key from Module 2
+   - Allows the agent to call LLM models through the gateway
+   - You created this in Module 2, Step 9
+
+4. **📊 Langfuse Credentials** - For observability and tracing
+   - Public and secret keys from your `.env` file
+   - Enables complete audit trails of AI decisions
+
+5. **🔐 Service Account with S3 Access** - Kubernetes RBAC + AWS IAM
+   - Copies the Langfuse service account to workshop namespace
+   - Creates Pod Identity Association for S3 permissions
+   - Allows pods to securely access S3 without hardcoded credentials
+
+### Verify Your Credentials
 
 First, let's make sure you have your Virtual Key from Module 2:
 
@@ -47,107 +72,137 @@ fi
 
 ::alert[**Missing AGENT_KEY?** Go back to Module 2, Step 3 of the Virtual Key section and copy your key. Then run: `export AGENT_KEY="sk-your-actual-key"`]{type="warning"}
 
-### Set Up All Required Keys
+## 🎯 Step 2: Automated Deployment
 
-Now let's set up all the credentials needed for Loan Buddy:
+### Run the Deployment Script
 
-:::code{language=bash showCopyAction=true}
-# Load your environment file to get Langfuse keys
-source .env
-
-# Verify all required keys are present
-echo "Checking required credentials..."
-[ ! -z "$LANGFUSE_PUBLIC_KEY" ] && echo "✅ LANGFUSE_PUBLIC_KEY found" || echo "❌ LANGFUSE_PUBLIC_KEY missing"
-[ ! -z "$LANGFUSE_SECRET_KEY" ] && echo "✅ LANGFUSE_SECRET_KEY found" || echo "❌ LANGFUSE_SECRET_KEY missing"
-[ ! -z "$AGENT_KEY" ] && echo "✅ AGENT_KEY found" || echo "❌ AGENT_KEY missing"
-:::
-
-### Update the Deployment Configuration
-
-Now let's configure Loan Buddy to connect to your platform:
+We've created an automated deployment script that handles all the configuration for you:
 
 :::code{language=bash showCopyAction=true}
-# Open the deployment file
-code /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
+# Navigate to the credit validation directory
+cd /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation
+
+# Make the script executable
+chmod +x deploy-workshop-app.sh
+
+# Run the deployment script
+./deploy-workshop-app.sh
 :::
 
-**Update these environment variables in the deployment file:**
+### What the Script Does
 
-::alert[**Use Your AGENT_KEY**: Replace `YOUR_LITELLM_API_KEY` with the value from your `$AGENT_KEY` environment variable (the Virtual Key you created in Module 2, Step 9)]{type="warning"}
+The script automates the following steps:
 
-1. Find the `loan-buddy-agent` deployment section
-2. Update these values:
-   ```yaml
-   - name: LANGFUSE_PUBLIC_KEY
-     value: "YOUR_ACTUAL_PUBLIC_KEY"  # Replace with value from $LANGFUSE_PUBLIC_KEY
-   - name: LANGFUSE_SECRET_KEY  
-     value: "YOUR_ACTUAL_SECRET_KEY"  # Replace with value from $LANGFUSE_SECRET_KEY
-   - name: GATEWAY_MODEL_ACCESS_KEY
-     value: "YOUR_LITELLM_API_KEY"    # Replace with value from $AGENT_KEY
+1. ✅ **Validates Prerequisites** - Checks kubectl and cluster connectivity
+2. ✅ **Retrieves S3 Bucket** - Gets bucket name from Terraform output
+3. ✅ **Gets AWS Region** - Loads from .env file
+4. ✅ **Configures Credentials** - Sets up LiteLLM and Langfuse keys
+5. ✅ **Creates Workshop Namespace** - Isolated environment for the application
+6. ✅ **Sets Up Service Account** - Copies Langfuse SA with S3 permissions
+7. ✅ **Creates Pod Identity Association** - Grants S3 access to workshop pods
+8. ✅ **Configures Deployment** - Replaces all placeholders in YAML
+9. ✅ **Deploys Application** - Applies the configured Kubernetes manifests
+10. ✅ **Waits for Ready** - Ensures all pods are running
+
+::alert[**Learning Opportunity**: The script creates a file called `agentic-application-deployment.configured.yaml` with all values filled in. Review it to see how the configuration works!]{type="info"}
+
+::::expand{header="🔍 Under the Hood: What's Being Automated"}
+
+**Without the script, you would need to:**
+
+1. **Get S3 Bucket Name:**
+   ```bash
+   cd /workshop/components/o11y/langfuse
+   terraform output langfuse_bucket_name
    ```
 
-3. Also update in the `mcp-image-processor` deployment:
-   ```yaml
-   - name: GATEWAY_MODEL_ACCESS_KEY
-     value: "YOUR_LITELLM_API_KEY"    # Same value from $AGENT_KEY
+2. **Get AWS Region:**
+   ```bash
+   source /workshop/.env
+   echo $REGION
    ```
 
-**Tip:** You can echo your keys to copy them:
-:::code{language=bash showCopyAction=true}
-echo "LANGFUSE_PUBLIC_KEY: $LANGFUSE_PUBLIC_KEY"
-echo "LANGFUSE_SECRET_KEY: $LANGFUSE_SECRET_KEY"
-echo "AGENT_KEY: $AGENT_KEY"
-:::
+3. **Manually Edit YAML File:**
+   - Replace `<>` with S3 bucket name (2 places)
+   - Replace `<>` with AWS region (2 places)
+   - Replace Langfuse keys (2 places)
+   - Replace LiteLLM keys (2 places)
 
-::alert[**Important**: Save the file (Ctrl+S) after making these changes!]{type="warning"}
+4. **Create Service Account:**
+   ```bash
+   kubectl get serviceaccount langfuse -n langfuse -o yaml | \
+     sed 's/namespace: langfuse/namespace: workshop/' | \
+     kubectl apply -f -
+   ```
 
-::alert[**Configuration Complete!** Your deployment file is now configured with all the necessary credentials from Module 2.]{type="success"}
+5. **Create Pod Identity Association:**
+   ```bash
+   aws eks create-pod-identity-association \
+     --cluster-name genai-on-eks \
+     --namespace workshop \
+     --service-account langfuse \
+     --role-arn <IAM_ROLE_ARN>
+   ```
 
-## 🎯 Step 2: Deploy the AI Workforce
+6. **Deploy Application:**
+   ```bash
+   kubectl apply -f agentic-application-deployment.yaml
+   ```
 
-### Create the Workshop Namespace
+**The script does all of this in one command!** This is the same automation pattern used in production CI/CD pipelines.
 
-:::code{language=bash showCopyAction=true}
-# Create a dedicated namespace for Loan Buddy
-kubectl create namespace workshop
-:::
+::::
 
-### Deploy All Components
+### Expected Output
 
-Now let's deploy our AI assembly line:
+You should see output similar to:
 
-:::code{language=bash showCopyAction=true}
-# Deploy Loan Buddy and all MCP servers
-kubectl apply -f /workshop/workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.yaml
-
-# Watch the magic happen!
-echo "🚀 Deploying your AI workforce..."
-echo "📸 Image Processor MCP - Ready to read documents"
-echo "🏠 Address Validator MCP - Ready to verify addresses"
-echo "💼 Employment Validator MCP - Ready to check backgrounds"
-echo "🤖 Loan Processing Agent - Ready to orchestrate!"
-:::
-
-### Wait for Deployment to Complete
-
-:::code{language=bash showCopyAction=true}
-# Check deployment status
-kubectl rollout status deployment/loan-buddy-agent -n workshop
-kubectl rollout status deployment/mcp-address-validator -n workshop
-kubectl rollout status deployment/mcp-employment-validator -n workshop
-kubectl rollout status deployment/mcp-image-processor -n workshop
-
-# Verify all pods are running
-kubectl get pods -n workshop
-:::
-
-**Expected output - all pods should be "Running":**
 ```
+  Loan Buddy Workshop Deployment
+
+Step 1: Checking prerequisites...
+✅ kubectl found
+✅ Connected to Kubernetes cluster
+
+Step 2: Retrieving S3 bucket name from Terraform...
+✅ S3 Bucket: genai-on-eks-bucket-langfuse-xxxxx
+
+Step 3: Getting AWS region...
+✅ AWS Region: us-west-2
+
+Step 4: Getting LiteLLM API key...
+✅ LiteLLM API Key: sk-xxxxx...
+
+Step 5: Getting Langfuse credentials...
+✅ Langfuse Public Key: lf_pk_xxxxx...
+✅ Langfuse Secret Key: lf_sk_xxxxx...
+
+Step 6: Creating workshop namespace...
+✅ Created namespace 'workshop'
+
+Step 7: Setting up service account for S3 access...
+✅ Service account 'langfuse' created in workshop namespace
+
+Step 7b: Creating Pod Identity Association for S3 access...
+✅ Pod Identity Association created for workshop namespace
+
+Step 8: Configuring deployment file...
+✅ Deployment file configured
+
+Step 9: Deploying Loan Buddy application...
+✅ Application deployed
+
+Step 10: Waiting for deployments to be ready...
+✅ All deployments ready
+
+Step 11: Verifying deployment...
 NAME                                     READY   STATUS    RESTARTS   AGE
 loan-buddy-agent-xxx                     1/1     Running   0          1m
 mcp-address-validator-xxx                1/1     Running   0          1m
 mcp-employment-validator-xxx             1/1     Running   0          1m
 mcp-image-processor-xxx                  1/1     Running   0          1m
+
+  ✅ Deployment Complete!
 ```
 
 ## 🎬 Step 3: Watch the AI in Action
