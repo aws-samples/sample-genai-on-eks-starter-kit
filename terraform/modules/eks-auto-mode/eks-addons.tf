@@ -260,7 +260,7 @@ module "eks_blueprints_addons_core" {
   }
 
   enable_ingress_nginx = var.enable_nginx
-  ingress_nginx = var.enable_nginx ? {
+  ingress_nginx = {
     chart_version = "4.14.0"
     values = [
       yamlencode({
@@ -280,7 +280,7 @@ module "eks_blueprints_addons_core" {
         }
       })
     ]
-  } : {}
+  }
 
   depends_on = [kubectl_manifest.karpenter_nodepool_default]
 }

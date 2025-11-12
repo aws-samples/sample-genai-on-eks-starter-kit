@@ -11,4 +11,6 @@ module "eks_{{{EKS_MODE}}}_mode" {
   efs_file_system_id           = aws_efs_file_system.this.id
   gpu_nodepool_capacity_type   = var.gpu_nodepool_capacity_type
   gpu_nodepool_instance_family = var.gpu_nodepool_instance_family
+  enable_nginx                 = var.enable_nginx
+  enable_lws                   = var.enable_lws
 }
