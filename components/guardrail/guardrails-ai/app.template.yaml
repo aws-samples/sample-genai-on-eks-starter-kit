@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: guardrails-ai
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: guardrails-ai-secret
+  namespace: guardrails-ai
+type: Opaque
+stringData:
+  token: "{{{GUARDRAILS_TOKEN}}}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guard
+  namespace: guardrails-ai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guard
+  template:
+    metadata:
+      labels:
+        app: guard
+    spec:
+      {{#unless useBuildx}}
+      nodeSelector:
+        kubernetes.io/arch: {{{arch}}}
+      {{/unless}}
+      containers:
+        - name: guard
+          image: {{{IMAGE}}}
+          env:
+            - name: GUARDRAILS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: guardrails-ai-secret
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 1.5
+              memory: 12Gi
+            limits:
+              memory: 12Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guard
+  namespace: guardrails-ai
+spec:
+  selector:
+    app: guard
+  ports:
+    - name: http
+      port: 8000

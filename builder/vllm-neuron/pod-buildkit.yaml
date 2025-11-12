@@ -28,10 +28,10 @@ spec:
       stdin: true
       resources:
         requests:
-          cpu: 3.6
-          memory: 29Gi
+          cpu: 7.2
+          memory: 58Gi
         limits:
-          memory: 60Gi
+          memory: 58Gi
       volumeMounts:
         - name: huggingface-cache
           mountPath: /root/.cache/huggingface
