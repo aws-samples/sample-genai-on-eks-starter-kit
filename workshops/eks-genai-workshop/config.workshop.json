@@ -33,7 +33,9 @@
   "terraform": {
     "vars": {
       "efs_throughput_mode": "elastic",
-      "neuron_nodepool_capacity_type": ["on-demand"]
+      "neuron_nodepool_capacity_type": ["on-demand"],
+      "enable_nginx": false,
+      "enable_lws": false
     }
   }
 }
