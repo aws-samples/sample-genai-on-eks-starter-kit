@@ -253,7 +253,7 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
         logger.error(f"Error processing credit application: {e}")
         return {
             "status": "ERROR",
-            "message": f"Error processing application: {str(e)}",
+            "message": "An error occurred while processing your application",
             "recommendation": "Please check the image format and try again"
         }
 
@@ -278,9 +278,10 @@ async def list_available_tools():
             "total_tools": len(tool_info)
         }
     except Exception as e:
+        logger.error(f"Error listing tools: {e}")
         return {
             "status": "error",
-            "message": f"Error listing tools: {str(e)}"
+            "message": "Unable to retrieve tools list"
         }
 
 @app.get("/api/health")
