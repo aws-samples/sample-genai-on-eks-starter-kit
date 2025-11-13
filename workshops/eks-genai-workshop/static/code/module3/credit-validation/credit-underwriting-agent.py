@@ -118,8 +118,11 @@ app = FastAPI(title="Credit Underwriting Agent with Image ID Support")
 # - Use 'validate_income_employment' to verify employment and income information
 # - Use 'validate_address' to verify address information
 
-# System prompt for the agent - updated for image ID workflow
-system_prompt = """You are a helpful AI assistant for credit underwriting and loan processing.
+
+
+system_prompt = f"""You are a helpful AI assistant for credit underwriting and loan processing.
+
+IMPORTANT: Today's date is 1st September 2024. Use this as your reference when evaluating dates on documents.
 
 Your task is to process credit applications by analyzing uploaded documents and validating applicant information using the tools provided. You will not have the image, instead an image_id which you will then pass to the tools to extract information.
 
@@ -250,7 +253,7 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
         logger.error(f"Error processing credit application: {e}")
         return {
             "status": "ERROR",
-            "message": f"Error processing application: {str(e)}",
+            "message": "An error occurred while processing your application",
             "recommendation": "Please check the image format and try again"
         }
 
@@ -275,9 +278,10 @@ async def list_available_tools():
             "total_tools": len(tool_info)
         }
     except Exception as e:
+        logger.error(f"Error listing tools: {e}")
         return {
             "status": "error",
-            "message": f"Error listing tools: {str(e)}"
+            "message": "Unable to retrieve tools list"
         }
 
 @app.get("/api/health")

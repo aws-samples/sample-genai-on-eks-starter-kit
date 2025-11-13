@@ -89,17 +89,6 @@ Create sophisticated AI applications using modern frameworks:
 - 🔧 **Model Context Protocol** - Integrate external tools and APIs with MCP servers
 - 🤖 **Secure and Observe** - Integrate your Agent flow with platform components
 
-
-### Module 4: Scaling and Securing Agents
-**Advanced AI Systems**
-
-Implement advanced patterns for scale and security:
-
-- 📈 **Distributed Inference** - Scale across multiple nodes
-- 🔐 **Pod Identity & IAM** - Secure access to AWS services
-- 💰 **Cost Optimization** - Calculate and optimize AI transaction costs
-- 🛡️ **Security Best Practices** - Implement guardrails and monitoring
-
 ## 🛠️ Technologies You'll Master
 
 ::::tabs

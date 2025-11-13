@@ -32,6 +32,16 @@ variable "gpu_nodepool_instance_family" {
   default = ["g6e", "g6", "g5g", "p5en", "p5e", "p5", "p4de", "p4d"]
 }
 
+variable "enable_nginx" {
+  type    = bool
+  default = true
+}
+
+variable "enable_lws" {
+  type    = bool
+  default = true
+}
+
 locals {
   account_id = data.aws_caller_identity.current.account_id
 }
@@ -68,4 +78,3 @@ terraform {
 }
 
 provider "aws" { region = var.region }
-

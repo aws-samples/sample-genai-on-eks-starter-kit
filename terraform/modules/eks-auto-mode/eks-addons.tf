@@ -259,7 +259,7 @@ module "eks_blueprints_addons_core" {
     }
   }
 
-  enable_ingress_nginx = true
+  enable_ingress_nginx = var.enable_nginx
   ingress_nginx = {
     chart_version = "4.14.0"
     values = [
@@ -433,6 +433,7 @@ resource "kubectl_manifest" "storageclass_efs" {
 
 # LWS
 resource "helm_release" "lws" {
+  count            = var.enable_lws ? 1 : 0
   name             = "lws"
   namespace        = "lws-system"
   repository       = "oci://registry.k8s.io/lws/charts"

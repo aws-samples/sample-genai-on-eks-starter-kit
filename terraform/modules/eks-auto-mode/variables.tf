@@ -8,6 +8,14 @@ variable "domain" { type = string }
 variable "efs_file_system_id" { type = string }
 variable "gpu_nodepool_capacity_type" { type = list(string) }
 variable "gpu_nodepool_instance_family" { type = list(string) }
+variable "enable_nginx" {
+  type    = bool
+  default = true
+}
+variable "enable_lws" {
+  type    = bool
+  default = true
+}
 
 terraform {
   required_version = ">= 1.5"

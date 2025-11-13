@@ -27,55 +27,6 @@ You've just experienced self-hosted models on our workshop infrastructure. Due t
 
 ::alert[**Workshop Suggestion**: For the remaining modules, we recommend using Bedrock (Claude 3.7 Sonnet) to ensure optimal learning experience. Both self-hosted and managed approaches have their place in different scenarios.]{type="info"}
 
-## Enabling Bedrock Model Access
-
-Before using Bedrock models, you need to enable access in your AWS account. Follow these steps:
-
-### Step 1: Access Bedrock Model Access Page
-
-Navigate directly to the [Bedrock Model Access Page](https://us-west-2.console.aws.amazon.com/bedrock/home?region=us-west-2#/modelaccess) in the AWS Console.
-
-![Bedrock Model Access Page](/static/images/module-1/bedrock-model-access-page.png)
-
-**Verify your access**: Ensure you see "WSParticipantRole/Participant" in the top right corner.
-
-### Step 2: Modify Model Access
-
-1. Click the **"Modify model access"** button (orange button in the interface)
-2. Scroll down to find the **Anthropic** section
-3. Check the box next to **Claude 3.7 Sonnet**
-
-![Select Claude 3.7 Sonnet](/static/images/module-1/bedrock-select-claude-sonnet.png)
-
-### Step 3: Submit Your Request
-
-1. Scroll down and click **"Next"**
-2. On the **"Review and submit"** page, review your selection and click **"Submit"**
-
-![Review and Submit](/static/images/module-1/bedrock-review-submit.png)
-
-::alert[**Cross-Region Requirement**: Claude 3.7 Sonnet requires cross-region inference. You will need to repeat these steps in the us-east-1 region as well. Use the region selector in the top right corner of the AWS Console.]{type="warning"}
-
-### Step 4: Enable Access in Second Region (Do It Yourself)
-
-Claude 3.7 Sonnet requires cross-region inference, so you need to enable access in both regions:
-
-1. **Switch to us-east-1 region**:
-   - Click the region selector in the top right corner of the AWS Console
-   - Select **"US East (N. Virginia) us-east-1"**
-
-2. **Repeat the model access process**:
-   - Navigate to the [Bedrock Model Access Page in us-east-1](https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess)
-   - Click **"Modify model access"**
-   - Find the **Anthropic** section and check **Claude 3.7 Sonnet**
-   - Click **"Next"** → **"Submit"**
-
-3. **Verify access in both regions**:
-   - You should now have Claude 3.7 Sonnet access in both us-west-2 and us-east-1
-   - This enables cross-region inference for optimal performance
-
-::alert[**Access Granted**: Model access is typically granted instantly. You should see "Access granted" status within seconds of submitting your request.]{type="success"}
-
 ## Using Bedrock Models in Open WebUI
 
 Once model access is enabled, we can interact with our Bedrock models via Open WebUI through LiteLLM:

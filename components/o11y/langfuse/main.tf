@@ -49,6 +49,10 @@ output "langfuse_bucket_name" {
   value = aws_s3_bucket.langfuse.id
 }
 
+output "langfuse_s3_role_arn" {
+  value = aws_iam_role.langfuse_s3_access.arn
+}
+
 resource "aws_iam_role" "langfuse_s3_access" {
   name = "${var.name}-${var.region}-langfuse-s3-access"
   assume_role_policy = jsonencode({
