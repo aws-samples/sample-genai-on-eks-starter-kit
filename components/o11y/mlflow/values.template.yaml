@@ -1,0 +1,48 @@
+global:
+  security:
+    # -- Allow insecure images to use our ECR images.
+    allowInsecureImages: true
+
+ingress:
+  enabled: true
+  className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
+  annotations:
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+  hosts:
+    - paths:
+        - path: /
+          pathType: Prefix
+      host: mlflow.{{{DOMAIN}}}
+
+extraEnvVars:
+  MLFLOW_SERVER_ALLOWED_HOSTS: "localhost:*,10.*,mlflow.mlflow,mlflow.{{{DOMAIN}}}"
+  # MLFLOW_LOGGING_LEVEL: "DEBUG"
+
+auth:
+  enabled: true
+  adminUsername: {{{MLFLOW_USERNAME}}}
+  adminPassword: {{{MLFLOW_PASSWORD}}}
+
+postgresql:
+  enabled: true
+  image:
+    registry: public.ecr.aws
+    repository: agentic-ai-platforms-on-k8s/postgresql
+    tag: 17.5.0-debian-12-r8
+    pullPolicy: IfNotPresent
+  auth:
+    username: admin
+    password: password123
+  primary:
+    resources: 
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
+
+artifactRoot:
+  s3:
+    enabled: true
+    bucket: {{{MLFLOW_BUCKET_NAME}}}

@@ -80,26 +80,32 @@ export async function install() {
       integration["mcp-servers"].push(serviceName.trim());
     }
   }
+  const callbacks = [],
+    successCallback = [],
+    failureCallback = [];
   let result = await $`kubectl get pod -n langfuse -l app=web --ignore-not-found`;
   if (result.stdout.includes("langfuse")) {
-    integration.o11y["langfuse"] = true;
+    integration.o11y.langfuse = true;
+    callbacks.push("langfuse");
+    successCallback.push("langfuse");
+    failureCallback.push("langfuse");
+  }
+  result = await $`kubectl get pod -n  mlflow -l app=mlflow --ignore-not-found`;
+  if (result.stdout.includes("mlflow")) {
+    integration.o11y.mlflow = true;
+    successCallback.push("mlflow");
+    failureCallback.push("mlflow");
   }
   result = await $`kubectl get pod -n phoenix -l app=phoenix --ignore-not-found`;
   if (result.stdout.includes("phoenix")) {
-    integration.o11y["phoenix"] = true;
+    integration.o11y.phoenix = true;
+    callbacks.push("arize_phoenix");
   }
-  integration.o11y.config = {};
-  if (integration.o11y["langfuse"] && integration.o11y["phoenix"]) {
-    integration.o11y.config["callbacks"] = '["langfuse", "arize_phoenix"]';
-    integration.o11y.config["success_callback"] = '["langfuse"]';
-    integration.o11y.config["failure_callback"] = '["langfuse"]';
-  } else if (integration.o11y["langfuse"]) {
-    integration.o11y.config["callbacks"] = '["langfuse"]';
-    integration.o11y.config["success_callback"] = '["langfuse"]';
-    integration.o11y.config["failure_callback"] = '["langfuse"]';
-  } else if (integration.o11y["phoenix"]) {
-    integration.o11y.config["callbacks"] = '["arize_phoenix"]';
-  }
+  integration.o11y.config = {
+    callbacks: JSON.stringify(callbacks),
+    success_callback: JSON.stringify(successCallback),
+    failure_callback: JSON.stringify(failureCallback),
+  };
   if (enableBedrockGuardrail) {
     const id = await utils.terraform.output(DIR, { outputName: "bedrock_guardrail_id" });
     const version = await utils.terraform.output(DIR, { outputName: "bedrock_guardrail_version" });
@@ -120,10 +126,23 @@ export async function install() {
     PHOENIX_API_KEY: process.env.PHOENIX_API_KEY,
     integration,
   };
+  if (integration.o11y.mlflow) {
+    const requiredEnvVars = ["MLFLOW_USERNAME", "MLFLOW_PASSWORD"];
+    utils.checkRequiredEnvVars(requiredEnvVars);
+    valuesVars.MLFLOW_USERNAME = process.env.MLFLOW_USERNAME;
+    valuesVars.MLFLOW_PASSWORD = process.env.MLFLOW_PASSWORD;
+  }
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
 }
 
 export async function uninstall() {
   await $`helm uninstall litellm --namespace litellm`;
+  const { enableBedrockGuardrail } = config["litellm"];
+  await utils.terraform.destroy(DIR, {
+    vars: {
+      bedrock_region: config["bedrock"]["region"] || process.env.REGION,
+      enable_bedrock_guardrail: enableBedrockGuardrail,
+    },
+  });
 }

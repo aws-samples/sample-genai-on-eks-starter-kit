@@ -29,6 +29,7 @@
       "name": "Observability",
       "components": [
         { "dir": "langfuse", "name": "Langfuse" },
+        { "dir": "mlflow", "name": "MLflow" },
         { "dir": "phoenix", "name": "Phoenix" }
       ]
     },
