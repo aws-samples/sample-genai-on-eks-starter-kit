@@ -6,8 +6,7 @@
       { "category": "gui-app", "component": "openwebui" },
       { "category": "vector-database", "component": "qdrant" },
       { "category": "embedding-model", "component": "tei" },
-      { "category": "ai-gateway", "component": "litellm" },
-      { "category": "guardrail", "component": "disabled" }
+      { "category": "ai-gateway", "component": "litellm" }
     ],
     "examples": [
       { "category": "mcp-server", "example": "calculator" },
