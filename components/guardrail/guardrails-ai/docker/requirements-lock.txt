@@ -48,7 +48,7 @@ jsonpointer==3.0.0
 jsonref==1.1.0
 jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
-langchain-core==0.2.21
+langchain-core==0.2.43
 langsmith==0.1.90
 litellm==1.41.24
 lxml==4.9.4
