@@ -415,7 +415,7 @@ module "eks_blueprints_addons_core" {
   }
   enable_ingress_nginx = true
   ingress_nginx = {
-    chart_version = "4.12.3"
+    chart_version = "4.14.0"
     values = [
       yamlencode({
         controller = {

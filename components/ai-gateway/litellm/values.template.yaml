@@ -194,4 +194,14 @@ proxy_config:
         aws_region_name: {{{@root.integration.bedrock.region}}}
         {{/if}}
     {{/if}}    
+    {{#if guardrailsAI}}
+    - guardrail_name: "guardrails-ai"
+      litellm_params:
+        guardrail: guardrails_ai
+        mode: "pre_call"
+        default_on: true
+        guard_name: "detect-pii"
+        guardrails_ai_api_input_format: "llmOutput"
+        api_base: http://guard.guardrails-ai:8000
+    {{/if}}
     {{/with}}

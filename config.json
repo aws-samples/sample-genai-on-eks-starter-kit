@@ -6,7 +6,8 @@
       { "category": "gui-app", "component": "openwebui" },
       { "category": "vector-database", "component": "qdrant" },
       { "category": "embedding-model", "component": "tei" },
-      { "category": "ai-gateway", "component": "litellm" }
+      { "category": "ai-gateway", "component": "litellm" },
+      { "category": "guardrail", "component": "guardrails-ai" } 
     ],
     "examples": [
       { "category": "mcp-server", "example": "calculator" },
@@ -82,7 +83,8 @@
     "embedding": { "models": [] }
   },
   "litellm": {
-    "enableBedrockGuardrail": false
+    "enableBedrockGuardrail": false,
+    "enableGuardrailsAI": false
   },
   "examples": {
     "agno": {

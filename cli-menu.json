@@ -23,6 +23,7 @@
       "name": "Embedding Model",
       "components": [{ "dir": "tei", "name": "Text Embedding Inference (TEI)" }]
     },
+    { "dir": "guardrail", "name": "Guardrail", "components": [{ "dir": "guardrails-ai", "name": "Guardrails AI" }] },
     {
       "dir": "o11y",
       "name": "Observability",
