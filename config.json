@@ -72,9 +72,16 @@
     "llm": {
       "models": [
         { "name": "amazon-nova-premier", "model": "us.amazon.nova-premier-v1:0" },
+        { "name": "amazon-nova-2-lite-us", "model": "us.amazon.nova-2-lite-v1:0" },
+        { "name": "amazon-nova-2-lite-global", "model": "global.amazon.nova-2-lite-v1:0" },
+        { "name": "claude-opus-4.5-us", "model": "us.anthropic.claude-opus-4-5-20251101-v1:0" },
+        { "name": "claude-opus-4.5-global", "model": "global.anthropic.claude-opus-4-5-20251101-v1:0" },
+        { "name": "claude-sonnet-4.5-us", "model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0" },
+        { "name": "claude-sonnet-4.5-global", "model": "global.anthropic.claude-sonnet-4-5-20250929-v1:0" },
+        { "name": "claude-haiku-4.5-us", "model": "us.anthropic.claude-haiku-4-5-20251001-v1:0" },
+        { "name": "claude-haiku-4.5-global", "model": "global.anthropic.claude-haiku-4-5-20251001-v1:0" },
         { "name": "claude-4-opus", "model": "us.anthropic.claude-opus-4-20250514-v1:0" },
         { "name": "claude-4-sonnet", "model": "us.anthropic.claude-sonnet-4-20250514-v1:0" },
-        { "name": "claude-3.7-sonnet", "model": "us.anthropic.claude-3-7-sonnet-20250219-v1:0" },
         { "name": "llama4-maverick", "model": "us.meta.llama4-maverick-17b-instruct-v1:0" },
         { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0" }
       ]
