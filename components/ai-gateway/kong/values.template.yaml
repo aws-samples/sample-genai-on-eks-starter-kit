@@ -3,13 +3,17 @@ proxy:
   type: ClusterIP
   ingress:
     enabled: true
+    {{#if DOMAIN}}
     hostname: kong.{{{DOMAIN}}}
+    {{/if}}
     path: /
     pathType: Prefix
     ingressClassName: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
     annotations:
       alb.ingress.kubernetes.io/target-type: ip
+      {{#if DOMAIN}}
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      {{/if}}
   http:
     enabled: true
   tls:
