@@ -66,6 +66,14 @@ resource "helm_release" "karpenter" {
         eks.amazonaws.com/role-arn: ${module.karpenter.iam_role_arn}
     webhook:
       enabled: false
+    controller:
+      resources:
+        requests:
+          cpu: 250m
+          memory: 768Mi
+        limits:
+          cpu: 250m
+          memory: 768Mi
     EOT
   ]
 
