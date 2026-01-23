@@ -7,7 +7,7 @@
     "dotenv": "16.5.0",
     "handlebars": "4.7.8",
     "inquirer": "12.6.3",
-    "lodash": "4.17.21",
+    "lodash": "4.17.23",
     "prettier": "3.5.3",
     "zx": "8.5.4"
   }
