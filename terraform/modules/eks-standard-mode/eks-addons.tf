@@ -559,7 +559,7 @@ metadata:
     ingressclass.kubernetes.io/is-default-class: "true"
   name: internet-facing-alb
 spec:
-  controller: elbv2.k8s.aws/alb
+  controller: ingress.k8s.aws/alb
   parameters:
     apiGroup: elbv2.k8s.aws
     kind: IngressClassParams
