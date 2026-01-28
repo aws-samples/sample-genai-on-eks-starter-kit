@@ -34,6 +34,7 @@ export async function install() {
     MLFLOW_USERNAME: process.env.MLFLOW_USERNAME,
     MLFLOW_PASSWORD: process.env.MLFLOW_PASSWORD,
     MLFLOW_BUCKET_NAME: mlflowBucketName,
+    AWS_REGION: process.env.AWS_REGION,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm repo add community-charts https://community-charts.github.io/helm-charts`;
