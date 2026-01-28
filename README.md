@@ -286,7 +286,18 @@ ECR Pull Through Cache caches external container images (from Docker Hub, GitHub
 - Your organization requires images to be stored in private registries
 
 **To enable:**
-Set `enable_ecr_pull_through_cache = true` in your Terraform variables and run `./cli terraform apply`.
+Modify the `terraform.vars` section on `config.json` (or `config.local.json`) to set `"enable_ecr_pull_through_cache": true` and then run `./cli terraform apply`.
+
+```json
+// config.local.json
+{
+  "terraform": {
+    "vars": {
+      "enable_ecr_pull_through_cache": true
+    }
+  }
+}
+```
 
 **Supported registries:**
 - `vllm/*` → Docker Hub

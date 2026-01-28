@@ -138,6 +138,8 @@ const terraform = (function () {
         for (const [key, value] of Object.entries(vars)) {
           if (Array.isArray(value)) {
             content += `${key} = ${JSON.stringify(value)}\n`;
+          } else if (typeof value === "boolean") {
+            content += `${key} = ${value}\n`;
           } else {
             content += `${key} = "${value}"\n`;
           }
