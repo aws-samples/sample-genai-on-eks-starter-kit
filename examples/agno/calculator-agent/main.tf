@@ -21,6 +21,7 @@ locals {
   app       = "calculator-agent"
   namespace = "agno"
   full_name = "${var.name}-${local.namespace}-${local.app}"
+  role_name = "${var.name}-${var.region}}-${local.app}"
 }
 resource "aws_ecr_repository" "this" {
   name                 = local.full_name
@@ -43,7 +44,7 @@ module "pod_identity" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "1.12.0"
 
-  name                 = local.full_name
+  name                 = local.role_name
   use_name_prefix      = false
   attach_custom_policy = true
   policy_statements = [

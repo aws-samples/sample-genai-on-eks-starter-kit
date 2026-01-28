@@ -22,7 +22,7 @@ module "pod_identity_vllm_buildah" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "1.12.0"
 
-  name                 = "${var.name}-vllm-buildah"
+  name                 = "${var.name}-${var.region}-vllm-buildah"
   use_name_prefix      = false
   attach_custom_policy = true
   policy_statements = [
@@ -60,7 +60,7 @@ module "pod_identity_vllm_buildkit" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "1.12.0"
 
-  name                 = "${var.name}-vllm-buildkit"
+  name                 = "${var.name}-${var.region}-vllm-buildkit"
   use_name_prefix      = false
   attach_custom_policy = true
   policy_statements = [

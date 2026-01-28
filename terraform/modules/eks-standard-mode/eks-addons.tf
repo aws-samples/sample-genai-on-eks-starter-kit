@@ -34,9 +34,9 @@ module "karpenter" {
 
   cluster_name                            = module.eks.cluster_name
   iam_role_use_name_prefix                = false
-  iam_role_name                           = "${var.name}-karpenter"
+  iam_role_name                           = "${module.eks.cluster_name}-${var.region}-karpenter"
   node_iam_role_use_name_prefix           = false
-  node_iam_role_name                      = "${var.name}-node"
+  node_iam_role_name                      = "${module.eks.cluster_name}-${var.region}-node"
   create_pod_identity_association         = false
   iam_role_source_assume_policy_documents = [data.aws_iam_policy_document.karpenter_irsa.json]
 

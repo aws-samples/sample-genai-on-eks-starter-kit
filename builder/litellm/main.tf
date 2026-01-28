@@ -22,7 +22,7 @@ module "pod_identity_litellm_buildkit" {
   source  = "terraform-aws-modules/eks-pod-identity/aws"
   version = "1.12.0"
 
-  name                 = "${var.name}-litellm-buildkit"
+  name                 = "${var.name}-${var.region}-litellm-buildkit"
   use_name_prefix      = false
   attach_custom_policy = true
   policy_statements = [
