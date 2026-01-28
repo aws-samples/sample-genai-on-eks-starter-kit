@@ -94,6 +94,11 @@ program
   .addHelpCommand(false)
   .action(async () => {
     try {
+      // Check htpasswd if vector-database components are in demo config
+      const hasVectorDatabase = config.demo.components.some((c) => c.category === "vector-database");
+      if (hasVectorDatabase) {
+        await utils.checkHtpasswd();
+      }
       await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
       const installItems = async (items, ITEMS_DIR, itemKey) => {
         const itemPaths = items.map((item) => {
@@ -183,6 +188,11 @@ program
         console.log("No components selected. Exiting.");
         return;
       }
+      // Check htpasswd if vector-database components are selected
+      const hasVectorDatabase = selectedComponents.some((c) => c.startsWith("vector-database/"));
+      if (hasVectorDatabase) {
+        await utils.checkHtpasswd();
+      }
       await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
       for (const component of selectedComponents) {
         const componentDetail = componentDetails[component];
@@ -229,6 +239,10 @@ async function addItemsCommands(itemCategories, ITEMS_DIR, itemsKey, itemKey) {
         .addHelpCommand(false)
         .action(async () => {
           try {
+            // Check htpasswd for vector-database components
+            if (categoryDir === "vector-database") {
+              await utils.checkHtpasswd();
+            }
             await utils.setK8sContext();
             await install();
           } catch (error) {
