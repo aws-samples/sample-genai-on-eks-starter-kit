@@ -27,7 +27,7 @@ fsspec==2024.6.1
 googleapis-common-protos==1.63.2
 griffe==0.36.9
 grpcio==1.65.1
-guardrails-ai==0.5.6
+guardrails-ai==0.5.10
 guardrails-api==0.0.5
 guardrails-api-client==0.3.8
 gunicorn==22.0.0
