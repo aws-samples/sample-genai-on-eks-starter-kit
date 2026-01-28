@@ -23,7 +23,7 @@ spec:
         {{{KARPENTER_PREFIX}}}/instance-generation: "5"
       containers:
         - name: vllm
-          image: vllm/vllm-openai:gptoss
+          image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:gptoss
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

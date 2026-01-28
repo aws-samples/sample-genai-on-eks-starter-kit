@@ -21,7 +21,7 @@ spec:
         {{{KARPENTER_PREFIX}}}/instance-family: g6e
       containers:
         - name: sglang
-          image: docker.io/lmsysorg/sglang:v0.5.0rc1-cu126
+          image: {{DOCKER_IMAGE_PREFIX}}lmsysorg/sglang:v0.5.0rc1-cu126
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

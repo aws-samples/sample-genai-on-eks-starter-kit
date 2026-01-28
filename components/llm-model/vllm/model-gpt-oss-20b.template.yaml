@@ -21,7 +21,7 @@ spec:
         {{{KARPENTER_PREFIX}}}/instance-family: g6e
       containers:
         - name: vllm
-          image: vllm/vllm-openai:gptoss
+          image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:gptoss
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

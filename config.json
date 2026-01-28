@@ -115,7 +115,12 @@
   },
   "terraform": {
     "vars": {
-      "efs_throughput_mode": "bursting"
+      "efs_throughput_mode": "bursting",
+      "enable_ecr_pull_through_cache": false,
+      "dockerhub_username": "",
+      "dockerhub_access_token": "",
+      "github_username": "",
+      "github_token": ""
     }
   }
 }

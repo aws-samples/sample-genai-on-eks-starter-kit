@@ -25,7 +25,7 @@ spec:
         # {{{KARPENTER_PREFIX}}}/instance-gpu-name: h200
       containers:
         - name: sglang
-          image: docker.io/lmsysorg/sglang:v0.4.10.post2-cu126
+          image: {{DOCKER_IMAGE_PREFIX}}lmsysorg/sglang:v0.4.10.post2-cu126
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

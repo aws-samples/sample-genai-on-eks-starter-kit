@@ -22,7 +22,7 @@ spec:
           {{{KARPENTER_PREFIX}}}/instance-family: g6e
         containers:
           - name: vllm
-            image: vllm/vllm-openai:nightly
+            image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:nightly
             imagePullPolicy: IfNotPresent
             securityContext:
               allowPrivilegeEscalation: false
@@ -90,10 +90,10 @@ spec:
             type: RuntimeDefault
         automountServiceAccountToken: false
         nodeSelector:
-          eks.amazonaws.com/instance-family: g6e
+          {{{KARPENTER_PREFIX}}}/instance-family: g6e
         containers:
           - name: vllm
-            image: vllm/vllm-openai:nightly
+            image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:nightly
             imagePullPolicy: IfNotPresent
             securityContext:
               allowPrivilegeEscalation: false

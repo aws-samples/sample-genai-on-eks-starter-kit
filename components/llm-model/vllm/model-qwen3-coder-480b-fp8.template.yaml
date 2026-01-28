@@ -22,7 +22,7 @@ spec:
           {{{KARPENTER_PREFIX}}}/instance-family: g6e
         containers:
           - name: vllm
-            image: vllm/vllm-openai:v0.10.2
+            image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:v0.10.2
             imagePullPolicy: IfNotPresent
             securityContext:
               allowPrivilegeEscalation: false
@@ -95,7 +95,7 @@ spec:
           {{{KARPENTER_PREFIX}}}/instance-family: g6e
         containers:
           - name: vllm
-            image: vllm/vllm-openai:v0.10.2
+            image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:v0.10.2
             imagePullPolicy: IfNotPresent
             securityContext:
               allowPrivilegeEscalation: false

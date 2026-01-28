@@ -42,6 +42,40 @@ variable "enable_lws" {
   default = true
 }
 
+variable "enable_ecr_pull_through_cache" {
+  description = "Enable ECR pull through cache for Docker Hub and GitHub Container Registry images"
+  type        = bool
+  default     = false
+}
+
+variable "dockerhub_username" {
+  description = "Docker Hub username for ECR pull through cache authentication"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "dockerhub_access_token" {
+  description = "Docker Hub access token for ECR pull through cache authentication"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "github_username" {
+  description = "GitHub username for GitHub Container Registry pull through cache authentication"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "github_token" {
+  description = "GitHub Personal Access Token for GitHub Container Registry pull through cache authentication"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 locals {
   account_id = data.aws_caller_identity.current.account_id
 }
