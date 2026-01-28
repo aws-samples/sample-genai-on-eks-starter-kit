@@ -270,6 +270,32 @@ By default, the same region as the EKS cluster will be used. To change it, modif
 
 You can change the values of the `REGION`, `EKS_CLUSTER_NAME`, and `DOMAIN` fields on `.env` (or `.env.local`). Then, Terraform workspace and kubectl context will automatically use those values when running the related `./cli` commands.
 
+### What is ECR Pull Through Cache and should I enable it?
+
+ECR Pull Through Cache caches external container images (from Docker Hub, GitHub Container Registry) in your private ECR registry. This avoids rate limits from public registries and keeps images within your AWS infrastructure.
+
+**Default: Disabled** (`enable_ecr_pull_through_cache = false`)
+
+**Why disabled by default?**
+- Cached images are stored in your private ECR, which incurs storage costs
+- Public registries (Docker Hub, GHCR) work fine for most use cases since EKS nodes have internet access
+
+**When to enable:**
+- You're hitting Docker Hub rate limits (anonymous: 100 pulls/6hrs, authenticated: 200 pulls/6hrs)
+- You want faster, more reliable pulls from within AWS
+- Your organization requires images to be stored in private registries
+
+**To enable:**
+Set `enable_ecr_pull_through_cache = true` in your Terraform variables and run `./cli terraform apply`.
+
+**Supported registries:**
+- `vllm/*` → Docker Hub
+- `lmsysorg/*` → Docker Hub  
+- `ollama/*` → Docker Hub
+- `huggingface/*` → GitHub Container Registry
+
+**Note:** When you `terraform destroy`, the cache rules are deleted but the cached ECR repositories remain. To fully clean up, manually delete repositories starting with `vllm/`, `lmsysorg/`, `ollama/`, or `huggingface/` from ECR.
+
 ## Disclaimer
 
 ⚠️ **This repository is intended for demonstration and learning purposes only.**

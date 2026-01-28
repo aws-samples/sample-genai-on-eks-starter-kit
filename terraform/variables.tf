@@ -42,6 +42,12 @@ variable "enable_lws" {
   default = true
 }
 
+variable "enable_ecr_pull_through_cache" {
+  description = "Enable ECR pull through cache for Docker Hub and GitHub Container Registry images"
+  type        = bool
+  default     = false
+}
+
 locals {
   account_id = data.aws_caller_identity.current.account_id
 }
