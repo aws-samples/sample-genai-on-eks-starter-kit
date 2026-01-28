@@ -39,6 +39,7 @@ export async function install() {
   await $`helm upgrade --install milvus milvus/milvus --namespace milvus --create-namespace -f ${valuesRenderedPath}`;
 
   const { MILVUS_USERNAME, MILVUS_PASSWORD } = process.env;
+  await utils.checkHtpasswd();
   const authContent = await $`htpasswd -nb ${MILVUS_USERNAME} ${MILVUS_PASSWORD}`;
   const secretTemplatePath = path.join(DIR, "secret.template.yaml");
   const secretRenderedPath = path.join(DIR, "secret.rendered.yaml");
