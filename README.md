@@ -286,18 +286,43 @@ ECR Pull Through Cache caches external container images (from Docker Hub, GitHub
 - Your organization requires images to be stored in private registries
 
 **To enable:**
-Modify the `terraform.vars` section on `config.json` (or `config.local.json`) to set `"enable_ecr_pull_through_cache": true` and then run `./cli terraform apply`.
+
+Docker Hub and GitHub Container Registry require authentication for ECR pull through cache. You'll need to provide credentials for both registries.
+
+1. **Get Docker Hub credentials:**
+   - Create a Docker Hub account at [hub.docker.com](https://hub.docker.com)
+   - Generate an access token at [Docker Hub Security Settings](https://hub.docker.com/settings/security) → "New Access Token"
+   - For more information, see [Create and manage access tokens](https://docs.docker.com/security/for-developers/access-tokens/) in the Docker documentation
+
+2. **Get GitHub credentials:**
+   - Generate a Personal Access Token (classic) at [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)
+   - The token needs `read:packages` scope to pull from GitHub Container Registry
+   - For more information, see [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) in the GitHub documentation
+
+3. **Configure credentials in `config.local.json`:**
 
 ```json
 // config.local.json
 {
   "terraform": {
     "vars": {
-      "enable_ecr_pull_through_cache": true
+      "enable_ecr_pull_through_cache": true,
+      "dockerhub_username": "your-dockerhub-username",
+      "dockerhub_access_token": "your-dockerhub-access-token",
+      "github_username": "your-github-username",
+      "github_token": "your-github-personal-access-token"
     }
   }
 }
 ```
+
+4. **Apply the changes:**
+
+```bash
+./cli terraform apply
+```
+
+**Important:** Keep your credentials in `config.local.json` (which is gitignored) and never commit them to version control. The credentials are stored securely in AWS Secrets Manager with the `ecr-pullthroughcache/` prefix.
 
 **Supported registries:**
 - `vllm/*` → Docker Hub
