@@ -56,7 +56,7 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.5
 mdurl==0.1.2
 multidict==6.0.5
-nltk==3.8.1
+nltk==3.9
 openai==1.35.14
 opentelemetry-api==1.25.0
 opentelemetry-exporter-otlp-proto-common==1.25.0
