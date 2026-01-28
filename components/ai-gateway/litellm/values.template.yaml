@@ -128,6 +128,7 @@ proxy_config:
         aws_region_name: {{{@root.integration.bedrock.region}}}
         {{/if}}
     {{/each}}
+    # vllm Models
     {{#each integration.llm-model.vllm}}
     - model_name: vllm/{{@key}}
       litellm_params:
