@@ -21,7 +21,7 @@ locals {
   app       = "calculator-agent"
   namespace = "strands-agents"
   full_name = "${var.name}-${local.namespace}-${local.app}"
-  role_name = "${var.name}-${var.region}}-${local.app}"
+  role_name = "${var.name}-${var.region}-${local.app}"
 }
 resource "aws_ecr_repository" "this" {
   name                 = local.full_name
