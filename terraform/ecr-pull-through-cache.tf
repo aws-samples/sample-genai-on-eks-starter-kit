@@ -39,41 +39,51 @@ resource "aws_secretsmanager_secret_version" "github" {
 }
 
 #------------------------------------------------------------------------------
-# Pull Through Cache Rules - Docker Hub Namespaces
+# Pull Through Cache Rules - Docker Hub
 #------------------------------------------------------------------------------
 
-# vLLM - LLM inference engine
-resource "aws_ecr_pull_through_cache_rule" "vllm" {
+# Docker Hub - All Docker Hub images (vllm/*, lmsysorg/*, ollama/*, etc.)
+# Pull format: {account}.dkr.ecr.{region}.amazonaws.com/docker-hub/namespace/image:tag
+resource "aws_ecr_pull_through_cache_rule" "docker_hub" {
   count                 = var.enable_ecr_pull_through_cache ? 1 : 0
-  ecr_repository_prefix = "vllm"
-  upstream_registry_url = "registry-1.docker.io"
-  credential_arn        = aws_secretsmanager_secret.dockerhub[0].arn
-}
-
-# LMSys - SGLang inference engine
-resource "aws_ecr_pull_through_cache_rule" "lmsysorg" {
-  count                 = var.enable_ecr_pull_through_cache ? 1 : 0
-  ecr_repository_prefix = "lmsysorg"
-  upstream_registry_url = "registry-1.docker.io"
-  credential_arn        = aws_secretsmanager_secret.dockerhub[0].arn
-}
-
-# Ollama - Local LLM runtime
-resource "aws_ecr_pull_through_cache_rule" "ollama" {
-  count                 = var.enable_ecr_pull_through_cache ? 1 : 0
-  ecr_repository_prefix = "ollama"
+  ecr_repository_prefix = "docker-hub"
   upstream_registry_url = "registry-1.docker.io"
   credential_arn        = aws_secretsmanager_secret.dockerhub[0].arn
 }
 
 #------------------------------------------------------------------------------
-# Pull Through Cache Rules - GitHub Container Registry Namespaces
+# Pull Through Cache Rules - GitHub Container Registry
 #------------------------------------------------------------------------------
 
-# Hugging Face - TGI and TEI inference engines
-resource "aws_ecr_pull_through_cache_rule" "huggingface" {
+# GitHub Container Registry - All GHCR images (huggingface/*, etc.)
+# Pull format: {account}.dkr.ecr.{region}.amazonaws.com/github/namespace/image:tag
+resource "aws_ecr_pull_through_cache_rule" "github" {
   count                 = var.enable_ecr_pull_through_cache ? 1 : 0
-  ecr_repository_prefix = "huggingface"
+  ecr_repository_prefix = "github"
   upstream_registry_url = "ghcr.io"
   credential_arn        = aws_secretsmanager_secret.github[0].arn
+}
+
+#------------------------------------------------------------------------------
+# Outputs for CLI usage
+#------------------------------------------------------------------------------
+
+output "account_id" {
+  description = "AWS Account ID"
+  value       = local.account_id
+}
+
+output "region" {
+  description = "AWS Region"
+  value       = var.region
+}
+
+output "enable_ecr_pull_through_cache" {
+  description = "Whether ECR pull through cache is enabled"
+  value       = var.enable_ecr_pull_through_cache
+}
+
+output "ecr_registry_url" {
+  description = "ECR registry URL prefix for pull through cache"
+  value       = var.enable_ecr_pull_through_cache ? "${local.account_id}.dkr.ecr.${var.region}.amazonaws.com" : ""
 }

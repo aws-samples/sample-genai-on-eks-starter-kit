@@ -38,6 +38,20 @@ const renderTemplate = (templatePath, renderedPath, vars) => {
   fs.writeFileSync(renderedPath, template(vars));
 };
 
+// ECR Pull Through Cache 
+const getImagePrefixes = () => {
+  const enabled = config?.terraform?.vars?.enable_ecr_pull_through_cache;
+  const { REGION, AWS_ACCOUNT_ID } = process.env;
+  const ecrBase = enabled ? `${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com` : "";
+
+  return {
+    // Docker Hub: empty when disabled, ECR prefix when enabled
+    DOCKER_IMAGE_PREFIX: enabled ? `${ecrBase}/docker-hub/` : "",
+    // GHCR: ghcr.io/ when disabled, ECR prefix when enabled
+    GHCR_IMAGE_PREFIX: enabled ? `${ecrBase}/github/` : "ghcr.io/",
+  };
+};
+
 // Model Management
 const model = (function () {
   const configureModels = async (models, categoryDir, componentDir) => {
@@ -60,16 +74,23 @@ const model = (function () {
     fs.writeFileSync(configLocalPath, formattedConfig);
   };
 
+  // Helper to get common model template variables
+  const getModelVars = () => {
+    const { EKS_MODE } = process.env;
+    const imagePrefixes = getImagePrefixes();
+    return {
+      KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
+      ...imagePrefixes,
+    };
+  };
+
   const updateModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
+    const modelVars = getModelVars();
     for (const model of models) {
-      const { EKS_MODE } = process.env;
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
-      let modelVars = {
-        KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
-      };
       renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
       if (model.deploy) {
         await $`kubectl apply -f ${modelRenderedPath}`;
@@ -82,16 +103,13 @@ const model = (function () {
   const addModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
+    const modelVars = getModelVars();
     for (const model of models) {
       if (!model.deploy) {
         continue;
       }
-      const { EKS_MODE } = process.env;
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
-      let modelVars = {
-        KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
-      };
       renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
       await $`kubectl apply -f ${modelRenderedPath}`;
     }
@@ -100,13 +118,10 @@ const model = (function () {
   const removeAllModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
+    const modelVars = getModelVars();
     for (const model of models) {
-      const { EKS_MODE } = process.env;
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
-      let modelVars = {
-        KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
-      };
       renderTemplate(modelTemplatePath, modelRenderedPath, modelVars);
       await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
     }
@@ -260,6 +275,7 @@ export default {
   checkRequiredEnvVars,
   setK8sContext,
   renderTemplate,
+  getImagePrefixes,
   model,
   terraform,
   cleanupStandardModeResources,
