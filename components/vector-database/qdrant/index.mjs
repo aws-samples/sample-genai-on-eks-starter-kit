@@ -36,7 +36,6 @@ export async function install() {
   await $`helm upgrade --install qdrant qdrant/qdrant --namespace qdrant --create-namespace -f ${valuesRenderedPath}`;
 
   const { QDRANT_USERNAME, QDRANT_PASSWORD } = process.env;
-  await utils.checkHtpasswd();
   const authContent = await $`htpasswd -nb ${QDRANT_USERNAME} ${QDRANT_PASSWORD}`;
   const secretTemplatePath = path.join(DIR, "secret.template.yaml");
   const secretRenderedPath = path.join(DIR, "secret.rendered.yaml");
