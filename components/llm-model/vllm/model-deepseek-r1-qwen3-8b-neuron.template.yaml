@@ -49,6 +49,7 @@ spec:
               value: /root/.cache/huggingface
             - name: HF_HUB_CACHE
               value: /root/.cache/huggingface/hub
+            # Neuron specific  
             - name: NEURON_RT_NUM_CORES
               value: "2"
             - name: NEURON_RT_VISIBLE_CORES

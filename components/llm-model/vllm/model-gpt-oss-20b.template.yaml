@@ -21,7 +21,7 @@ spec:
         {{{KARPENTER_PREFIX}}}/instance-family: g6e
       containers:
         - name: vllm
-          image: vllm/vllm-openai:gptoss
+          image: vllm/vllm-openai:v0.14.1
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -44,8 +44,6 @@ spec:
                 secretKeyRef:
                   name: hf-token
                   key: token
-            - name: VLLM_ATTENTION_BACKEND
-              value: TRITON_ATTN_VLLM_V1
           resources:
             requests:
               cpu: 3 #75%

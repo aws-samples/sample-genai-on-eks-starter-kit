@@ -19,9 +19,7 @@
         { "name": "qwen3-30b-instruct-fp8", "deploy": true },
         { "name": "qwen3-30b-thinking-fp8", "deploy": false },
         { "name": "qwen3-32b-fp8", "deploy": true },
-        { "name": "qwen3-next-80b-instruct", "deploy": false },
         { "name": "qwen3-next-80b-instruct-fp8", "deploy": false },
-        { "name": "qwen3-next-80b-thinking", "deploy": false },
         { "name": "qwen3-next-80b-thinking-fp8", "deploy": false },
         { "name": "qwen3-coder-30b-fp8", "deploy": false },
         { "name": "qwen3-coder-480b-fp8", "deploy": false },
@@ -30,10 +28,6 @@
         { "name": "qwen3-omni-30b-captioner", "deploy": false },
         { "name": "gpt-oss-20b", "deploy": false },
         { "name": "gpt-oss-120b", "deploy": false },
-        { "name": "deepseek-r1-qwen3-8b", "deploy": false },
-        { "name": "gemma3-27b-gptq", "deploy": false },
-        { "name": "magistral-24b-fp8", "deploy": false },
-        { "name": "llama-4-scout-17b-16e-instruct-fp8", "deploy": false },
         { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": false },
         { "name": "qwen3-8b-neuron", "deploy": false }
       ]

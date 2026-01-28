@@ -22,7 +22,7 @@ spec:
           {{{KARPENTER_PREFIX}}}/instance-family: g6e
         containers:
           - name: vllm
-            image: vllm/vllm-openai:v0.10.2
+            image: vllm/vllm-openai:v0.14.1
             imagePullPolicy: IfNotPresent
             securityContext:
               allowPrivilegeEscalation: false
