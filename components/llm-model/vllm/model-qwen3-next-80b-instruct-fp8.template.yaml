@@ -1,146 +1,88 @@
-apiVersion: leaderworkerset.x-k8s.io/v1
-kind: LeaderWorkerSet
+
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: qwen3-next-80b-instruct-fp8
   namespace: vllm
 spec:
   replicas: 1
-  leaderWorkerTemplate:
-    size: 2
-    restartPolicy: RecreateGroupOnPodRestart
-    leaderTemplate:
-      metadata:
-        labels:
-          app: qwen3-next-80b-instruct-fp8
-          role: leader
-      spec:
-        securityContext:
-          seccompProfile:
-            type: RuntimeDefault
-        automountServiceAccountToken: false
-        nodeSelector:
-          {{{KARPENTER_PREFIX}}}/instance-family: g6e
-        containers:
-          - name: vllm
-            image: vllm/vllm-openai:v0.14.1
-            imagePullPolicy: IfNotPresent
-            securityContext:
-              allowPrivilegeEscalation: false
-              capabilities:
-                drop:
-                  - NET_RAW
-              seccompProfile:
-                type: RuntimeDefault
-            command:
-              - sh
-              - -c
-              - |
-                bash /vllm-workspace/examples/online_serving/multi-node-serving.sh leader --ray_cluster_size=$(LWS_GROUP_SIZE)
-                python3 -m vllm.entrypoints.openai.api_server \
-                --port 8000 \
-                --model Qwen/Qwen3-Next-80B-A3B-Instruct-FP8 \
-                --served-model-name=qwen3-next-80b-instruct-fp8 \
-                --trust-remote-code \
-                --gpu-memory-utilization=0.95 \
-                --max-model-len=262144 \
-                --tensor-parallel-size=1 \
-                --pipeline-parallel-size=2 \
-                --enable-auto-tool-choice \
-                --tool-call-parser=hermes
-                # --tokenizer-mode=auto \
-                # --no-enable-chunked-prefill \
-                # '--speculative-config={"method": "qwen3_next_mtp", "num_speculative_tokens": 2}'
-            env:
-              - name: HUGGING_FACE_HUB_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: hf-token
-                    key: token
-              - name: PYTORCH_CUDA_ALLOC_CONF
-                value: expandable_segments:True
-            ports:
-              - containerPort: 8000
-            resources:
-              requests:
-                cpu: 3 #75%
-                memory: 24Gi #75%
-                nvidia.com/gpu: 1
-              limits:
-                nvidia.com/gpu: 1
-            volumeMounts:
-              - name: huggingface-cache
-                mountPath: /root/.cache/huggingface
-              - name: shm
-                mountPath: /dev/shm
-        volumes:
-          - name: huggingface-cache
-            persistentVolumeClaim:
-              claimName: huggingface-cache
-          - name: shm
-            emptyDir:
-              medium: Memory
-        tolerations:
-          - key: nvidia.com/gpu
-            operator: Exists
-            effect: NoSchedule
-    workerTemplate:
-      metadata:
-        labels:
-          app: qwen3-next-80b-instruct-fp8
-          role: worker
-      spec:
-        securityContext:
-          seccompProfile:
-            type: RuntimeDefault
-        automountServiceAccountToken: false
-        nodeSelector:
-          {{{KARPENTER_PREFIX}}}/instance-family: g6e
-        containers:
-          - name: vllm
-            image: vllm/vllm-openai:nightly
-            imagePullPolicy: IfNotPresent
-            securityContext:
-              allowPrivilegeEscalation: false
-              capabilities:
-                drop:
-                  - NET_RAW
-              seccompProfile:
-                type: RuntimeDefault
-            command:
-              - sh
-              - -c
-              - "bash /vllm-workspace/examples/online_serving/multi-node-serving.sh worker --ray_address=$(LWS_LEADER_ADDRESS)"
-            env:
-              - name: HUGGING_FACE_HUB_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: hf-token
-                    key: token
-              - name: PYTORCH_CUDA_ALLOC_CONF
-                value: expandable_segments:True
-            resources:
-              requests:
-                cpu: 3 #75%
-                memory: 24Gi #75%
-                nvidia.com/gpu: 1
-              limits:
-                nvidia.com/gpu: 1
-            volumeMounts:
-              - name: huggingface-cache
-                mountPath: /root/.cache/huggingface
-              - name: shm
-                mountPath: /dev/shm
-        volumes:
-          - name: huggingface-cache
-            persistentVolumeClaim:
-              claimName: huggingface-cache
-          - name: shm
-            emptyDir:
-              medium: Memory
-        tolerations:
-          - key: nvidia.com/gpu
-            operator: Exists
-            effect: NoSchedule
+  selector:
+    matchLabels:
+      app: qwen3-next-80b-instruct-fp8
+  template:
+    metadata:
+      labels:
+        app: qwen3-next-80b-instruct-fp8
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        {{{KARPENTER_PREFIX}}}/instance-family: g7e
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:v0.14.1
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - Qwen/Qwen3-Next-80B-A3B-Thinking-FP8
+            - --served-model-name=qwen3-next-80b-instruct-fp8
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.95
+            - --max-model-len=65536 # 64K
+            # Qwen3-Next specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+            - --reasoning-parser=qwen3
+            - --async-scheduling
+            - --no-enable-prefix-caching
+            - --max-num-seqs=2
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+            # Qwen3-Next specific      
+            - name: VLLM_USE_FLASHINFER_MOE_FP8
+              value: "1"
+            - name: VLLM_FLASHINFER_MOE_BACKEND
+              value: "latency"
+            - name: VLLM_USE_DEEP_GEMM
+              value: "0"
+            - name: VLLM_USE_TRTLLM_ATTENTION
+              value: "0"
+            - name: VLLM_ATTENTION_BACKEND
+              value: "FLASH_ATTN"
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 6 #75%
+              memory: 48Gi #75%
+              nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
 ---
 apiVersion: v1
 kind: Service
@@ -150,7 +92,6 @@ metadata:
 spec:
   selector:
     app: qwen3-next-80b-instruct-fp8
-    role: leader
   ports:
     - name: http
       port: 8000

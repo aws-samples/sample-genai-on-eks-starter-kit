@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,12 +19,10 @@ spec:
           type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
-        # {{{KARPENTER_PREFIX}}}/instance-family: g6e
-        {{{KARPENTER_PREFIX}}}/instance-category: p
-        {{{KARPENTER_PREFIX}}}/instance-generation: "5"
+        {{{KARPENTER_PREFIX}}}/instance-family: g7e
       containers:
         - name: vllm
-          image: vllm/vllm-openai:gptoss
+          image: vllm/vllm-openai:v0.14.1
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -37,37 +36,42 @@ spec:
             - openai/gpt-oss-120b
             - --served-model-name=gpt-oss-120b
             - --trust-remote-code
-            - --gpu-memory-utilization=0.90
-            - --max-model-len=32768 # 32K
-            # - --max-model-len=131072 # 128K
-            - --tensor-parallel-size=8
+            - --gpu-memory-utilization=0.95
+            - --max-model-len=131072 # 128K
+            # gpt-oss specific
+            - --kv-cache-dtype=fp8
+            - '--compilation-config={"pass_config":{"fuse_allreduce_rms":true,"eliminate_noops":true}}'
             - --async-scheduling
+            - --no-enable-prefix-caching
+            - --max-cudagraph-capture-size=2048
+            - --max-num-batched-tokens=8192
+            - --stream-interval=20
+            - --max-num-seqs=2
           env:
             - name: HUGGING_FACE_HUB_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hf-token
                   key: token
+            - name: VLLM_USE_FLASHINFER_MOE_FP8
+              value: "1"
           ports:
             - name: http
               containerPort: 8000
           resources:
             requests:
-              nvidia.com/gpu: 8
+              cpu: 6 #75%
+              memory: 48Gi #75%
+              nvidia.com/gpu: 1
             limits:
-              nvidia.com/gpu: 8
+              nvidia.com/gpu: 1
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface
-            - name: shm
-              mountPath: /dev/shm
       volumes:
         - name: huggingface-cache
           persistentVolumeClaim:
             claimName: huggingface-cache
-        - name: shm
-          emptyDir:
-            medium: Memory
       tolerations:
         - key: nvidia.com/gpu
           operator: Exists
