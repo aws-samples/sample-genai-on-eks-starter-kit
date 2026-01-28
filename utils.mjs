@@ -10,6 +10,18 @@ let config;
 let configLocalPath;
 let COMPONENTS_DIR;
 
+// Auto-detect AWS Account ID if not set in environment
+const getAwsAccountId = async () => {
+  // Fetch from AWS CLI
+  try {
+    const result = await $`aws sts get-caller-identity --query Account --output text`;
+    return result.stdout.trim();
+  } catch (error) {
+    console.error("Error: Could not determine AWS Account ID. Please set AWS_ACCOUNT_ID in .env or ensure AWS CLI is configured.");
+    return undefined;
+  }
+};
+
 const init = (options) => {
   BASE_DIR = options.BASE_DIR;
   config = options.config;
@@ -39,10 +51,11 @@ const renderTemplate = (templatePath, renderedPath, vars) => {
 };
 
 // ECR Pull Through Cache 
-const getImagePrefixes = () => {
+const getImagePrefixes = async () => {
   const enabled = config?.terraform?.vars?.enable_ecr_pull_through_cache;
-  const { REGION, AWS_ACCOUNT_ID } = process.env;
-  const ecrBase = enabled ? `${AWS_ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com` : "";
+  const { REGION } = process.env;
+  const awsAccountId = await getAwsAccountId();
+  const ecrBase = enabled ? `${awsAccountId}.dkr.ecr.${REGION}.amazonaws.com` : "";
 
   return {
     // Docker Hub: empty when disabled, ECR prefix when enabled
@@ -75,9 +88,9 @@ const model = (function () {
   };
 
   // Helper to get common model template variables
-  const getModelVars = () => {
+  const getModelVars = async () => {
     const { EKS_MODE } = process.env;
-    const imagePrefixes = getImagePrefixes();
+    const imagePrefixes = await getImagePrefixes();
     return {
       KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
       ...imagePrefixes,
@@ -87,7 +100,7 @@ const model = (function () {
   const updateModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
-    const modelVars = getModelVars();
+    const modelVars = await getModelVars();
     for (const model of models) {
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);
@@ -103,7 +116,7 @@ const model = (function () {
   const addModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
-    const modelVars = getModelVars();
+    const modelVars = await getModelVars();
     for (const model of models) {
       if (!model.deploy) {
         continue;
@@ -118,7 +131,7 @@ const model = (function () {
   const removeAllModels = async (models, categoryDir, componentDir) => {
     await setK8sContext();
     const MODELS_DIR = path.join(COMPONENTS_DIR, categoryDir, componentDir);
-    const modelVars = getModelVars();
+    const modelVars = await getModelVars();
     for (const model of models) {
       const modelTemplatePath = path.join(MODELS_DIR, `model-${model.name}.template.yaml`);
       const modelRenderedPath = path.join(MODELS_DIR, `model-${model.name}.rendered.yaml`);

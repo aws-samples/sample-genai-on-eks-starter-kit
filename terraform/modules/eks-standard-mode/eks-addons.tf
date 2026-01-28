@@ -28,6 +28,22 @@ data "aws_iam_policy_document" "karpenter_irsa" {
   }
 }
 
+# ECR Pull Through Cache policy for Karpenter nodes
+resource "aws_iam_policy" "ecr_pull_through_cache" {
+  name        = "${var.name}-ecr-pull-through-cache"
+  description = "Allows EKS nodes to create ECR repositories for pull through cache"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "ECRPullThroughCache"
+      Effect   = "Allow"
+      Action   = "ecr:CreateRepository"
+      Resource = "*"
+    }]
+  })
+}
+
 module "karpenter" {
   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
   version = "21.3.1"
@@ -39,6 +55,11 @@ module "karpenter" {
   node_iam_role_name                      = "${var.name}-node"
   create_pod_identity_association         = false
   iam_role_source_assume_policy_documents = [data.aws_iam_policy_document.karpenter_irsa.json]
+
+  # Enable ECR pull through cache for Karpenter nodes
+  node_iam_role_additional_policies = {
+    ECRPullThroughCache = aws_iam_policy.ecr_pull_through_cache.arn
+  }
 
   depends_on = [module.eks]
 }
