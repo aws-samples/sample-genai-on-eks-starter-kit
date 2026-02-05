@@ -21,7 +21,7 @@ spec:
         {{{KARPENTER_PREFIX}}}/instance-family: g6e
       containers:
         - name: ollama
-          image: ollama/ollama:0.10.1
+          image: {{DOCKER_IMAGE_PREFIX}}ollama/ollama:0.10.1
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
