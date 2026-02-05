@@ -16,7 +16,7 @@ let config;
 let utils;
 
 // Default Dynamo version
-const DEFAULT_RELEASE_VERSION = "0.8.0";
+const DEFAULT_RELEASE_VERSION = "0.8.1";
 
 export async function init(_BASE_DIR, _config, _utils) {
   BASE_DIR = _BASE_DIR;
