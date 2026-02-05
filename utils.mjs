@@ -10,8 +10,17 @@ let config;
 let configLocalPath;
 let COMPONENTS_DIR;
 
+// Check if running in K8s mode (non-EKS)
+const isK8sMode = () => {
+  return process.env.PLATFORM === "k8s";
+};
+
 // Auto-detect AWS Account ID if not set in environment
 const getAwsAccountId = async () => {
+  // Return empty string in K8s mode (no AWS)
+  if (isK8sMode()) {
+    return "";
+  }
   // Fetch from AWS CLI
   try {
     const result = await $`aws sts get-caller-identity --query Account --output text`;
@@ -39,10 +48,30 @@ const checkRequiredEnvVars = (requiredEnvVars) => {
 };
 
 const setK8sContext = async () => {
+  // Skip context switching in K8s mode - use current context
+  if (isK8sMode()) {
+    console.log("K8s mode: Using current kubectl context");
+    return;
+  }
+  
+  // EKS mode: switch to EKS context
   const { EKS_CLUSTER_NAME, REGION } = process.env;
   const contextName = `${EKS_CLUSTER_NAME}-${REGION}`;
   await $`kubectl config use-context ${contextName}`;
 };
+
+// Register Handlebars helpers for platform-aware templating
+handlebars.registerHelper('eq', function(a, b) {
+  return a === b;
+});
+
+handlebars.registerHelper('isK8s', function(options) {
+  return process.env.PLATFORM === 'k8s' ? options.fn(this) : options.inverse(this);
+});
+
+handlebars.registerHelper('isEks', function(options) {
+  return process.env.PLATFORM !== 'k8s' ? options.fn(this) : options.inverse(this);
+});
 
 const renderTemplate = (templatePath, renderedPath, vars) => {
   const templateString = fs.readFileSync(templatePath, "utf8");
@@ -52,6 +81,15 @@ const renderTemplate = (templatePath, renderedPath, vars) => {
 
 // ECR Pull Through Cache 
 const getImagePrefixes = async () => {
+  // K8s mode: use public registries directly
+  if (isK8sMode()) {
+    return {
+      DOCKER_IMAGE_PREFIX: "",
+      GHCR_IMAGE_PREFIX: "ghcr.io/",
+    };
+  }
+  
+  // EKS mode: use ECR Pull Through Cache if enabled
   const enabled = config?.terraform?.vars?.enable_ecr_pull_through_cache;
   const { REGION } = process.env;
   const awsAccountId = await getAwsAccountId();
@@ -91,8 +129,27 @@ const model = (function () {
   const getModelVars = async () => {
     const { EKS_MODE } = process.env;
     const imagePrefixes = await getImagePrefixes();
+    
+    // K8s mode: use platform-specific settings from config
+    if (isK8sMode()) {
+      const k8sConfig = config?.platform?.k8s || {};
+      return {
+        PLATFORM: "k8s",
+        GPU_NODE_SELECTOR_KEY: k8sConfig.gpuNodeSelectorKey || "nvidia.com/gpu.present",
+        GPU_NODE_SELECTOR_VALUE: k8sConfig.gpuNodeSelectorValue || "true",
+        STORAGE_CLASS: k8sConfig.storageClass || "local-path",
+        ...imagePrefixes,
+      };
+    }
+    
+    // EKS mode: use EKS-specific settings
+    const eksConfig = config?.platform?.eks || {};
     return {
+      PLATFORM: "eks",
       KARPENTER_PREFIX: EKS_MODE === "auto" ? "eks.amazonaws.com" : "karpenter.k8s.aws",
+      GPU_NODE_SELECTOR_KEY: eksConfig.gpuNodeSelectorKey || "eks.amazonaws.com/instance-family",
+      GPU_NODE_SELECTOR_VALUE: eksConfig.gpuNodeSelectorValue || "g6e",
+      STORAGE_CLASS: eksConfig.storageClass || "efs",
       ...imagePrefixes,
     };
   };
@@ -139,12 +196,18 @@ const model = (function () {
       await $`kubectl delete -f ${modelRenderedPath} --ignore-not-found`;
     }
   };
-  return { configureModels, updateModels, addModels, removeAllModels };
+  return { configureModels, updateModels, addModels, removeAllModels, getModelVars };
 })();
 
 // Terraform
 const terraform = (function () {
   const setupWorkspace = async function (TERRAFORM_DIR, options = {}) {
+    // Skip terraform in K8s mode
+    if (isK8sMode()) {
+      console.log("K8s mode: Skipping Terraform setup");
+      return;
+    }
+    
     const requiredEnvVars = ["REGION", "EKS_CLUSTER_NAME", "EKS_MODE"];
     checkRequiredEnvVars(requiredEnvVars);
     const { REGION, EKS_CLUSTER_NAME, EKS_MODE, DOMAIN } = process.env;
@@ -185,6 +248,10 @@ const terraform = (function () {
   };
 
   const plan = async function (TERRAFORM_DIR, options = {}) {
+    if (isK8sMode()) {
+      console.log("K8s mode: Skipping Terraform plan");
+      return;
+    }
     const { REGION } = process.env;
     try {
       await setupWorkspace(TERRAFORM_DIR, options);
@@ -195,6 +262,10 @@ const terraform = (function () {
   };
 
   const apply = async function (TERRAFORM_DIR, options = {}) {
+    if (isK8sMode()) {
+      console.log("K8s mode: Skipping Terraform apply");
+      return;
+    }
     const { REGION } = process.env;
     try {
       await setupWorkspace(TERRAFORM_DIR, options);
@@ -205,6 +276,10 @@ const terraform = (function () {
   };
 
   const destroy = async function (TERRAFORM_DIR, options = {}) {
+    if (isK8sMode()) {
+      console.log("K8s mode: Skipping Terraform destroy");
+      return;
+    }
     const { REGION } = process.env;
     try {
       await setupWorkspace(TERRAFORM_DIR, options);
@@ -215,6 +290,10 @@ const terraform = (function () {
   };
 
   const output = async function (TERRAFORM_DIR, options = {}) {
+    if (isK8sMode()) {
+      console.log("K8s mode: Skipping Terraform output");
+      return {};
+    }
     try {
       await setupWorkspace(TERRAFORM_DIR, options);
       if (options.outputName) {
@@ -289,6 +368,7 @@ export default {
   setK8sContext,
   renderTemplate,
   getImagePrefixes,
+  isK8sMode,
   model,
   terraform,
   cleanupStandardModeResources,

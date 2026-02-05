@@ -1,4 +1,17 @@
 {
+  "platform": {
+    "type": "eks",
+    "eks": {
+      "storageClass": "efs",
+      "gpuNodeSelectorKey": "eks.amazonaws.com/instance-family",
+      "gpuNodeSelectorValue": "g6e"
+    },
+    "k8s": {
+      "storageClass": "local-path",
+      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
+      "gpuNodeSelectorValue": "true"
+    }
+  },
   "demo": {
     "components": [
       { "category": "llm-model", "component": "vllm" },
