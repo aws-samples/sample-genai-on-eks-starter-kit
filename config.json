@@ -16,12 +16,24 @@
         "migManagerEnabled": false,
         "useAMP": false,
         "ampWorkspaceId": ""
+      },
+      "dynamoPlatform": {
+        "releaseVersion": "0.8.1",
+        "namespace": "dynamo-system",
+        "groveEnabled": true,
+        "kaiSchedulerEnabled": true
       }
     },
     "k8s": {
       "storageClass": "local-path",
       "gpuNodeSelectorKey": "nvidia.com/gpu.present",
-      "gpuNodeSelectorValue": "true"
+      "gpuNodeSelectorValue": "true",
+      "dynamoPlatform": {
+        "releaseVersion": "0.8.1",
+        "namespace": "dynamo-system",
+        "groveEnabled": true,
+        "kaiSchedulerEnabled": true
+      }
     }
   },
   "demo": {

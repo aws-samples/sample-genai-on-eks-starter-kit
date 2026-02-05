@@ -1,0 +1,92 @@
+# ==============================================================================
+# Dynamo Platform Helm Values
+# Platform: {{#if IS_K8S}}Kubernetes{{else}}EKS{{/if}}
+# ==============================================================================
+
+# ==============================================================================
+# Dynamo Operator
+# - Manages DynamoGraphDeployment CRDs
+# ==============================================================================
+dynamo-operator:
+  enabled: true
+  
+  # Image configuration (NGC public registry)
+  image:
+    repository: nvcr.io/nvidia/ai-dynamo/dynamo-operator
+    # tag: Uses chart default
+
+# ==============================================================================
+# etcd - Distributed key-value store
+# - Required for Dynamo worker coordination
+# ==============================================================================
+etcd:
+  enabled: true
+  replicaCount: 1
+  
+  # Persistence for etcd data
+  persistence:
+    enabled: true
+    storageClass: "{{{STORAGE_CLASS}}}"
+    size: 10Gi
+
+# ==============================================================================
+# NATS - High-performance messaging
+# - Required for Dynamo service communication
+# ==============================================================================
+nats:
+  enabled: true
+  
+  # Use single-node config for simplicity
+  config:
+    cluster:
+      enabled: false
+    jetstream:
+      enabled: true
+      memoryStore:
+        enabled: true
+        maxSize: 1Gi
+      fileStore:
+        enabled: true
+        dir: /data
+        pvc:
+          enabled: true
+          storageClassName: "{{{STORAGE_CLASS}}}"
+          size: 10Gi
+
+# ==============================================================================
+# Grove - Multi-node inference orchestrator
+# - Handles GPU-aware scheduling and request routing
+# - Required for disaggregated serving across multiple nodes
+# ==============================================================================
+grove:
+  enabled: {{{GROVE_ENABLED}}}
+  
+  # Image configuration (NGC public registry)
+  image:
+    repository: nvcr.io/nvidia/ai-dynamo/grove
+    # tag: Uses chart default
+
+# ==============================================================================
+# KAI Scheduler - AI workload scheduler
+# - Optimized for GPU/AI workload placement
+# - Integrates with Kubernetes scheduler
+# ==============================================================================
+kai-scheduler:
+  enabled: {{{KAI_SCHEDULER_ENABLED}}}
+
+# ==============================================================================
+# Common Configuration
+# ==============================================================================
+
+# Tolerations for GPU nodes (allows components to run on GPU tainted nodes)
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+{{#if IS_EKS}}
+  # EKS Auto Mode GPU node taint
+  - key: eks.amazonaws.com/compute-type
+    operator: Equal
+    value: auto
+    effect: NoSchedule
+{{/if}}
