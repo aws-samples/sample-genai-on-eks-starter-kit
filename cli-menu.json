@@ -1,6 +1,13 @@
 {
   "componentCategories": [
     {
+      "dir": "nvidia-platform",
+      "name": "NVIDIA Platform",
+      "components": [
+        { "dir": "gpu-operator", "name": "GPU Operator" }
+      ]
+    },
+    {
       "dir": "ai-gateway",
       "name": "AI Gateway",
       "components": [

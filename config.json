@@ -3,8 +3,20 @@
     "type": "eks",
     "eks": {
       "storageClass": "efs",
-      "gpuNodeSelectorKey": "eks.amazonaws.com/instance-family",
-      "gpuNodeSelectorValue": "g6e"
+      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
+      "gpuNodeSelectorValue": "true",
+      "gpuOperator": {
+        "driverEnabled": false,
+        "toolkitEnabled": false,
+        "devicePluginEnabled": false,
+        "gfdEnabled": true,
+        "dcgmExporterEnabled": true,
+        "gdsEnabled": true,
+        "nfdEnabled": false,
+        "migManagerEnabled": false,
+        "useAMP": false,
+        "ampWorkspaceId": ""
+      }
     },
     "k8s": {
       "storageClass": "local-path",
