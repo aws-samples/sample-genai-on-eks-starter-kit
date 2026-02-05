@@ -38,6 +38,22 @@ const checkRequiredEnvVars = (requiredEnvVars) => {
   }
 };
 
+const checkHtpasswd = async () => {
+  try {
+    await $`which htpasswd`.quiet();
+  } catch {
+    console.error("\n❌ Error: htpasswd command not found.");
+    console.error("\nhtpasswd is required for generating HTTP Basic Authentication credentials.");
+    console.error("Please install it based on your operating system:\n");
+    console.error("  macOS (Homebrew):        brew install httpd");
+    console.error("  Debian/Ubuntu:           sudo apt-get install apache2-utils");
+    console.error("  RHEL/CentOS/Amazon Linux: sudo yum install httpd-tools");
+    console.error("  Fedora:                  sudo dnf install httpd-tools");
+    console.error("  Alpine:                  apk add apache2-utils\n");
+    process.exit(1);
+  }
+};
+
 const setK8sContext = async () => {
   const { EKS_CLUSTER_NAME, REGION } = process.env;
   const contextName = `${EKS_CLUSTER_NAME}-${REGION}`;
@@ -286,6 +302,7 @@ const cleanupStandardModeResources = async () => {
 export default {
   init,
   checkRequiredEnvVars,
+  checkHtpasswd,
   setK8sContext,
   renderTemplate,
   getImagePrefixes,
