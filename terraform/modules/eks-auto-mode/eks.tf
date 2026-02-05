@@ -1,6 +1,6 @@
 # ECR Pull Through Cache policy for EKS Auto Mode nodes
 resource "aws_iam_policy" "ecr_pull_through_cache" {
-  name        = "${var.name}-ecr-pull-through-cache"
+  name        = "${var.name}-${var.region}-ecr-pull-through-cache"
   description = "Allows EKS nodes to create ECR repositories for pull through cache"
 
   policy = jsonencode({
