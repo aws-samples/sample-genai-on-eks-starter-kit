@@ -3,12 +3,22 @@
 # Platform: {{#if IS_K8S}}Kubernetes{{else}}EKS{{/if}}
 # ==============================================================================
 
+{{#if NGC_SECRET_ENABLED}}
+# NGC imagePullSecrets (for private images in future versions)
+imagePullSecrets:
+  - name: ngc-secret
+{{/if}}
+
 # ==============================================================================
 # Dynamo Operator
 # - Manages DynamoGraphDeployment CRDs
 # ==============================================================================
 dynamo-operator:
   enabled: true
+{{#if NGC_SECRET_ENABLED}}
+  imagePullSecrets:
+    - name: ngc-secret
+{{/if}}
   
   # Image configuration (NGC public registry)
   image:
@@ -57,14 +67,10 @@ nats:
 # Grove - Multi-node inference orchestrator
 # - Handles GPU-aware scheduling and request routing
 # - Required for disaggregated serving across multiple nodes
+# - Downloaded from ghcr.io/nvidia/grove (public)
 # ==============================================================================
 grove:
   enabled: {{{GROVE_ENABLED}}}
-  
-  # Image configuration (NGC public registry)
-  image:
-    repository: nvcr.io/nvidia/ai-dynamo/grove
-    # tag: Uses chart default
 
 # ==============================================================================
 # KAI Scheduler - AI workload scheduler
