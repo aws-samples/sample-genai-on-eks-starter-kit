@@ -372,7 +372,7 @@ export async function install() {
     console.log(`  Checking if model '${model}' is cached in PVC...`);
     try {
       const checkPodName = `model-check-${Date.now().toString(36)}`;
-      await $`kubectl run ${checkPodName} --rm -i --restart=Never --image=busybox \
+      const checkResult = await $`kubectl run ${checkPodName} --rm -i --restart=Never --image=busybox \
         --overrides=${JSON.stringify({
           spec: {
             tolerations: [{ key: "nvidia.com/gpu", operator: "Exists", effect: "NoSchedule" }],
@@ -387,7 +387,8 @@ export async function install() {
         })} \
         -n ${namespace}`.quiet();
       
-      const output = (await $`kubectl logs ${checkPodName} -n ${namespace}`.quiet().catch(() => ({ stdout: "" }))).stdout;
+      // --rm -i: output comes directly from stdout of kubectl run
+      const output = checkResult.stdout;
       if (output.includes("MODEL_EXISTS")) {
         console.log("  ✅ Model already cached in PVC. Skipping download.");
         preDownloadModel = false;
@@ -395,10 +396,16 @@ export async function install() {
         console.log("  ⚠️  Model not found in PVC. Will pre-download.");
         preDownloadModel = true;
       }
-    } catch {
-      // Check failed, default to download
-      console.log("  ⚠️  Could not verify model cache. Will pre-download to be safe.");
-      preDownloadModel = true;
+    } catch (e) {
+      // Check pod might have failed or timed out
+      const output = e?.stdout || "";
+      if (output.includes("MODEL_EXISTS")) {
+        console.log("  ✅ Model already cached in PVC. Skipping download.");
+        preDownloadModel = false;
+      } else {
+        console.log("  ⚠️  Could not verify model cache. Will pre-download to be safe.");
+        preDownloadModel = true;
+      }
     }
   }
   
@@ -654,49 +661,6 @@ spec:
   await $`kubectl apply -f ${renderedPath} -n ${namespace}`;
   
   console.log("\n✅ Deployment created!");
-  console.log("\nWaiting for all pods to be ready (this may take a few minutes for model loading)...");
-  
-  // Wait for worker pods to be ready
-  const maxWaitMin = 15;
-  const pollSec = 15;
-  let ready = false;
-  
-  for (let elapsed = 0; elapsed < maxWaitMin * 60; elapsed += pollSec) {
-    try {
-      const result = await $`kubectl get pods -n ${namespace} -l nvidia.com/dynamograph=${deploymentName} --no-headers`.quiet();
-      const lines = result.stdout.trim().split("\n").filter(l => l);
-      const allRunning = lines.length > 0 && lines.every(l => l.includes("Running"));
-      const allReady = lines.every(l => {
-        const match = l.match(/(\d+)\/(\d+)/);
-        return match && match[1] === match[2];
-      });
-      
-      if (allRunning && allReady) {
-        ready = true;
-        break;
-      }
-      
-      // Show progress
-      if (elapsed % 30 === 0) {
-        const summary = lines.map(l => {
-          const parts = l.trim().split(/\s+/);
-          return `${parts[0].split("-").pop()}: ${parts[1]} ${parts[2]}`;
-        }).join(", ");
-        console.log(`  [${Math.floor(elapsed / 60)}m] ${summary || "waiting..."}`);
-      }
-    } catch {}
-    
-    await new Promise(resolve => setTimeout(resolve, pollSec * 1000));
-  }
-  
-  if (!ready) {
-    console.log("\n⚠️  Pods not ready yet. Check status manually:");
-    console.log(`  kubectl get pods -n ${namespace} -l nvidia.com/dynamograph=${deploymentName}`);
-    console.log(`  kubectl logs -f <pod-name> -n ${namespace}`);
-    return;
-  }
-  
-  await printStatus(namespace, deploymentName);
   
   // Usage instructions - platform-specific
   const modelName = servedModelName || model;
@@ -706,10 +670,12 @@ spec:
   console.log("\n========================================");
   console.log("Next Steps");
   console.log("========================================");
+  console.log("\n0. Watch pods until ready:");
+  console.log(`   kubectl get pods -n ${namespace} | grep ${deploymentName}`);
   
   if (isK8s) {
     // K8s mode: port-forward
-    console.log("\n1. Port-forward the frontend service:");
+    console.log("\n1. Port-forward the frontend service (after pods are ready):");
     console.log(`   kubectl port-forward svc/${frontendSvc} 8000:8000 -n ${namespace} &`);
     console.log("\n2. Test the API:");
     console.log(`   curl localhost:8000/v1/chat/completions \\`);
@@ -734,33 +700,6 @@ spec:
   
   console.log("\n4. Uninstall:");
   console.log(`   ./cli nvidia-platform dynamo-vllm uninstall`);
-}
-
-async function printStatus(namespace, deploymentName) {
-  console.log("\n========================================");
-  console.log("Dynamo vLLM Deployment Status");
-  console.log("========================================\n");
-  
-  console.log("DynamoGraphDeployment:");
-  try {
-    await $`kubectl get dynamographdeployment ${deploymentName} -n ${namespace}`;
-  } catch {
-    console.log("  (Deployment not found)");
-  }
-  
-  console.log("\nPods:");
-  try {
-    await $`kubectl get pods -n ${namespace} -l nvidia.com/dynamograph=${deploymentName}`;
-  } catch {
-    console.log("  (No pods found)");
-  }
-  
-  console.log("\nServices:");
-  try {
-    await $`kubectl get svc -n ${namespace} -l nvidia.com/dynamograph=${deploymentName}`;
-  } catch {
-    console.log("  (No services found)");
-  }
 }
 
 export async function uninstall() {
