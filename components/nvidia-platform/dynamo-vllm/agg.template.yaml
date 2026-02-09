@@ -1,0 +1,85 @@
+# ==============================================================================
+# Dynamo vLLM Aggregated Deployment
+# - Single worker handling both prefill and decode
+# - Simpler setup, suitable for smaller models
+# ==============================================================================
+apiVersion: nvidia.com/v1alpha1
+kind: DynamoGraphDeployment
+metadata:
+  name: {{{DEPLOYMENT_NAME}}}
+spec:
+  # Environment variables for all services
+  envs:
+    - name: DYN_LOG
+      value: "info"
+  
+  services:
+    # Frontend: OpenAI-compatible API server
+    Frontend:
+      envFromSecret: hf-token-secret
+      componentType: frontend
+      replicas: 1
+      resources:
+        requests:
+          cpu: "2"
+          memory: "4Gi"
+        limits:
+          cpu: "4"
+          memory: "8Gi"
+      extraPodSpec:
+        mainContainer:
+          image: nvcr.io/nvidia/ai-dynamo/vllm-runtime:{{{IMAGE_TAG}}}
+{{#if IS_EKS}}
+        tolerations:
+          - key: nvidia.com/gpu
+            operator: Exists
+            effect: NoSchedule
+          - key: eks.amazonaws.com/compute-type
+            operator: Equal
+            value: auto
+            effect: NoSchedule
+{{/if}}
+    
+    # VllmWorker: Handles both prefill and decode
+    VllmWorker:
+      envFromSecret: hf-token-secret
+      componentType: worker
+      replicas: 1
+      resources:
+        requests:
+          cpu: "4"
+          memory: "16Gi"
+        limits:
+          cpu: "8"
+          memory: "32Gi"
+          nvidia.com/gpu: "{{{GPU_COUNT}}}"
+      extraPodSpec:
+        mainContainer:
+          image: nvcr.io/nvidia/ai-dynamo/vllm-runtime:{{{IMAGE_TAG}}}
+          workingDir: /workspace/examples/backends/vllm
+          command:
+            - python3
+            - -m
+            - dynamo.vllm
+          args:
+            - --model
+            - "{{{MODEL}}}"
+{{#if IS_EKS}}
+        nodeSelector:
+          {{{GPU_NODE_SELECTOR_KEY}}}: "{{{GPU_NODE_SELECTOR_VALUE}}}"
+        tolerations:
+          - key: nvidia.com/gpu
+            operator: Exists
+            effect: NoSchedule
+          - key: eks.amazonaws.com/compute-type
+            operator: Equal
+            value: auto
+            effect: NoSchedule
+{{else}}
+        nodeSelector:
+          {{{GPU_NODE_SELECTOR_KEY}}}: "{{{GPU_NODE_SELECTOR_VALUE}}}"
+        tolerations:
+          - key: nvidia.com/gpu
+            operator: Exists
+            effect: NoSchedule
+{{/if}}

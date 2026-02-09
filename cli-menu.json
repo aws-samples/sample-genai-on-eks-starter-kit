@@ -5,7 +5,8 @@
       "name": "NVIDIA Platform",
       "components": [
         { "dir": "gpu-operator", "name": "GPU Operator" },
-        { "dir": "dynamo-platform", "name": "Dynamo Platform" }
+        { "dir": "dynamo-platform", "name": "Dynamo Platform" },
+        { "dir": "dynamo-vllm", "name": "Dynamo vLLM Serving" }
       ]
     },
     {

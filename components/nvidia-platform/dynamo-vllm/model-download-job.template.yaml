@@ -1,0 +1,88 @@
+# ==============================================================================
+# Model Download Job
+# Pre-downloads HuggingFace model to PVC before deployment
+# This prevents timeout/OOM during vLLM worker startup
+# ==============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{{JOB_NAME}}}
+  labels:
+    app: dynamo-model-download
+    model: "{{{MODEL_SHORT_NAME}}}"
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: dynamo-model-download
+        model: "{{{MODEL_SHORT_NAME}}}"
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: model-download
+          image: python:3.11-slim
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "=========================================="
+              echo "Model Download Job"
+              echo "Model: {{{MODEL}}}"
+              echo "Target: /opt/models"
+              echo "=========================================="
+              pip install -q "huggingface_hub[hf_transfer]"
+              export HF_HUB_ENABLE_HF_TRANSFER=1
+              if [ -n "$HF_TOKEN" ]; then
+                echo "Authenticating with HuggingFace..."
+                python3 -c "from huggingface_hub import login; login(token='${HF_TOKEN}')"
+              fi
+              echo "Downloading model..."
+              python3 -c "
+              from huggingface_hub import snapshot_download
+              path = snapshot_download(
+                  repo_id='{{{MODEL}}}',
+                  cache_dir='/opt/models',
+                  resume_download=True,
+              )
+              print('Model downloaded to: ' + path)
+              "
+              echo "=========================================="
+              echo "Download complete!"
+              echo "=========================================="
+              du -sh /opt/models/hub/models--* 2>/dev/null || du -sh /opt/models/* 2>/dev/null || echo "No files found"
+          env:
+{{#if HAS_HF_TOKEN}}
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token-secret
+                  key: HF_TOKEN
+{{/if}}
+            - name: HF_HOME
+              value: /opt/models
+          resources:
+            requests:
+              cpu: "2"
+              memory: "8Gi"
+            limits:
+              cpu: "4"
+              memory: "16Gi"
+          volumeMounts:
+            - name: model-cache
+              mountPath: /opt/models
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: {{{MODEL_CACHE_PVC_NAME}}}
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+{{#if IS_EKS}}
+        - key: eks.amazonaws.com/compute-type
+          operator: Equal
+          value: auto
+          effect: NoSchedule
+{{/if}}
