@@ -224,20 +224,13 @@ export async function install() {
   console.log("\n[2/6] Model & Deployment Configuration...");
   
   // Model selection
-  const { model, servedModelName } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "model",
-      message: "Enter model name (HuggingFace format):",
-      default: "nvidia/Llama-3.3-70B-Instruct-FP8",
-    },
-    {
-      type: "input",
-      name: "servedModelName",
-      message: "API served model name (optional, defaults to model name):",
-      default: "",
-    },
-  ]);
+  const { model } = await inquirer.prompt([{
+    type: "input",
+    name: "model",
+    message: "Enter model name (HuggingFace format):",
+    default: "nvidia/Llama-3.3-70B-Instruct-FP8",
+  }]);
+  const servedModelName = model; // API served name = model name
   
   // Deployment mode
   const { deploymentMode } = await inquirer.prompt([{
@@ -323,26 +316,60 @@ export async function install() {
   const { enableKvbm } = await inquirer.prompt([{
     type: "confirm",
     name: "enableKvbm",
-    message: "Enable KV Cache Offloading (KVBM - offload to CPU/Disk)?",
+    message: "Enable KV Cache Offloading (KVBM - offload GPU KV cache to CPU/Disk)?",
     default: false,
   }]);
   
   let kvbmConfig = {};
   if (enableKvbm) {
-    kvbmConfig = await inquirer.prompt([
-      {
-        type: "input",
-        name: "cpuCacheGB",
-        message: "CPU cache size (GB):",
-        default: "100",
-      },
-      {
-        type: "input",
-        name: "diskCacheGB",
-        message: "Disk cache size (GB, 0 to disable):",
-        default: "0",
-      },
-    ]);
+    // CPU cache (required for KVBM)
+    const { cpuCacheGB } = await inquirer.prompt([{
+      type: "input",
+      name: "cpuCacheGB",
+      message: "CPU pinned memory cache size (GB):",
+      default: "100",
+      validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
+    }]);
+    kvbmConfig.cpuCacheGB = cpuCacheGB;
+    
+    // Disk/SSD cache (optional tier 2)
+    const { enableDiskCache } = await inquirer.prompt([{
+      type: "confirm",
+      name: "enableDiskCache",
+      message: "Enable Disk/SSD offloading (GPU → CPU → Disk tiered cache)?",
+      default: false,
+    }]);
+    
+    if (enableDiskCache) {
+      const diskConfig = await inquirer.prompt([
+        {
+          type: "input",
+          name: "diskCacheGB",
+          message: "Disk cache size (GB):",
+          default: "200",
+        },
+        {
+          type: "input",
+          name: "diskCacheDir",
+          message: "Disk cache directory (use fast SSD/NVMe path):",
+          default: isK8s ? "/tmp" : "/mnt/nvme/kvbm_cache",
+        },
+        {
+          type: "confirm",
+          name: "enableDiskFilter",
+          message: "Enable disk offload frequency filter (recommended for SSD lifespan)?",
+          default: true,
+        },
+      ]);
+      kvbmConfig.diskCacheGB = diskConfig.diskCacheGB;
+      kvbmConfig.diskCacheDir = diskConfig.diskCacheDir;
+      kvbmConfig.disableDiskFilter = !diskConfig.enableDiskFilter;
+      // zerofill is only needed for network filesystems (NFS/EFS/Lustre)
+      // Disk cache should always be on local SSD, so this is almost never needed
+      kvbmConfig.zerofillFallback = false;
+    } else {
+      kvbmConfig.diskCacheGB = "0";
+    }
   }
   
   // Model cache storage (always enabled - required for model persistence)
@@ -367,8 +394,7 @@ export async function install() {
     console.log(`  ✅ Model cache PVC '${pvcName}' already exists`);
     modelCacheConfig = { pvcName, createPvc: false };
     
-    // Auto-detect: check if model already exists in PVC
-    const modelDir = model.replace("/", "--");
+    // Auto-detect: check if model already exists in PVC at /opt/models/<model>/
     console.log(`  Checking if model '${model}' is cached in PVC...`);
     try {
       const checkPodName = `model-check-${Date.now().toString(36)}`;
@@ -379,7 +405,7 @@ export async function install() {
             containers: [{
               name: checkPodName,
               image: "busybox",
-              command: ["sh", "-c", `ls /opt/models/hub/models--${modelDir}/snapshots/*/config.json 2>/dev/null && echo MODEL_EXISTS || echo MODEL_MISSING`],
+              command: ["sh", "-c", `ls /opt/models/${model}/*.safetensors 2>/dev/null && echo MODEL_EXISTS || echo MODEL_MISSING`],
               volumeMounts: [{ name: "cache", mountPath: "/opt/models" }],
             }],
             volumes: [{ name: "cache", persistentVolumeClaim: { claimName: pvcName } }],
@@ -466,18 +492,16 @@ export async function install() {
   const modelShortName = model.split("/").pop().toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30);
   const deploymentName = `vllm-${modelShortName}-${deploymentMode}`;
   
-  // Convert additional args to YAML format
-  const additionalArgsYaml = additionalArgs
-    ? additionalArgs.split(" ")
-        .filter(arg => arg.trim())
-        .map(arg => `            - "${arg}"`)
-        .join("\n")
-    : "";
+  // Additional args as inline string (for shell command mode)
+  const additionalArgsInline = additionalArgs || "";
+  
+  const modelLocalPath = `/opt/models/${model}`;  // e.g., /opt/models/nvidia/Qwen3-14B-FP8
   
   const templateVars = {
     // Basic
     DEPLOYMENT_NAME: deploymentName,
     MODEL: model,
+    MODEL_LOCAL_PATH: modelLocalPath,
     SERVED_MODEL_NAME: servedModelName || model,
     IMAGE_TAG: imageTag,
     
@@ -509,6 +533,12 @@ export async function install() {
     KVBM_CPU_CACHE_GB: kvbmConfig.cpuCacheGB || "0",
     KVBM_DISK_CACHE_GB: kvbmConfig.diskCacheGB || "0",
     ENABLE_KVBM_DISK: enableKvbm && parseInt(kvbmConfig.diskCacheGB || "0") > 0,
+    KVBM_DISK_CACHE_DIR: kvbmConfig.diskCacheDir || "/tmp",
+    KVBM_DISABLE_DISK_FILTER: kvbmConfig.disableDiskFilter || false,
+    KVBM_ZEROFILL_FALLBACK: kvbmConfig.zerofillFallback || false,
+    // KVBM memory: CPU cache + 20GB overhead for vLLM engine + OS
+    KVBM_MEMORY_REQUEST: enableKvbm ? `${parseInt(kvbmConfig.cpuCacheGB || "0") + 16}Gi` : "16Gi",
+    KVBM_MEMORY_LIMIT: enableKvbm ? `${parseInt(kvbmConfig.cpuCacheGB || "0") + 32}Gi` : "64Gi",
     
     // Model Cache
     ENABLE_MODEL_CACHE: enableModelCache,
@@ -516,8 +546,8 @@ export async function install() {
     MODEL_CACHE_SIZE: modelCacheConfig.cacheSize || "500Gi",
     CREATE_MODEL_CACHE_PVC: modelCacheConfig.createPvc || false,
     
-    // Additional args (pre-formatted for YAML)
-    ADDITIONAL_ARGS_YAML: additionalArgsYaml,
+    // Additional args (inline for shell command)
+    ADDITIONAL_ARGS_INLINE: additionalArgsInline,
     
     // Platform
     IS_K8S: isK8s,
@@ -564,7 +594,16 @@ export async function install() {
     console.log(`  Workers:        ${aggReplicas} replica(s)`);
   }
   console.log(`  KV Router:      ${enableKvRouter ? "Enabled" : "Disabled"}`);
-  console.log(`  KV Offloading:  ${enableKvbm ? `Enabled (CPU: ${kvbmConfig.cpuCacheGB}GB, Disk: ${kvbmConfig.diskCacheGB}GB)` : "Disabled"}`);
+  if (enableKvbm) {
+    let kvbmSummary = `CPU: ${kvbmConfig.cpuCacheGB}GB`;
+    if (parseInt(kvbmConfig.diskCacheGB || "0") > 0) {
+      kvbmSummary += `, Disk: ${kvbmConfig.diskCacheGB}GB (${kvbmConfig.diskCacheDir})`;
+      kvbmSummary += kvbmConfig.disableDiskFilter ? " [filter OFF]" : " [filter ON]";
+    }
+    console.log(`  KV Offloading:  Enabled (${kvbmSummary})`);
+  } else {
+    console.log(`  KV Offloading:  Disabled`);
+  }
   console.log(`  Model Cache:    ${modelCacheConfig.pvcName} (${storageClass})`);
   console.log(`  Pre-Download:   ${preDownloadModel ? "Yes (will download before deploy)" : "No (vLLM downloads on startup)"}`);
   

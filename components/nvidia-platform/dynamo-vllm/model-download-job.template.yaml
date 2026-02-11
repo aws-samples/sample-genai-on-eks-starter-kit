@@ -1,7 +1,7 @@
 # ==============================================================================
 # Model Download Job
-# Pre-downloads HuggingFace model to PVC before deployment
-# This prevents timeout/OOM during vLLM worker startup
+# Downloads model to /opt/models/<org>/<model-name> using --local-dir
+# vLLM uses --model pointing to this exact path
 # ==============================================================================
 apiVersion: batch/v1
 kind: Job
@@ -27,25 +27,25 @@ spec:
           args:
             - |
               set -e
+              MODEL_ID="{{{MODEL}}}"
+              LOCAL_DIR="/opt/models/${MODEL_ID}"
               echo "=========================================="
               echo "Model Download Job"
-              echo "Model: {{{MODEL}}}"
-              echo "Target: /opt/models"
+              echo "Model: ${MODEL_ID}"
+              echo "Target: ${LOCAL_DIR}"
               echo "=========================================="
-              echo "Cleaning up stale lock files..."
-              find /opt/models -name "*.lock" -delete 2>/dev/null || true
               pip install -q "huggingface_hub[hf_transfer]"
               export HF_HUB_ENABLE_HF_TRANSFER=1
               if [ -n "$HF_TOKEN" ]; then
                 echo "Authenticating with HuggingFace..."
                 python3 -c "from huggingface_hub import login; login(token='${HF_TOKEN}')"
               fi
-              echo "Downloading model..."
+              echo "Downloading model to ${LOCAL_DIR}..."
               python3 -c "
               from huggingface_hub import snapshot_download
               path = snapshot_download(
-                  repo_id='{{{MODEL}}}',
-                  cache_dir='/opt/models',
+                  repo_id='${MODEL_ID}',
+                  local_dir='${LOCAL_DIR}',
                   resume_download=True,
               )
               print('Model downloaded to: ' + path)
@@ -53,7 +53,7 @@ spec:
               echo "=========================================="
               echo "Download complete!"
               echo "=========================================="
-              du -sh /opt/models/hub/models--* 2>/dev/null || du -sh /opt/models/* 2>/dev/null || echo "No files found"
+              ls -lh ${LOCAL_DIR}/*.safetensors 2>/dev/null || ls ${LOCAL_DIR}/ || echo "No files found"
           env:
 {{#if HAS_HF_TOKEN}}
             - name: HF_TOKEN
@@ -62,8 +62,6 @@ spec:
                   name: hf-token-secret
                   key: HF_TOKEN
 {{/if}}
-            - name: HF_HOME
-              value: /opt/models
           resources:
             requests:
               cpu: "2"
