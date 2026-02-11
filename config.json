@@ -25,7 +25,7 @@
       }
     },
     "k8s": {
-      "storageClass": "local-path",
+      "storageClass": "nfs",
       "gpuNodeSelectorKey": "nvidia.com/gpu.present",
       "gpuNodeSelectorValue": "true",
       "dynamoPlatform": {
