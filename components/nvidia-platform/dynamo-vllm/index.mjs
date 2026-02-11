@@ -245,26 +245,85 @@ export async function install() {
   }]);
   
   // Parallelism configuration
-  const { tensorParallel, pipelineParallel } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "tensorParallel",
-      message: "Tensor Parallel Size (TP - split model across GPUs):",
-      default: "4",
-      validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
-    },
-    {
-      type: "input",
-      name: "pipelineParallel",
-      message: "Pipeline Parallel Size (PP - split layers across GPUs, usually 1):",
-      default: "1",
-      validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
-    },
-  ]);
+  // Parallelism - different for agg vs disagg
+  let tensorParallel, pipelineParallel, gpuCount;
+  let prefillTP, prefillPP, prefillGpuCount;
+  let decodeTP, decodePP, decodeGpuCount;
   const dataParallel = "1"; // DP는 Dynamo에서 replicas로 대체
   
-  const gpuCount = parseInt(tensorParallel) * parseInt(pipelineParallel);
-  console.log(`  → Total GPUs per worker: ${gpuCount} (TP=${tensorParallel} × PP=${pipelineParallel})`);
+  if (deploymentMode === "agg") {
+    const parallelConfig = await inquirer.prompt([
+      {
+        type: "input",
+        name: "tensorParallel",
+        message: "Tensor Parallel Size (TP):",
+        default: "4",
+        validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
+      },
+      {
+        type: "input",
+        name: "pipelineParallel",
+        message: "Pipeline Parallel Size (PP, usually 1):",
+        default: "1",
+        validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
+      },
+    ]);
+    tensorParallel = parallelConfig.tensorParallel;
+    pipelineParallel = parallelConfig.pipelineParallel;
+    gpuCount = parseInt(tensorParallel) * parseInt(pipelineParallel);
+    console.log(`  → GPUs per worker: ${gpuCount} (TP=${tensorParallel} × PP=${pipelineParallel})`);
+  } else {
+    // Disagg: prefill and decode can have different parallelism
+    console.log("\n  Prefill worker parallelism:");
+    const prefillConfig = await inquirer.prompt([
+      {
+        type: "input",
+        name: "tp",
+        message: "  Prefill TP (higher = faster prefill):",
+        default: "2",
+        validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
+      },
+      {
+        type: "input",
+        name: "pp",
+        message: "  Prefill PP (usually 1):",
+        default: "1",
+        validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
+      },
+    ]);
+    prefillTP = prefillConfig.tp;
+    prefillPP = prefillConfig.pp;
+    prefillGpuCount = parseInt(prefillTP) * parseInt(prefillPP);
+    
+    console.log("\n  Decode worker parallelism:");
+    const decodeConfig = await inquirer.prompt([
+      {
+        type: "input",
+        name: "tp",
+        message: "  Decode TP (higher = more KV cache capacity):",
+        default: "4",
+        validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
+      },
+      {
+        type: "input",
+        name: "pp",
+        message: "  Decode PP (usually 1):",
+        default: "1",
+        validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
+      },
+    ]);
+    decodeTP = decodeConfig.tp;
+    decodePP = decodeConfig.pp;
+    decodeGpuCount = parseInt(decodeTP) * parseInt(decodePP);
+    
+    // For shared settings (Frontend etc), use decode as reference
+    tensorParallel = decodeTP;
+    pipelineParallel = decodePP;
+    gpuCount = decodeGpuCount;
+    
+    console.log(`  → Prefill: ${prefillGpuCount} GPUs (TP=${prefillTP} × PP=${prefillPP})`);
+    console.log(`  → Decode:  ${decodeGpuCount} GPUs (TP=${decodeTP} × PP=${decodePP})`);
+  }
   
   // EKS: optional instance family selector
   let eksInstanceFamily = "";
@@ -285,6 +344,14 @@ export async function install() {
   // Step 3: Advanced features configuration
   // ============================================
   console.log("\n[3/6] Advanced Features Configuration...");
+  
+  // Expert Parallel (MoE models like DeepSeek-R1, Mixtral, etc.)
+  const { enableExpertParallel } = await inquirer.prompt([{
+    type: "confirm",
+    name: "enableExpertParallel",
+    message: "Enable Expert Parallel (EP)? (for MoE models: DeepSeek-R1, Mixtral, etc.)",
+    default: false,
+  }]);
   
   // KV Router
   const { enableKvRouter } = await inquirer.prompt([{
@@ -445,13 +512,13 @@ export async function install() {
       {
         type: "input",
         name: "prefillReplicas",
-        message: `Prefill worker replicas (each gets ${gpuCount} GPUs):`,
+        message: `Prefill worker replicas (each gets ${prefillGpuCount} GPUs):`,
         default: "1",
       },
       {
         type: "input",
         name: "decodeReplicas",
-        message: `Decode worker replicas (each gets ${gpuCount} GPUs):`,
+        message: `Decode worker replicas (each gets ${decodeGpuCount} GPUs):`,
         default: "1",
       },
     ]);
@@ -489,8 +556,19 @@ export async function install() {
   console.log("\n[4/6] Rendering deployment template...");
   
   // Generate deployment name
-  const modelShortName = model.split("/").pop().toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30);
-  const deploymentName = `vllm-${modelShortName}-${deploymentMode}`;
+  // Deployment name must be ≤27 chars (K8s pod name limit: 45 - 17 for "vllmprefillworker" suffix - 1)
+  const defaultName = model.split("/").pop().toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-").slice(0, 20);
+  const { deploymentName } = await inquirer.prompt([{
+    type: "input",
+    name: "deploymentName",
+    message: "Deployment name (max 27 chars, lowercase alphanumeric + hyphens):",
+    default: defaultName,
+    validate: (input) => {
+      if (input.length > 27) return `Too long (${input.length}/27). Shorten it.`;
+      if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(input)) return "Must be lowercase alphanumeric with hyphens, no leading/trailing hyphens";
+      return true;
+    },
+  }]);
   
   // Additional args as inline string (for shell command mode)
   const additionalArgsInline = additionalArgs || "";
@@ -510,13 +588,26 @@ export async function install() {
     IS_AGG: deploymentMode === "agg",
     IS_DISAGG: deploymentMode === "disagg",
     
-    // Parallelism
+    // Parallelism (agg uses these directly, disagg uses PREFILL_*/DECODE_*)
     TENSOR_PARALLEL: tensorParallel,
     PIPELINE_PARALLEL: pipelineParallel,
     DATA_PARALLEL: dataParallel,
     GPU_COUNT: gpuCount.toString(),
     ENABLE_PP: parseInt(pipelineParallel) > 1,
     ENABLE_DP: parseInt(dataParallel) > 1,
+    
+    // Disagg-specific parallelism
+    PREFILL_TP: prefillTP || tensorParallel,
+    PREFILL_PP: prefillPP || pipelineParallel,
+    PREFILL_GPU_COUNT: (prefillGpuCount || gpuCount).toString(),
+    PREFILL_ENABLE_PP: parseInt(prefillPP || pipelineParallel) > 1,
+    DECODE_TP: decodeTP || tensorParallel,
+    DECODE_PP: decodePP || pipelineParallel,
+    DECODE_GPU_COUNT: (decodeGpuCount || gpuCount).toString(),
+    DECODE_ENABLE_PP: parseInt(decodePP || pipelineParallel) > 1,
+    
+    // Expert Parallel (MoE)
+    ENABLE_EP: enableExpertParallel,
     
     // Replicas
     AGG_REPLICAS: aggReplicas,
@@ -585,14 +676,15 @@ export async function install() {
   console.log(`  Name:           ${deploymentName}`);
   console.log(`  Model:          ${model}`);
   console.log(`  Mode:           ${deploymentMode}`);
-  console.log(`  Parallelism:    TP=${tensorParallel}, PP=${pipelineParallel}, DP=${dataParallel}`);
-  console.log(`  GPUs/worker:    ${gpuCount}`);
-  if (deploymentMode === "disagg") {
-    console.log(`  Prefill:        ${prefillReplicas} replica(s)`);
-    console.log(`  Decode:         ${decodeReplicas} replica(s)`);
-  } else {
+  if (deploymentMode === "agg") {
+    console.log(`  Parallelism:    TP=${tensorParallel}, PP=${pipelineParallel}`);
+    console.log(`  GPUs/worker:    ${gpuCount}`);
     console.log(`  Workers:        ${aggReplicas} replica(s)`);
+  } else {
+    console.log(`  Prefill:        TP=${prefillTP}, PP=${prefillPP} (${prefillGpuCount} GPUs × ${prefillReplicas} replicas)`);
+    console.log(`  Decode:         TP=${decodeTP}, PP=${decodePP} (${decodeGpuCount} GPUs × ${decodeReplicas} replicas)`);
   }
+  console.log(`  Expert Parallel: ${enableExpertParallel ? "Enabled (MoE)" : "Disabled"}`);
   console.log(`  KV Router:      ${enableKvRouter ? "Enabled" : "Disabled"}`);
   if (enableKvbm) {
     let kvbmSummary = `CPU: ${kvbmConfig.cpuCacheGB}GB`;

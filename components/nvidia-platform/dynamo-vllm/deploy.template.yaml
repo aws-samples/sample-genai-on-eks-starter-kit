@@ -143,6 +143,9 @@ spec:
 {{#if ENABLE_DP}}
               --data-parallel-size {{{DATA_PARALLEL}}}
 {{/if}}
+{{#if ENABLE_EP}}
+              --enable-expert-parallel
+{{/if}}
 {{#if ENABLE_KVBM}}
               --enforce-eager
               --connector kvbm
@@ -184,7 +187,7 @@ spec:
         limits:
           cpu: "8"
           memory: "64Gi"
-          gpu: "{{{GPU_COUNT}}}"
+          gpu: "{{{DECODE_GPU_COUNT}}}"
       sharedMemory:
         size: 20Gi
 {{#if ENABLE_MODEL_CACHE}}
@@ -213,12 +216,15 @@ spec:
               python3 -m dynamo.vllm
               --model $MODEL_PATH
               --served-model-name $SERVED_MODEL_NAME
-              --tensor-parallel-size {{{TENSOR_PARALLEL}}}
-{{#if ENABLE_PP}}
-              --pipeline-parallel-size {{{PIPELINE_PARALLEL}}}
+              --tensor-parallel-size {{{DECODE_TP}}}
+{{#if DECODE_ENABLE_PP}}
+              --pipeline-parallel-size {{{DECODE_PP}}}
 {{/if}}
               --is-decode-worker
               --connector nixl
+{{#if ENABLE_EP}}
+              --enable-expert-parallel
+{{/if}}
 {{#if ENABLE_KV_ROUTER}}
               --kv-events-config '{"enable_kv_cache_events": true}'
 {{/if}}
@@ -255,7 +261,7 @@ spec:
         limits:
           cpu: "16"
           memory: "{{{KVBM_MEMORY_LIMIT}}}"
-          gpu: "{{{GPU_COUNT}}}"
+          gpu: "{{{PREFILL_GPU_COUNT}}}"
       envs:
         - name: DYN_KVBM_CPU_CACHE_GB
           value: "{{{KVBM_CPU_CACHE_GB}}}"
@@ -277,7 +283,7 @@ spec:
         limits:
           cpu: "8"
           memory: "64Gi"
-          gpu: "{{{GPU_COUNT}}}"
+          gpu: "{{{PREFILL_GPU_COUNT}}}"
 {{/if}}
       sharedMemory:
         size: 20Gi
@@ -307,11 +313,14 @@ spec:
               python3 -m dynamo.vllm
               --model $MODEL_PATH
               --served-model-name $SERVED_MODEL_NAME
-              --tensor-parallel-size {{{TENSOR_PARALLEL}}}
-{{#if ENABLE_PP}}
-              --pipeline-parallel-size {{{PIPELINE_PARALLEL}}}
+              --tensor-parallel-size {{{PREFILL_TP}}}
+{{#if PREFILL_ENABLE_PP}}
+              --pipeline-parallel-size {{{PREFILL_PP}}}
 {{/if}}
               --is-prefill-worker
+{{#if ENABLE_EP}}
+              --enable-expert-parallel
+{{/if}}
 {{#if ENABLE_KVBM}}
               --enforce-eager
               --connector kvbm nixl
