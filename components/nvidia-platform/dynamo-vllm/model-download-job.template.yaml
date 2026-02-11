@@ -32,6 +32,8 @@ spec:
               echo "Model: {{{MODEL}}}"
               echo "Target: /opt/models"
               echo "=========================================="
+              echo "Cleaning up stale lock files..."
+              find /opt/models -name "*.lock" -delete 2>/dev/null || true
               pip install -q "huggingface_hub[hf_transfer]"
               export HF_HUB_ENABLE_HF_TRANSFER=1
               if [ -n "$HF_TOKEN" ]; then
