@@ -13,8 +13,14 @@ __pycache__/
 
 # Project
 .DS_Store
-.kiro/
 .backup/
+
+# AI Agent Tools
+.kiro/
+.claude/
+.omc/
+CLAUDE.md
+AGENTS.md
 .temp/
 .kubeconfig
 .env.local
