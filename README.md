@@ -11,6 +11,7 @@ The starter kit includes the configurable components and examples from several c
 - GUI App - [Open WebUI](https://docs.openwebui.com)
 - Vector Database - [Qdrant](https://qdrant.tech), [Chroma](https://docs.trychroma.com), [Milvus](https://milvus.io)
 - Workflow Automation - [n8n](https://docs.n8n.io)
+- AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
 - AI Agent Framework - [Strands Agents ](https://strandsagents.com), [Agno](https://docs.agno.com)
 
@@ -344,6 +345,8 @@ Check [Security Considerations](docs/SECURITY.md) for more information on the se
 ## Contributing
 
 Contributions welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for more information.
+
+For contributors working with the forked repository, please refer to the [Fork Workflow Guide](FORK_WORKFLOW.md) for detailed instructions on development workflow and PR submission process.
 
 ## License
 
