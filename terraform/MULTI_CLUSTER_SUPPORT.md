@@ -8,15 +8,23 @@ This Terraform configuration now supports deploying multiple EKS clusters in the
 
 ### 1. Cluster-Specific Resource Naming
 
-All AWS resources now use the cluster name (`var.name`) as a prefix to ensure uniqueness:
+IAM roles now use the cluster name (`var.name`) as a prefix to ensure uniqueness:
 
-- **KMS Alias**: Uses cluster name in the encryption configuration
-- **CloudWatch Log Group**: `/aws/eks/${var.name}/cluster`
 - **IAM Roles**: `${cluster_name}-${region}-${service}`
   - EFS CSI Driver: `${cluster_name}-${region}-efs-csi-driver`
   - External DNS: `${cluster_name}-${region}-external-dns`
 
-### 2. How to Deploy Multiple Clusters
+### 2. Known Limitations
+
+The EKS Terraform module (version 21.3.1) does not support customizing:
+- **KMS Alias**: Managed internally by the EKS module
+- **CloudWatch Log Group**: Managed internally by the EKS module
+
+These resources will still use the default naming pattern from the EKS module. To deploy multiple clusters in the same region, you must:
+1. Use different cluster names (via `var.name`)
+2. Manually clean up KMS aliases and CloudWatch log groups between deployments if reusing the same cluster name
+
+### 3. How to Deploy Multiple Clusters
 
 You can now deploy multiple clusters in the same region by using different cluster names:
 
@@ -46,7 +54,7 @@ terraform apply -var="name=demo-cluster-2"
 
 ### 3. Resource Naming Pattern
 
-All resources follow this pattern:
+IAM roles follow this pattern:
 
 ```
 {cluster_name}-{region}-{resource_type}
@@ -55,8 +63,8 @@ All resources follow this pattern:
 Examples:
 - `demo-cluster-1-ap-northeast-2-efs-csi-driver`
 - `demo-cluster-2-ap-northeast-2-external-dns`
-- `/aws/eks/demo-cluster-1/cluster`
-- `/aws/eks/demo-cluster-2/cluster`
+
+**Note**: KMS aliases and CloudWatch log groups are managed by the EKS module and may still conflict if you reuse the same cluster name.
 
 ### 4. Backward Compatibility
 
