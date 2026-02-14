@@ -16,6 +16,15 @@ module "eks" {
     enabled    = true
     node_pools = ["general-purpose"]
   }
+
+  # Use cluster name in KMS alias to avoid conflicts
+  cluster_encryption_config = {
+    resources        = ["secrets"]
+    provider_key_arn = null
+  }
+  
+  # Use cluster name in CloudWatch log group to avoid conflicts
+  cloudwatch_log_group_name = "/aws/eks/${var.name}/cluster"
 }
 
 resource "null_resource" "update_kubeconfig" {

@@ -148,6 +148,7 @@ spec:
 }
 
 # EKS add-ons
+# IAM roles use cluster name to support multiple clusters in same region
 resource "aws_iam_role" "efs_csi_driver" {
   name = "${module.eks.cluster_name}-${var.region}-efs-csi-driver"
   assume_role_policy = jsonencode({
