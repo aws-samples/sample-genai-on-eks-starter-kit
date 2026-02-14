@@ -62,8 +62,6 @@ export async function install() {
   const template = handlebars.compile(templateString);
   const { LITELLM_API_KEY } = process.env;
   const vars = {
-    useBuildx,
-    arch,
     IMAGE: `${ecrRepoUrl}:latest`,
     ...config["ai-agent"]["openclaw"].env,
     LITELLM_BASE_URL: "http://litellm.litellm:4000",
