@@ -11,6 +11,7 @@ COPY src/ src/
 RUN npx tsc
 
 # Stage 2: Runtime
+# Note: node:22-slim without digest pinning is acceptable for starter kit demos
 FROM node:22-slim
 
 RUN apt-get update && \

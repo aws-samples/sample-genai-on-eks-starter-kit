@@ -14,9 +14,19 @@ echo "[start] Starting OpenClaw Gateway (foreground)..."
 openclaw gateway --port 18789 --verbose --allow-unconfigured --bind loopback 2>&1 &
 GATEWAY_PID=$!
 
-# Wait for either process to exit
-wait -n ${BRIDGE_PID} ${GATEWAY_PID} 2>/dev/null || true
+cleanup() {
+  echo "[start] Received signal, shutting down..."
+  kill ${BRIDGE_PID} ${GATEWAY_PID} 2>/dev/null || true
+  wait
+  exit 0
+}
 
-echo "[start] A process exited, shutting down..."
+trap cleanup SIGTERM SIGINT
+
+# Wait for either process to exit
+wait -n ${BRIDGE_PID} ${GATEWAY_PID} 2>/dev/null
+EXIT_CODE=$?
+echo "[start] A process exited with code ${EXIT_CODE}, shutting down..."
 kill ${BRIDGE_PID} ${GATEWAY_PID} 2>/dev/null || true
 wait
+exit ${EXIT_CODE}

@@ -27,12 +27,18 @@ class Pipe:
         )
 
         if not last_user_message:
-            return
+            return "Error: No user message found in conversation."
 
         message = last_user_message["content"]
         if message.startswith("### Task"):
             print("Skip: ### Task")
             return
+
+        # Validate input
+        if not isinstance(message, str) or len(message.strip()) == 0:
+            return "Error: Empty message received."
+        if len(message) > 50000:
+            return "Error: Message too long. Please limit to 50,000 characters."
 
         print("Latest user message:", message)
 

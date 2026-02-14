@@ -34,6 +34,13 @@ resource "aws_ecr_repository" "this" {
   encryption_configuration {
     encryption_type = "KMS"
   }
+
+  tags = {
+    Name        = local.full_name
+    Component   = "ai-agent"
+    Application = "openclaw"
+    ManagedBy   = "terraform"
+  }
 }
 output "ecr_repository_url" {
   value = aws_ecr_repository.this.repository_url

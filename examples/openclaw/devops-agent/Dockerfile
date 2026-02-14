@@ -11,7 +11,11 @@ COPY src/ src/
 RUN npx tsc
 
 # Stage 2: Runtime — DevOps Agent with kubectl, helm, AWS CLI
+# Note: node:22-slim without digest pinning is acceptable for starter kit demos
 FROM node:22-slim
+
+ARG KUBECTL_VERSION=v1.31.4
+ARG HELM_VERSION=v3.16.4
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -19,11 +23,15 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install kubectl
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/$(dpkg --print-architecture)/kubectl" && \
+RUN curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/$(dpkg --print-architecture)/kubectl" && \
     chmod +x kubectl && mv kubectl /usr/local/bin/
 
 # Install Helm
-RUN curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH}.tar.gz" -o /tmp/helm.tar.gz && \
+    tar -xzf /tmp/helm.tar.gz -C /tmp && \
+    mv /tmp/linux-${ARCH}/helm /usr/local/bin/ && \
+    rm -rf /tmp/helm.tar.gz /tmp/linux-${ARCH}
 
 # Install AWS CLI v2
 RUN ARCH=$(dpkg --print-architecture) && \

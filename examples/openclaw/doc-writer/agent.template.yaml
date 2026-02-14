@@ -24,6 +24,11 @@ spec:
       containers:
         - name: agent
           image: {{{IMAGE}}}
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
           env:
             - name: OPENCLAW_GATEWAY_TOKEN
               value: "{{{OPENCLAW_GATEWAY_TOKEN}}}"
@@ -51,21 +56,22 @@ spec:
           resources:
             requests:
               cpu: 250m
-              memory: 512Mi
-            limits:
               memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 90
+            initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
 ---
@@ -87,3 +93,22 @@ metadata:
   name: doc-writer
   namespace: openclaw
 automountServiceAccountToken: false
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: doc-writer-scaler
+  namespace: openclaw
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: doc-writer
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod: 300
+  triggers:
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      value: "50"

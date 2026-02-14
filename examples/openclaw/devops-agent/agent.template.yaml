@@ -16,7 +16,7 @@ spec:
         app: devops-agent
     spec:
       serviceAccountName: devops-agent
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
       {{#unless useBuildx}}
       nodeSelector:
         kubernetes.io/arch: {{{arch}}}
@@ -24,6 +24,11 @@ spec:
       containers:
         - name: agent
           image: {{{IMAGE}}}
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
           env:
             - name: OPENCLAW_GATEWAY_TOKEN
               value: "{{{OPENCLAW_GATEWAY_TOKEN}}}"
@@ -49,19 +54,20 @@ spec:
               cpu: 500m
               memory: 1Gi
             limits:
+              cpu: 2000m
               memory: 2Gi
           livenessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 90
+            initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 60
+            initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
 ---
@@ -82,4 +88,49 @@ kind: ServiceAccount
 metadata:
   name: devops-agent
   namespace: openclaw
-automountServiceAccountToken: false
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: devops-agent-reader
+rules:
+- apiGroups: ["", "apps", "batch", "networking.k8s.io", "autoscaling"]
+  resources: ["pods", "services", "deployments", "replicasets", "statefulsets", "daemonsets", "jobs", "cronjobs", "ingresses", "configmaps", "namespaces", "nodes", "events", "horizontalpodautoscalers"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: devops-agent-reader-binding
+subjects:
+- kind: ServiceAccount
+  name: devops-agent
+  namespace: openclaw
+roleRef:
+  kind: ClusterRole
+  name: devops-agent-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: devops-agent
+  namespace: openclaw
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: devops-agent
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
