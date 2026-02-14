@@ -284,6 +284,8 @@ Check [Security Considerations](docs/SECURITY.md) for more information on the se
 
 Contributions welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for more information.
 
+For contributors working with the forked repository, please refer to the [Fork Workflow Guide](FORK_WORKFLOW.md) for detailed instructions on development workflow and PR submission process.
+
 ## License
 
 This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
