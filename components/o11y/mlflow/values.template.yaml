@@ -8,15 +8,17 @@ ingress:
   className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
   annotations:
       alb.ingress.kubernetes.io/target-type: ip
+      {{#if DOMAIN}}
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      {{/if}}
   hosts:
     - paths:
         - path: /
           pathType: Prefix
-      host: mlflow.{{{DOMAIN}}}
+      host: {{#if DOMAIN}}mlflow.{{{DOMAIN}}}{{else}}"*.{{{AWS_REGION}}}.elb.amazonaws.com"{{/if}}
 
 extraEnvVars:
-  MLFLOW_SERVER_ALLOWED_HOSTS: "localhost:*,10.*,mlflow.mlflow,mlflow.{{{DOMAIN}}}"
+  MLFLOW_SERVER_ALLOWED_HOSTS: "localhost:*,10.*,mlflow.mlflow,{{#if DOMAIN}}mlflow.{{{DOMAIN}}}{{else}}*.{{{AWS_REGION}}}.elb.amazonaws.com{{/if}}"
   # MLFLOW_LOGGING_LEVEL: "DEBUG"
 
 auth:
