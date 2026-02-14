@@ -11,6 +11,7 @@ The starter kit includes the configurable components and examples from several c
 - GUI App - [Open WebUI](https://docs.openwebui.com)
 - Vector Database - [Qdrant](https://qdrant.tech), [Chroma](https://docs.trychroma.com), [Milvus](https://milvus.io)
 - Workflow Automation - [n8n](https://docs.n8n.io)
+- AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
 - AI Agent Framework - [Strands Agents ](https://strandsagents.com), [Agno](https://docs.agno.com)
 
@@ -270,6 +271,68 @@ By default, the same region as the EKS cluster will be used. To change it, modif
 
 You can change the values of the `REGION`, `EKS_CLUSTER_NAME`, and `DOMAIN` fields on `.env` (or `.env.local`). Then, Terraform workspace and kubectl context will automatically use those values when running the related `./cli` commands.
 
+### What is ECR Pull Through Cache and should I enable it?
+
+ECR Pull Through Cache caches external container images (from Docker Hub, GitHub Container Registry) in your private ECR registry. This avoids rate limits from public registries and keeps images within your AWS infrastructure.
+
+**Default: Disabled** (`enable_ecr_pull_through_cache = false`)
+
+**Why disabled by default?**
+- Cached images are stored in your private ECR, which incurs storage costs
+- Public registries (Docker Hub, GHCR) work fine for most use cases since EKS nodes have internet access
+
+**When to enable:**
+- You're hitting Docker Hub rate limits (anonymous: 100 pulls/6hrs, authenticated: 200 pulls/6hrs)
+- You want faster, more reliable pulls from within AWS
+- Your organization requires images to be stored in private registries
+
+**To enable:**
+
+Docker Hub and GitHub Container Registry require authentication for ECR pull through cache. You'll need to provide credentials for both registries.
+
+1. **Get Docker Hub credentials:**
+   - Create a Docker Hub account at [hub.docker.com](https://hub.docker.com)
+   - Generate an access token at [Docker Hub Security Settings](https://hub.docker.com/settings/security) → "New Access Token"
+   - For more information, see [Create and manage access tokens](https://docs.docker.com/security/for-developers/access-tokens/) in the Docker documentation
+
+2. **Get GitHub credentials:**
+   - Generate a Personal Access Token (classic) at [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)
+   - The token needs `read:packages` scope to pull from GitHub Container Registry
+   - For more information, see [Managing your personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens) in the GitHub documentation
+
+3. **Configure credentials in `config.local.json`:**
+
+```json
+// config.local.json
+{
+  "terraform": {
+    "vars": {
+      "enable_ecr_pull_through_cache": true,
+      "dockerhub_username": "your-dockerhub-username",
+      "dockerhub_access_token": "your-dockerhub-access-token",
+      "github_username": "your-github-username",
+      "github_token": "your-github-personal-access-token"
+    }
+  }
+}
+```
+
+4. **Apply the changes:**
+
+```bash
+./cli terraform apply
+```
+
+**Important:** Keep your credentials in `config.local.json` (which is gitignored) and never commit them to version control. The credentials are stored securely in AWS Secrets Manager with the `ecr-pullthroughcache/` prefix.
+
+**Supported registries:**
+- `vllm/*` → Docker Hub
+- `lmsysorg/*` → Docker Hub  
+- `ollama/*` → Docker Hub
+- `huggingface/*` → GitHub Container Registry
+
+**Note:** When you `terraform destroy`, the cache rules are deleted but the cached ECR repositories remain. To fully clean up, manually delete repositories starting with `vllm/`, `lmsysorg/`, `ollama/`, or `huggingface/` from ECR.
+
 ## Disclaimer
 
 ⚠️ **This repository is intended for demonstration and learning purposes only.**
@@ -282,6 +345,8 @@ Check [Security Considerations](docs/SECURITY.md) for more information on the se
 ## Contributing
 
 Contributions welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for more information.
+
+For contributors working with the forked repository, please refer to the [Fork Workflow Guide](FORK_WORKFLOW.md) for detailed instructions on development workflow and PR submission process.
 
 ## License
 

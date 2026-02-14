@@ -35,10 +35,13 @@ export function patchConfig(configPath: string, options?: PatchOptions): void {
 }
 
 // CLI entry point: node patch-config.js <configPath>
-const configPath = process.argv[2];
-if (configPath) {
-  const llmApiBaseUrl = process.env.LITELLM_BASE_URL || "http://litellm.litellm:4000";
-  const llmModel = process.env.LITELLM_MODEL_NAME;
-  patchConfig(configPath, { llmApiBaseUrl, llmModel });
-  console.log(`[patch-config] Patched ${configPath}`);
+// Only run when executed directly, not when imported as a module
+if (require.main === module) {
+  const configPath = process.argv[2];
+  if (configPath) {
+    const llmApiBaseUrl = process.env.LITELLM_BASE_URL || "http://litellm.litellm:4000";
+    const llmModel = process.env.LITELLM_MODEL_NAME;
+    patchConfig(configPath, { llmApiBaseUrl, llmModel });
+    console.log(`[patch-config] Patched ${configPath}`);
+  }
 }

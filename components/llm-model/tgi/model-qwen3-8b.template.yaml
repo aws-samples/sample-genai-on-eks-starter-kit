@@ -21,7 +21,7 @@ spec:
         {{{KARPENTER_PREFIX}}}/instance-family: g6e
       containers:
         - name: tgi
-          image: ghcr.io/huggingface/text-generation-inference:3.3.4
+          image: {{GHCR_IMAGE_PREFIX}}huggingface/text-generation-inference:3.3.4
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

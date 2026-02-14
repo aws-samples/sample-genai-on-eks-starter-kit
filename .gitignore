@@ -29,3 +29,4 @@ config.local.json
 test*.py
 test*.mjs
 terraform/eks.tf
+docs/external-images.md

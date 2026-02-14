@@ -1,3 +1,19 @@
+# ECR Pull Through Cache policy for EKS Auto Mode nodes
+resource "aws_iam_policy" "ecr_pull_through_cache" {
+  name        = "${var.name}-${var.region}-ecr-pull-through-cache"
+  description = "Allows EKS nodes to create ECR repositories for pull through cache"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "ECRPullThroughCache"
+      Effect   = "Allow"
+      Action   = "ecr:CreateRepository"
+      Resource = "*"
+    }]
+  })
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.3.1"
@@ -15,6 +31,20 @@ module "eks" {
   compute_config = {
     enabled    = true
     node_pools = ["general-purpose"]
+  }
+
+  # Use cluster name in KMS alias to avoid conflicts
+  cluster_encryption_config = {
+    resources        = ["secrets"]
+    provider_key_arn = null
+  }
+  
+  # Use cluster name in CloudWatch log group to avoid conflicts
+  cloudwatch_log_group_name = "/aws/eks/${var.name}/cluster"
+
+  # Enable ECR pull through cache for EKS Auto Mode nodes
+  node_iam_role_additional_policies = {
+    ECRPullThroughCache = aws_iam_policy.ecr_pull_through_cache.arn
   }
 }
 

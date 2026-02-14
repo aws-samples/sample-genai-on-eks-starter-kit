@@ -10,9 +10,8 @@ export interface BridgeDeps {
   authToken?: string;
 }
 
-const startTime = Date.now();
-
 export function createApp(deps: BridgeDeps): express.Express {
+  const startTime = Date.now();
   const app = express();
 
   app.use(express.json());
@@ -45,16 +44,30 @@ export function createApp(deps: BridgeDeps): express.Express {
     deps.lifecycle.updateLastActivity();
 
     const sse = new SseSender(res);
+    let clientDisconnected = false;
+
+    req.on("close", () => {
+      clientDisconnected = true;
+      console.log("Client disconnected");
+    });
 
     try {
       const generator = deps.openclawClient.sendMessage(body.message);
       for await (const chunk of generator) {
+        if (clientDisconnected) {
+          console.log("Stopping iteration due to client disconnect");
+          break;
+        }
         sse.sendChunk(chunk);
       }
-      sse.sendDone();
+      if (!clientDisconnected) {
+        sse.sendDone();
+      }
     } catch (err) {
-      sse.sendError(err instanceof Error ? err.message : "Unknown error");
-      sse.sendDone();
+      if (!clientDisconnected) {
+        sse.sendError(err instanceof Error ? err.message : "Unknown error");
+        sse.sendDone();
+      }
     }
   });
 
