@@ -17,7 +17,7 @@ type ReqHandler = {
 
 export class OpenClawClient {
   readonly gatewayUrl: string;
-  ws: WebSocket | null = null;
+  private ws: WebSocket | null = null;
   private token: string;
   private nextId = 1;
   private sessionKey = "";
@@ -26,6 +26,8 @@ export class OpenClawClient {
   private readyResolve!: () => void;
   private readyReject!: (reason: Error) => void;
   private readyPromise: Promise<void>;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 3;
 
   constructor(baseUrl: string, token: string) {
     this.gatewayUrl = baseUrl;
@@ -49,7 +51,13 @@ export class OpenClawClient {
     });
 
     this.ws.on("message", (raw: WebSocket.Data) => {
-      const msg = JSON.parse(raw.toString()) as Record<string, unknown>;
+      let msg: Record<string, unknown>;
+      try {
+        msg = JSON.parse(raw.toString()) as Record<string, unknown>;
+      } catch (err) {
+        console.error("Failed to parse WebSocket message:", err);
+        return;
+      }
 
       // Gateway connect challenge — respond with connect request
       if (msg.type === "event" && msg.event === "connect.challenge") {
@@ -160,7 +168,7 @@ export class OpenClawClient {
             const resolve = run.chunkResolve;
             run.chunkResolve = null;
             run.chunkReject = null;
-            resolve({ value: undefined as unknown as string, done: true });
+            resolve({ value: "", done: true });
           }
           run.resolve();
         } else if (payload.state === "error" || payload.state === "aborted") {
@@ -177,6 +185,18 @@ export class OpenClawClient {
           run.reject(err);
         }
         return;
+      }
+    });
+
+    this.ws.on("close", () => {
+      console.log("WebSocket closed");
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        const delay = Math.pow(2, this.reconnectAttempts) * 1000;
+        this.reconnectAttempts++;
+        console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+        setTimeout(() => this.connect(), delay);
+      } else {
+        console.error("Max reconnection attempts reached");
       }
     });
   }
@@ -241,7 +261,7 @@ export class OpenClawClient {
           chat.chunkReject = reject;
         }),
         completionPromise.then(
-          () => ({ value: undefined as unknown as string, done: true }) as IteratorResult<string>,
+          () => ({ value: "", done: true }) as IteratorResult<string>,
           (err) => {
             throw err;
           },

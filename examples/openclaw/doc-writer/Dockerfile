@@ -11,6 +11,7 @@ COPY src/ src/
 RUN npx tsc
 
 # Stage 2: Runtime — Document Writer Agent
+# Note: node:22-slim without digest pinning is acceptable for starter kit demos
 FROM node:22-slim
 
 RUN apt-get update && \
@@ -31,6 +32,7 @@ RUN mkdir -p /home/openclaw/.config/openclaw && \
     chown -R openclaw:openclaw /home/openclaw/.config
 
 # Configure Git defaults for doc-writer commits
+# Note: --system writes to /etc/gitconfig as root, readable by all users including openclaw
 RUN git config --system user.name "OpenClaw Doc Writer" && \
     git config --system user.email "openclaw-doc-writer@noreply"
 
