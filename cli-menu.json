@@ -43,7 +43,8 @@
         { "dir": "milvus", "name": "Milvus" }
       ]
     },
-    { "dir": "workflow-automation", "name": "Workflow Automation", "components": [{ "dir": "n8n", "name": "n8n" }] }
+    { "dir": "workflow-automation", "name": "Workflow Automation", "components": [{ "dir": "n8n", "name": "n8n" }] },
+    { "dir": "ai-agent", "name": "AI Agent", "components": [{ "dir": "openclaw", "name": "OpenClaw" }] }
   ],
   "exampleCategories": [
     { "dir": "mcp-server", "name": "MCP Server", "examples": [{ "dir": "calculator", "name": "Calculator" }] },
@@ -56,6 +57,14 @@
       "dir": "agno",
       "name": "Agno",
       "examples": [{ "dir": "calculator-agent", "name": "Calculator Agent" }]
+    },
+    {
+      "dir": "openclaw",
+      "name": "OpenClaw",
+      "examples": [
+        { "dir": "doc-writer", "name": "Document Writer Agent" },
+        { "dir": "devops-agent", "name": "DevOps Agent" }
+      ]
     }
   ]
 }
