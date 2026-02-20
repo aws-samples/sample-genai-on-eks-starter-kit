@@ -1,3 +1,6 @@
+image:
+  tag: main-v1.81.3-stable
+
 global:
   security:
     # -- Allow insecure images to use our ECR images.
