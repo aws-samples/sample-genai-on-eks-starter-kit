@@ -165,7 +165,7 @@ Once logged in, you'll see the model selection dropdown at the top:
 Select **vllm/qwen3-8b-neuron** from the dropdown. You'll see several options:
 - ✅ **vllm/qwen3-8b-neuron** (use this one)
 - ✅ **vllm/deepseek-r1-qwen3-8b-neuron** (also available)
-- ✅ **bedrock/claude-3.7-sonnet** (Bedrock Model - not hosted on EKS)
+- ✅ **bedrock/claude-4.5-sonnet** (Bedrock Model - not hosted on EKS)
 
 ### Step 4: Start Your First Conversation
 

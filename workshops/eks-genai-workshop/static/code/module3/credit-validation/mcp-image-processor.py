@@ -36,7 +36,7 @@ model_key = os.environ.get("GATEWAY_MODEL_ACCESS_KEY", "")
 api_gateway_url = os.environ.get("GATEWAY_URL", "")
 
 # Vision model configuration
-vision_model = "bedrock/claude-3.7-sonnet"
+vision_model = "bedrock/claude-4.5-sonnet"
 client = openai.OpenAI(
     api_key=model_key,            
     base_url=api_gateway_url 

@@ -3,7 +3,7 @@ title: "AWS Bedrock - Managed AI Services"
 weight: 23
 ---
 
-AWS Bedrock is a fully managed service that provides access to high-performing foundation models from leading AI companies through a single API. In this section, you'll configure access to Claude 3.7 Sonnet and learn how to use Bedrock models for the GenAI platforms you configure on EKS.
+AWS Bedrock is a fully managed service that provides access to high-performing foundation models from leading AI companies through a single API. In this section, you'll configure access to Claude 4.5 Sonnet and learn how to use Bedrock models for the GenAI platforms you configure on EKS.
 
 ## What is AWS Bedrock?
 
@@ -22,10 +22,10 @@ You've just experienced self-hosted models on our workshop infrastructure. Due t
 
 1. **No Hardware Constraints**: Not limited by workshop instance sizes
 2. **Consistent Performance**: Reliable response times for hands-on exercises  
-3. **Latest Models**: Access to Claude 3.7 Sonnet with advanced capabilities
+3. **Latest Models**: Access to Claude 4.5 Sonnet with advanced capabilities
 4. **Focus on Learning**: Spend time on concepts, not waiting for responses
 
-::alert[**Workshop Suggestion**: For the remaining modules, we recommend using Bedrock (Claude 3.7 Sonnet) to ensure optimal learning experience. Both self-hosted and managed approaches have their place in different scenarios.]{type="info"}
+::alert[**Workshop Suggestion**: For the remaining modules, we recommend using Bedrock (Claude 4.5 Sonnet) to ensure optimal learning experience. Both self-hosted and managed approaches have their place in different scenarios.]{type="info"}
 
 ## Using Bedrock Models in Open WebUI
 
@@ -39,10 +39,10 @@ Once model access is enabled, we can interact with our Bedrock models via Open W
 ### Step 2: Select Bedrock Model
 
 1. Click the model dropdown at the top of the chat
-2. Look for **"claude-3.7-sonnet"** (it should appear automatically)
+2. Look for **"claude-4.5-sonnet"** (it should appear automatically)
 3. Select it as your active model
 
-### Step 3: Test Claude 3.7 Sonnet
+### Step 3: Test Claude 4.5 Sonnet
 
 Now let's experience Claude's capabilities with some practical examples.
 
@@ -87,7 +87,7 @@ Open WebUI's powerful feature allows you to compare responses from different mod
 
 ### How to Compare Models
 
-1. **Select your first model** (e.g., Claude 3.7 Sonnet)
+1. **Select your first model** (e.g., Claude 4.5 Sonnet)
 2. **Click the "+" button** next to the model name to add a second model
 3. **Choose a second model** (e.g., vLLM Deepseek)
 4. **Click the "+" button** next to the model name to add a third model
@@ -182,7 +182,7 @@ Now let's set up the knowledge base in OpenWebUI:
 
 Let's first see how Claude responds without access to our document:
 
-**Ask this question**: "What is the object of project nightfall?"
+**Ask this question**: "What is the objective of project nightfall?"
 
 ![Claude Without RAG Context](/static/images/module-1/claude-without-rag-context.png)
 
@@ -198,7 +198,7 @@ Now let's see the power of RAG in action:
 ![Knowledge Base Selection](/static/images/module-1/openwebui-select-knowledge-base.png)
 
 3. **Select your knowledge base**: Click on **"super-secret.txt"**
-4. **Ask the exact same question**: "What is the object of project nightfall?"
+4. **Ask the exact same question**: "What is the objective of project nightfall?"
 
 ![Claude With RAG Context](/static/images/module-1/claude-with-rag-context.png)
 
@@ -230,7 +230,7 @@ This is OpenWebUI's built-in simple RAG capability. You've just seen how:
 
 ✅ **Managed Service Benefits**: Optimized infrastructure without operational overhead
 
-✅ **Advanced Models**: Access to Claude 3.7 with 200K context window
+✅ **Advanced Models**: Access to Claude 4.5 with 200K context window
 
 ✅ **Pay-Per-Use**: Cost model ideal for variable workloads
 
@@ -246,7 +246,7 @@ Congratulations! You've now experienced three different approaches to model depl
 
 ### Suggested Approach for Remaining Modules
 
-**Use Bedrock (Claude 3.7 Sonnet)** for optimal workshop experience:
+**Use Bedrock (Claude 4.5 Sonnet)** for optimal workshop experience:
 - Consistent performance for hands-on exercises
 - Advanced capabilities for complex learning scenarios
 - No infrastructure management overhead
