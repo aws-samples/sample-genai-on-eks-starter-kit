@@ -4,7 +4,7 @@ annotated-types==0.7.0
 anyio==4.4.0
 arrow==1.3.0
 attrs==23.2.0
-blinker==1.8.2
+blinker==1.9.0
 boto3==1.34.144
 botocore==1.34.144
 cachelib==0.9.0
@@ -17,7 +17,7 @@ Deprecated==1.2.14
 distro==1.9.0
 Faker==25.9.2
 filelock==3.20.3
-Flask==3.0.3
+Flask==3.1.3
 Flask-Caching==2.3.0
 Flask-Cors==5.0.1
 Flask-SQLAlchemy==3.1.1
@@ -105,7 +105,7 @@ typing_extensions==4.12.2
 uri-template==1.3.0
 urllib3==2.6.3
 webcolors==24.6.0
-Werkzeug==3.1.5
+Werkzeug==3.1.6
 wrapt==1.16.0
 yarl==1.17.0
 zipp==3.19.2
