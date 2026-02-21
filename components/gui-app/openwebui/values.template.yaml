@@ -12,7 +12,9 @@ ingress:
 
 # openaiBaseApiUrl: https://litellm.{{{DOMAIN}}}/v1
 openaiBaseApiUrl: http://litellm.litellm:4000/v1
-extraEnvVars:
+
+# Override default env vars to avoid duplicates
+env:
   - name: OPENAI_API_KEY
     value: {{{LITELLM_API_KEY}}}
 
