@@ -33,7 +33,7 @@ graph LR
     subgraph "Your GenAI Platform (Modules 1 & 2)"
         UI[Open WebUI]
         GATEWAY[LiteLLM Gateway]
-        MODELS[AI Models<br/>Claude 3.7 / Qwen 3 8b]
+        MODELS[AI Models<br/>Claude 4.5 / Qwen 3 8b]
         OBS[Langfuse Observability]
     end
     
@@ -77,7 +77,7 @@ graph LR
 **Key Integration Points:**
 - **Uses your LiteLLM Gateway** from Module 2 for all AI requests
 - **Tracked in Langfuse** from Module 2 for complete observability
-- **Leverages your models** from Module 1 (Claude 3.7 recommended)
+- **Leverages your models** from Module 1 (Claude 4.5 recommended)
 - **Deployed on EKS** using the same patterns you've learned
 
 ## Module Structure
@@ -127,7 +127,7 @@ This module demonstrates **real-world AI application patterns**:
 - **Your LiteLLM Gateway** - Routes all AI requests
 - **Your Langfuse Instance** - Tracks all agent activities
 - **Your EKS Cluster** - Hosts the application components
-- **Claude 3.7 Sonnet** - Recommended model for complex reasoning
+- **Claude 4.5 Sonnet** - Recommended model for complex reasoning
 :::
 
 :::tab{label="Application Components"}

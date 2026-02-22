@@ -308,12 +308,12 @@ You'll now see the main Langfuse dashboard with comprehensive analytics:
 - 📊 **71 Total traces tracked** - Every AI interaction from your workshop
 - 💰 **$0.10957 Total cost** - Your actual workshop spending
 - 🔍 **Model Breakdown**:
-  - `us.anthropic.claude-3-7-sonnet`: 20.63K tokens, $0.106486
+  - `global.anthropic.claude-sonnet-4-5`: 20.63K tokens, $0.106486
   - `openai.gpt-oss-20b-1:0`: 7.52K tokens, $0.001084
 - 📈 **Usage Timeline**: Chart showing your interaction patterns over time
 
 **What This Tells You:**
-- Most of your cost comes from Claude 3.7 Sonnet
+- Most of your cost comes from Claude 4.5 Sonnet
 - GPT-OSS-20B is very cost-effective
 - Self-hosted models have no per-token costs
 - Your usage has clear patterns over time

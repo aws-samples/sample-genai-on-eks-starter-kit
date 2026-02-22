@@ -97,7 +97,7 @@ graph LR
     subgraph "Your GenAI Platform"
         GATEWAY[🚪 LiteLLM Gateway<br/>Routes AI Requests]
         LANGFUSE[📊 Langfuse<br/>Tracks Everything]
-        CLAUDE[🧠 Claude 3.7 Sonnet<br/>Processes & Decides]
+        CLAUDE[🧠 Claude 4.5 Sonnet<br/>Processes & Decides]
         MCP1[🏠 Address Validator<br/>Verifies 123 Main St]
         MCP2[💼 Employment Checker<br/>Confirms Tech Solutions Inc]
         MCP3[📸 Image Processor<br/>Extracts John's Data]
@@ -127,7 +127,7 @@ graph LR
 **Key Integration Points:**
 - **Uses your LiteLLM Gateway** for all AI requests (no direct model calls)
 - **Tracked in Langfuse** for complete observability and compliance
-- **Leverages Claude 3.7 Sonnet** for complex reasoning and decision-making
+- **Leverages Claude 4.5 Sonnet** for complex reasoning and decision-making
 - **Deployed on your EKS cluster** using the same patterns you've learned
 
 ## 🎯 What You'll Experience

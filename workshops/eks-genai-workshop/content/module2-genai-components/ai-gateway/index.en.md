@@ -68,9 +68,9 @@ grep -A 16 "model_list:" /workshop/components/ai-gateway/litellm/values.rendered
 # How your models are configured in LiteLLM:
 model_list:
   # Bedrock models (from AWS configuration)
-  - model_name: bedrock/claude-3.7-sonnet
+  - model_name: bedrock/claude-4.5-sonnet
     litellm_params:
-      model: bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0
+      model: bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0
       aws_region_name: us-west-2
       
   # vLLM models (discovered automatically from running pods)
@@ -443,7 +443,7 @@ After logging in, click on the **Models + Endpoints** to view the models configu
 - 🔍 **Model Table** with columns for Model ID, Public Model Name, Provider, and LiteLLM Model Name
 
 **Your Models:**
-- ✅ **bedrock/claude-3.7-sonnet** - AWS Bedrock model (bedrock provider)
+- ✅ **bedrock/claude-4.5-sonnet** - AWS Bedrock model (bedrock provider)
 - ✅ **vllm/qwen3-8b-neuron** - Self-hosted model (openai provider)
 - ✅ **vllm/deepseek-r1-qwen3-8b-neuron** - Self-hosted model (openai provider)
 
@@ -473,12 +473,12 @@ Click on **"Usage"** in the left sidebar to see comprehensive analytics:
 
 ### Step 5: Test Models Directly
 
-Click on **"Test Key"** to access the interactive testing interface:
+Click on **"Playground"** to access the interactive testing interface:
 
 ![LiteLLM Test Interface](/static/images/module-2/litellm-test-interface.png)
 
 **Testing Features:**
-- 🎯 **Model Selection**: Dropdown showing "bedrock/claude-3.7-s..." selected
+- 🎯 **Model Selection**: Dropdown showing "bedrock/claude-4.5-s..." selected
 - 💬 **Chat Interface**: Real conversation with the selected model
 - 🔧 **Configuration Options**: API Key Source, Endpoint Type, Tags, MCP Tools
 - 📝 **Sample Conversation**: Shows a question about dragon etymology with detailed response
@@ -626,7 +626,7 @@ Click the **"+ Create New Key"** button to open the key creation dialog:
 **Key Details:**
 - 📝 **Key Name**: Enter `agent-key`
 - 🤖 **Models**: Select all available models:
-  - `bedrock/claude-3.7-sonnet` ✓
+  - `bedrock/claude-4.5-sonnet` ✓
   - `bedrock/gpt-oss-20b` ✓  
   - `vllm/qwen3-8b-neuron` ✓
   - `vllm/deepseek-r1-qwen3-8b-neuron` ✓
@@ -657,21 +657,21 @@ export AGENT_KEY="sk-aUM4QuQjObwI4nGcNoBYPw"  # Your actual key will be differen
 
 Let's test that your Virtual Key has access to all models:
 
-1. Navigate to **"Test Key"** in the sidebar
+1. Navigate to **"Playground"** in the sidebar
 2. Configure the test interface:
 
-![Test Key Configuration](/static/images/module-2/select-test-key.png)
+![Playground Configuration](/static/images/module-2/select-test-key.png)
 
 **Test Configuration:**
 - 🔑 **API Key Source**: Select "Virtual Key" from dropdown
 - 🔐 **Key Input**: Paste your `sk-` key in the field that appears
-- 🤖 **Select Model**: Choose any model (e.g., "bedrock/claude-3.7-sonnet")
+- 🤖 **Select Model**: Choose any model (e.g., "bedrock/claude-4.5-sonnet")
 
 ### Step 5: Validate Model Access
 
 Send a test message to confirm your key works:
 
-![Test Key Success](/static/images/module-2/test-key.png)
+![Playground Success](/static/images/module-2/test-key.png)
 
 **What you're validating:**
 - ✅ **Authentication**: Your Virtual Key is accepted
@@ -682,7 +682,7 @@ Send a test message to confirm your key works:
 **Example test:**
 - **Question**: "Why is most of the landmass in the world above the equator?"
 - **Response**: You should see a detailed geological explanation
-- **Model Used**: Shows which model responded (e.g., "us.anthropic.claude-3-7-sonnet")
+- **Model Used**: Shows which model responded (e.g., "global.anthropic.claude-sonnet-4-5")
 
 ::alert[**Success!** Your Virtual Key is now ready for Module 3's agentic application. This key provides unified access to all your models through a single authentication token.]{type="success"}
 
