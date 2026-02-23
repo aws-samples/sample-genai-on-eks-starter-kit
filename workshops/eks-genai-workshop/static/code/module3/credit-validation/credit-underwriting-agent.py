@@ -79,7 +79,7 @@ else:
     logger.info("Langfuse tracing disabled - module not available")
 
 # Configure LLM with token limits to avoid rate limiting
-llm_model = "bedrock/claude-3.7-sonnet"
+llm_model = "bedrock/claude-4.5-sonnet"
 
 model = ChatOpenAI(
     model=llm_model, 

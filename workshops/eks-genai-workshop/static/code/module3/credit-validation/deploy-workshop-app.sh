@@ -321,6 +321,29 @@ kubectl rollout status deployment/mcp-address-validator -n workshop --timeout=5m
 kubectl rollout status deployment/mcp-employment-validator -n workshop --timeout=5m
 kubectl rollout status deployment/mcp-image-processor -n workshop --timeout=5m
 
+# Step 10b: Ensure Pod Identity credentials are available
+echo -e "\n${YELLOW}Step 10b: Verifying Pod Identity credentials...${NC}"
+
+check_and_restart_for_credentials() {
+    local deployment=$1
+    local namespace=$2
+
+    # Check if credentials are injected
+    if kubectl exec deployment/${deployment} -n ${namespace} -- env 2>/dev/null | grep -q "AWS_CONTAINER_CREDENTIALS_FULL_URI"; then
+        echo -e "${GREEN}✅ ${deployment}: Pod Identity credentials found${NC}"
+    else
+        echo -e "${YELLOW}⚠️  ${deployment}: No credentials found, restarting to pick up Pod Identity...${NC}"
+        kubectl rollout restart deployment/${deployment} -n ${namespace}
+        kubectl rollout status deployment/${deployment} -n ${namespace} --timeout=120s
+        echo -e "${GREEN}✅ ${deployment}: Restarted with Pod Identity credentials${NC}"
+    fi
+}
+
+check_and_restart_for_credentials "loan-buddy-agent" "workshop"
+check_and_restart_for_credentials "mcp-address-validator" "workshop"
+check_and_restart_for_credentials "mcp-employment-validator" "workshop"
+check_and_restart_for_credentials "mcp-image-processor" "workshop"
+
 # Step 11: Verify deployment
 echo -e "\n${YELLOW}Step 11: Verifying deployment...${NC}"
 

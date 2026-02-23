@@ -15,7 +15,7 @@ Over the course of this workshop, you have successfully:
 ✅ **Deployed and interacted with real LLMs on EKS**
 - Set up Open WebUI as your ChatGPT-like interface
 - Explored vLLM serving Mistral 7B and DeepSeek R1 Llama 8B on AWS Neuron chips
-- Integrated Claude 3.7 Sonnet via AWS Bedrock
+- Integrated Claude 4.5 Sonnet via AWS Bedrock
 - Compared self-hosted vs. managed model deployment patterns
 - Understood the Kubernetes resources required for LLM hosting
 

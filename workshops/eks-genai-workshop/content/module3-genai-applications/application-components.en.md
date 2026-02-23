@@ -48,7 +48,7 @@ graph = create_react_agent(model, tools, debug=True)
 from langchain_openai import ChatOpenAI
 
 model = ChatOpenAI(
-    model="bedrock/claude-3.7-sonnet",
+    model="bedrock/claude-4.5-sonnet",
     api_key=model_key,
     base_url="http://litellm.litellm.svc.cluster.local:4000"  # Your gateway!
 )

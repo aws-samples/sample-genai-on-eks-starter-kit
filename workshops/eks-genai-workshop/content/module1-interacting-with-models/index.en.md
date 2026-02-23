@@ -26,7 +26,7 @@ Start by exploring the user interface that connects you to various LLM backends.
 Dive deep into hosting your own LLMs on EKS. Examine the Kubernetes manifests, understand Neuron optimization, and interact with Qwen 3 8B running on AWS Inferentia chips.
 
 #### 3. [AWS Bedrock - Managed AI Services](./bedrock)
-Experience the power of fully-managed AI services. Configure access to Claude 3.7 Sonnet and compare its performance with self-hosted models.
+Experience the power of fully-managed AI services. Configure access to Claude 4.5 Sonnet and compare its performance with self-hosted models.
 
 ## Architecture Context
 
@@ -43,7 +43,7 @@ graph LR
     subgraph "Model Backends"
         VLLM[vLLM<br/>Qwen 3 8B]
         VLLMQ[vLLM<br/>DeepSeek R1 Qwen 3 8B]
-        BEDROCK[AWS Bedrock<br/>Claude 3.7]
+        BEDROCK[AWS Bedrock<br/>Claude 4.5]
     end
     
     UI --> LLM

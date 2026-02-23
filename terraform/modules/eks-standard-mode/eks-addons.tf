@@ -632,7 +632,6 @@ resource "kubectl_manifest" "storageclass_efs" {
       provisioningMode: efs-ap
       fileSystemId: ${var.efs_file_system_id}
       directoryPerms: "700"
-      reuseAccessPoint: "true"
   YAML
 
   ignore_fields = ["metadata.uid", "metadata.resourceVersion"]

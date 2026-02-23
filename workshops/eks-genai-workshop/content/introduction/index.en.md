@@ -9,7 +9,7 @@ Welcome to a hands-on GenAI workshop where you'll build a complete AI platform o
 
 By the end of this workshop, you'll have a fully functional GenAI platform running on EKS:
 
-- **Chat with real AI models** including Qwen 3 8b running on AWS Neuron and Claude 3.7 via Bedrock
+- **Chat with real AI models** including Qwen 3 8b running on AWS Neuron and Claude 4.5 via Bedrock
 - **Unified AI gateway** that routes requests across multiple model providers
 - **Complete observability** tracking every AI interaction, cost, and performance metric
 - **Intelligent applications** that use your platform to solve real business problems
@@ -31,7 +31,7 @@ graph LR
     subgraph "Model Backends"
         VLLM[vLLM<br/>Qwen 3 8b]
         VLLMQ[vLLM<br/>DeepSeek R1 Qwen 3 8b]
-        BEDROCK[AWS Bedrock<br/>Claude 3.7]
+        BEDROCK[AWS Bedrock<br/>Claude 4.5]
     end
     
     subgraph "Observability"
@@ -98,7 +98,7 @@ Through this workshop, you'll see how EKS provides an excellent foundation for A
 You'll start by chatting with real AI models and see them running on EKS:
 - Deploy Open WebUI and have your first AI conversation
 - Explore vLLM serving Qwen 3 8b on AWS Neuron hardware
-- Connect to Claude 3.7 via AWS Bedrock and compare capabilities
+- Connect to Claude 4.5 via AWS Bedrock and compare capabilities
 - Watch your models process requests in real-time with kubectl
 
 ### **Module 2: GenAI Platform Components**
