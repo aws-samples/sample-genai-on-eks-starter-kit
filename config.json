@@ -20,7 +20,7 @@
         "dcgmExporterEnabled": true,
         "gdsEnabled": true,
         "nfdEnabled": false,
-        "migManagerEnabled": false,
+        "migManagerEnabled": true,
         "useAMP": false,
         "ampWorkspaceId": ""
       },

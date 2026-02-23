@@ -130,7 +130,7 @@ export async function install() {
     DRIVER_ENABLED: platformConfig.driverEnabled ?? false,
     // Toolkit: disabled on EKS Auto (pre-installed)
     TOOLKIT_ENABLED: platformConfig.toolkitEnabled ?? false,
-    // Device Plugin: disabled on EKS Auto (pre-installed)
+    // Device Plugin
     DEVICE_PLUGIN_ENABLED: platformConfig.devicePluginEnabled ?? false,
     // GFD: always enabled for detailed GPU labeling
     GFD_ENABLED: platformConfig.gfdEnabled ?? true,

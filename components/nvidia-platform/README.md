@@ -26,11 +26,14 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 | GPU Operator | NVIDIA GPU resource management | `./cli nvidia-platform gpu-operator install` |
 | Monitoring | Prometheus + Grafana + Dynamo Dashboard | `./cli nvidia-platform monitoring install` |
 | Dynamo Platform | CRDs, Operator, etcd, NATS, Grove, KAI Scheduler | `./cli nvidia-platform dynamo-platform install` |
-| Dynamo vLLM Serving | vLLM model deployment with advanced features | `./cli nvidia-platform dynamo-vllm install` |
+| Dynamo vLLM Serving | vLLM model deployment (Device Plugin) | `./cli nvidia-platform dynamo-vllm install` |
+| DRA | DRA Driver + GPU Operator reconfiguration | `./cli nvidia-platform dra install` |
+| Dynamo vLLM (DRA) | vLLM model deployment (DRA ResourceClaims) | `./cli nvidia-platform dra-dynamo-vllm install` |
 
 ## Installation Order
 
 ```bash
+# === Standard Path (Device Plugin) ===
 # 1. GPU Operator
 ./cli nvidia-platform gpu-operator install
 
@@ -42,6 +45,14 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 
 # 4. Deploy a model
 ./cli nvidia-platform dynamo-vllm install
+
+# === DRA Path (Dynamic Resource Allocation) ===
+# 1~3 same as above, then:
+# 4. Install DRA (disables Device Plugin, installs DRA Driver)
+./cli nvidia-platform dra install
+
+# 5. Deploy a model with DRA
+./cli nvidia-platform dra-dynamo-vllm install
 ```
 
 ---
@@ -274,6 +285,61 @@ Based on the official dashboard from [ai-dynamo/dynamo](https://github.com/ai-dy
 
 ---
 
+## DRA (Dynamic Resource Allocation)
+
+DRA is a Kubernetes-native GPU allocation mechanism that replaces the traditional device plugin approach. It provides flexible GPU requesting, sharing, and dynamic reconfiguration.
+
+### Requirements
+
+| Requirement | Version |
+|-------------|---------|
+| Kubernetes | 1.34+ (DRA enabled by default) |
+| GPU Operator | 25.10.0+ |
+| NVIDIA Driver | 580+ |
+| DRA Driver | 25.12.0 |
+
+### How It Works
+
+```
+Traditional (Device Plugin):
+  resources.limits.gpu: "4"  →  nvidia.com/gpu: 4  →  Device Plugin allocates GPUs
+
+DRA (Dynamic Resource Allocation):
+  resources.claims:
+    - name: gpu
+      resourceClaimTemplateName: my-gpu  →  DRA Driver allocates via DeviceClass
+```
+
+### Auto-Detection
+
+- `dynamo-vllm install` automatically detects DRA DeviceClass `gpu.nvidia.com`
+- If detected, uses `resources.claims` instead of `resources.limits.gpu`
+- If not detected, falls back to traditional device plugin
+- `gpu-operator install` prompts to enable DRA and installs DRA Driver
+
+### DRA + MIG (Multi-Instance GPU)
+
+For small LLM demos (e.g., Qwen3-8B on a single MIG instance):
+
+```
+H100 (80GB) → MIG split → 7x 1g.10gb instances
+Each MIG instance runs a small LLM independently via DRA
+```
+
+- `migManager.enabled=true` in GPU Operator
+- DRA Driver auto-creates `mig.nvidia.com` DeviceClass
+- `dynamo-vllm install` detects MIG DeviceClass and prompts for MIG mode
+- ResourceClaimTemplate uses `deviceClassName: mig.nvidia.com`
+
+### EKS Considerations
+
+| EKS Version | DRA Status | Action |
+|-------------|-----------|--------|
+| 1.32 | Feature gate required | Manual enablement |
+| 1.33+ | Default enabled | Ready to use |
+
+---
+
 ## Dynamo vLLM Serving - Features
 
 ### Deployment Modes
@@ -391,6 +457,7 @@ curl http://$ENDPOINT/v1/chat/completions \
 
 - [x] **Monitoring (Prometheus + Grafana + Dynamo Dashboard)** - kube-prometheus-stack, PodMonitor auto-detection, DCGM ServiceMonitor, Grafana Dynamo Dashboard, Ingress support
 - [x] **Ingress Support** - Auto-detect Ingress controller, expose Grafana/Prometheus/vLLM API via path routing (no port-forward needed)
+- [x] **DRA (Dynamic Resource Allocation)** - GPU allocation via DRA ResourceClaims instead of device plugin (K8s 1.34+, NVIDIA Driver 580+)
 
 ### Not Yet Implemented
 
