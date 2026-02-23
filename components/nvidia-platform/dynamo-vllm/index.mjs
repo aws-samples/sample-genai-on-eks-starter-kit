@@ -641,6 +641,7 @@ export async function install() {
   const additionalArgsInline = additionalArgs || "";
   
   const modelLocalPath = `/opt/models/${model}`;  // e.g., /opt/models/nvidia/Qwen3-14B-FP8
+  const modelShortName = model.split("/").pop().toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-");
   
   const templateVars = {
     // Basic
