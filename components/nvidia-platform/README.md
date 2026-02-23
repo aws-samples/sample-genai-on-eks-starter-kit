@@ -10,12 +10,13 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
                     |  ./cli nvidia-platform |
                     +----------+------------+
                                |
-              +----------------+----------------+
-              |                |                |
-     GPU Operator     Dynamo Platform    Dynamo vLLM Serving
-     (K8s GPU mgmt)   (CRDs, Operator,  (Model deployment,
-                       etcd, NATS,       KV Router, KVBM,
-                       Grove, KAI)       Agg/Disagg modes)
+         +----------+----------+----------+----------+
+         |          |                     |          |
+    GPU Operator  Monitoring     Dynamo Platform  Dynamo vLLM
+    (K8s GPU      (Prometheus,   (CRDs, Operator, (Model deploy,
+     management)   Grafana,       etcd, NATS,      KV Router,
+                   Dashboards)    Grove, KAI)      KVBM, Agg/
+                                                   Disagg modes)
 ```
 
 ## Components
@@ -23,6 +24,7 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 | Component | Description | CLI Command |
 |-----------|-------------|-------------|
 | GPU Operator | NVIDIA GPU resource management | `./cli nvidia-platform gpu-operator install` |
+| Monitoring | Prometheus + Grafana + Dynamo Dashboard | `./cli nvidia-platform monitoring install` |
 | Dynamo Platform | CRDs, Operator, etcd, NATS, Grove, KAI Scheduler | `./cli nvidia-platform dynamo-platform install` |
 | Dynamo vLLM Serving | vLLM model deployment with advanced features | `./cli nvidia-platform dynamo-vllm install` |
 
@@ -32,10 +34,13 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 # 1. GPU Operator
 ./cli nvidia-platform gpu-operator install
 
-# 2. Dynamo Platform
+# 2. Monitoring (Prometheus + Grafana) - recommended before Dynamo Platform
+./cli nvidia-platform monitoring install
+
+# 3. Dynamo Platform (auto-detects Prometheus and sets prometheusEndpoint)
 ./cli nvidia-platform dynamo-platform install
 
-# 3. Deploy a model
+# 4. Deploy a model
 ./cli nvidia-platform dynamo-vllm install
 ```
 
@@ -43,7 +48,7 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 
 ## Platform Modes
 
-### K8s Mode (Vagrant / On-premises)
+### K8s Mode (On-premises)
 
 **Environment**: `PLATFORM=k8s` in `.env`
 
@@ -51,61 +56,50 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 
 | Requirement | Details |
 |-------------|---------|
-| Kubernetes v1.28+ | kubeadm, kubelet, kubectl |
+| Kubernetes v1.34+ | kubeadm, kubelet, kubectl |
 | NVIDIA Driver | Pre-installed on worker nodes |
 | NVIDIA Container Toolkit | CDI configured (`nvidia-ctk cdi generate`) |
-| Fabric Manager | **Required on host** for H100 SXM / NVSwitch GPUs |
-| NFS Server | Host machine running NFS for shared model cache |
-| StorageClass | `nfs` (model cache, ReadWriteMany) + `local-path` (etcd/NATS) |
-
-#### Host Machine Setup (run once before `vagrant up`)
-
-```bash
-# NFS server for shared model storage (uses host's disk, not VM's)
-sudo ./setup-host-nfs.sh
-
-# Fabric Manager for H100 SXM GPUs
-sudo systemctl start nvidia-fabricmanager
-sudo systemctl enable nvidia-fabricmanager
-```
-
-#### Worker Node Requirements
-
-The following are automatically configured by `common-gpu.sh` during `vagrant up`:
-- NVIDIA driver + `nvidia_uvm` kernel module
-- NVIDIA Container Toolkit + CDI configuration
-- `nfs-common` for NFS PVC mount
-- containerd with nvidia runtime
+| Fabric Manager | Required for H100 SXM / NVSwitch GPUs |
+| GPU Operator | With DCGM Exporter + ServiceMonitor enabled |
+| StorageClass | ReadWriteMany for model cache (e.g., NFS) + ReadWriteOnce for etcd/NATS |
 
 #### Storage
 
-| StorageClass | Purpose | Access Mode | Backend |
+| StorageClass | Purpose | Access Mode | Example |
 |--------------|---------|-------------|---------|
-| `nfs` | Model cache PVC | ReadWriteMany | Host NFS (`/srv/nfs/k8s`) |
+| `nfs` | Model cache PVC | ReadWriteMany | NFS, CephFS, etc. |
 | `local-path` | etcd, NATS persistence | ReadWriteOnce | Node local disk |
-
-#### Network
-
-```
-Host (192.168.122.1) ─── NFS Server + Fabric Manager
-  ├── gpu-control-plane (192.168.122.10) ─── K8s control plane
-  ├── gpu-worker-1 (192.168.122.21) ─── GPU node (4x GPU)
-  └── gpu-worker-2 (192.168.122.22) ─── GPU node (4x GPU)
-```
 
 #### Access
 
-```bash
-# Port-forward for local testing
-kubectl port-forward svc/<deployment>-frontend 8000:8000 -n dynamo-system &
+**With Ingress (recommended)** — if an Ingress controller is installed, monitoring and vLLM API are accessible via path routing:
 
-# Test
+```bash
+# Find Ingress controller's external port
+kubectl get svc -n ingress-nginx
+# PORT(S): 80:<NODE_PORT>/TCP
+
+# All services via single endpoint
+curl http://<node-ip>:<node-port>/v1/models          # vLLM API
+http://<node-ip>:<node-port>/grafana                  # Grafana
+http://<node-ip>:<node-port>/prometheus               # Prometheus
+```
+
+**Remote access (SSH tunnel)** — if the cluster is behind a remote server:
+
+```bash
+ssh -N -L <local-port>:<node-ip>:<node-port> <user>@<remote-host>
+# Then: http://localhost:<local-port>/v1/models
+# Then: http://localhost:<local-port>/grafana
+```
+
+**Without Ingress (port-forward fallback)**:
+
+```bash
+kubectl port-forward svc/<deployment>-frontend 8000:8000 -n dynamo-system --address 0.0.0.0 &
 curl localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model": "<served-model-name>", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50}'
-
-# Stop
-kill %1
 ```
 
 ---
@@ -154,6 +148,129 @@ kubectl patch svc <deployment>-frontend -n dynamo-system \
 
 # EKS instance family selection supported (e.g., p5, g6e)
 ```
+
+---
+
+## Monitoring
+
+### Overview
+
+The monitoring component deploys **kube-prometheus-stack** (Prometheus + Grafana) with a pre-configured **Dynamo Dashboard**. When monitoring is installed before Dynamo Platform, the `prometheusEndpoint` is automatically detected and configured.
+
+### Architecture
+
+```
+Prometheus ──► Scrapes metrics from:
+  ├── Dynamo Frontend (:8000/metrics) ── dynamo_frontend_* metrics
+  ├── Dynamo Workers  (:9090/metrics) ── dynamo_component_* metrics (Operator auto-configures DYN_SYSTEM_PORT)
+  ├── DCGM Exporter   (:9400/metrics) ── GPU utilization, power, memory
+  ├── Node Exporter                    ── CPU, memory, disk, network
+  └── kube-state-metrics               ── K8s object states
+
+Grafana ──► Queries Prometheus ──► Dynamo Dashboard
+  ├── Frontend Requests/Sec
+  ├── Time to First Token (TTFT)
+  ├── Inter-Token Latency (ITL)
+  ├── Request Duration
+  ├── Input/Output Sequence Length
+  ├── DCGM GPU Utilization
+  ├── Node CPU & Load
+  ├── Container CPU/Memory per Pod
+  └── (Custom dashboards via ConfigMap)
+```
+
+### Key Integration Points
+
+| Integration | How It Works |
+|-------------|-------------|
+| Dynamo Platform → Prometheus | `--set prometheusEndpoint=...` enables Dynamo Operator to auto-create PodMonitors |
+| Dynamo Workers → Prometheus | Dynamo Operator auto-sets `DYN_SYSTEM_PORT=9090`, creates health probes and `/metrics` endpoint |
+| DCGM → Prometheus | GPU Operator's DCGM Exporter + ServiceMonitor |
+| Grafana Dashboard | ConfigMap with `grafana_dashboard: "1"` label, auto-discovered by sidecar |
+
+### Interactive Configuration
+
+```
+? Grafana admin password: (admin)
+? Prometheus data retention period: (7d)
+? Enable persistent storage for Prometheus? (No)
+? Enable Alertmanager? (No)
+? Enable Ingress for Grafana and Prometheus? (Yes)   ← auto-detected if Ingress controller exists
+? Ingress class: (nginx)
+? Ingress host: ()                                    ← empty = any host
+```
+
+### Access
+
+#### With Ingress (recommended)
+
+If Ingress is enabled during installation, Grafana and Prometheus are accessible via HTTP path routing through the Ingress controller. No `port-forward` needed.
+
+```bash
+# Find the Ingress controller's NodePort (on-prem / Vagrant)
+kubectl get svc -n ingress-nginx
+# Look for PORT(S): 80:<NODE_PORT>/TCP
+
+# Find any node IP
+kubectl get nodes -o wide
+# Look for INTERNAL-IP
+```
+
+Access URLs:
+
+| Service | URL |
+|---------|-----|
+| Grafana | `http://<node-ip>:<node-port>/grafana` |
+| Prometheus | `http://<node-ip>:<node-port>/prometheus` |
+
+**Remote access (SSH tunnel)**:
+
+If the K8s cluster is behind a remote host (e.g., Vagrant VMs on a remote server):
+
+```bash
+# From your local machine (single SSH tunnel is enough)
+ssh -N -L <local-port>:<node-ip>:<node-port> <user>@<remote-host>
+
+# Then open in browser
+# Grafana:    http://localhost:<local-port>/grafana
+# Prometheus: http://localhost:<local-port>/prometheus
+```
+
+#### With EKS (LoadBalancer)
+
+On EKS, the Ingress controller typically uses an ALB/NLB with an external URL. Access Grafana/Prometheus directly via the ALB URL. Alternatively, use `kubectl port-forward` from your local machine (no tunnel needed since kubectl runs locally).
+
+#### Without Ingress (port-forward fallback)
+
+```bash
+# Inside the cluster (or via SSH to the node)
+kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring --address 0.0.0.0 &
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n monitoring --address 0.0.0.0 &
+
+# If accessing from a remote machine, set up SSH tunnels accordingly
+```
+
+### Grafana Login
+
+| Field | Value |
+|-------|-------|
+| User | `admin` |
+| Password | Configured during install (default: `admin`) |
+
+To retrieve the current password:
+
+```bash
+kubectl get secret prometheus-grafana -n monitoring \
+  -o jsonpath="{.data.admin-password}" | base64 --decode; echo
+```
+
+### Dashboard Source
+
+The Dynamo Grafana dashboard JSON is stored in the repo at:
+- `monitoring/dashboards/dynamo-dashboard.json` (source JSON)
+- `monitoring/dashboards/grafana-dynamo-dashboard-configmap.template.yaml` (K8s ConfigMap template)
+
+Based on the official dashboard from [ai-dynamo/dynamo](https://github.com/ai-dynamo/dynamo/tree/main/deploy/observability/k8s).
 
 ---
 
@@ -226,11 +343,36 @@ GPU (G1) → CPU Pinned Memory (G2) → Local SSD/NVMe (G3)
 ? Enable KV Cache Offloading (KVBM)? No
 ? Worker replicas: 1
 ? Additional vLLM args: --gpu-memory-utilization 0.90 --block-size 128
-? vLLM runtime image tag: 0.8.1
+? vLLM runtime image tag: 0.9.0
+? Enable structured logging (JSONL format)? No
+? Create Ingress for Frontend API? Yes              ← auto-detected if Ingress controller exists
+? Ingress class: (nginx)
+? Ingress path prefix: /v1
 ? What would you like to do? Deploy now / Review first / Save only
 ```
 
 ---
+
+## Quick Test (via Ingress)
+
+```bash
+# Set your endpoint (NodePort example)
+export ENDPOINT="<node-ip>:<node-port>"
+
+# Auto-detect model name
+export MODEL=$(curl -s http://$ENDPOINT/v1/models | python3 -c "import sys,json; d=json.load(sys.stdin)['data']; print(d[0]['id'] if d else 'NONE')")
+echo "Model: $MODEL"
+
+# Chat completion
+curl http://$ENDPOINT/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"$MODEL\",
+    \"messages\": [{\"role\": \"user\", \"content\": \"Hello! Who are you?\"}],
+    \"max_tokens\": 100
+  }"
+```
+
 
 ## TODO
 
@@ -247,11 +389,14 @@ GPU (G1) → CPU Pinned Memory (G2) → Local SSD/NVMe (G3)
 - [x] **Expert Parallel (EP)** - `--enable-expert-parallel` for MoE models (DeepSeek-R1, Mixtral, etc.)
 - [x] **EKS Mode Support** - ALB Ingress, EFS, EKS tolerations, instance family nodeSelector, LiteLLM integration
 
+- [x] **Monitoring (Prometheus + Grafana + Dynamo Dashboard)** - kube-prometheus-stack, PodMonitor auto-detection, DCGM ServiceMonitor, Grafana Dynamo Dashboard, Ingress support
+- [x] **Ingress Support** - Auto-detect Ingress controller, expose Grafana/Prometheus/vLLM API via path routing (no port-forward needed)
+
 ### Not Yet Implemented
 
 - [ ] **AIPerf Benchmark** - Automated benchmarking with `aiperf profile` for TTFT/ITL measurement
-- [ ] **Monitoring (DCGM + Dynamo Metrics)** - GPU metrics via DCGM exporter + KVBM metrics endpoint (`DYN_KVBM_METRICS=true`)
-- [ ] **Distributed Tracing Monitoring** - OpenTelemetry integration for request tracing across Frontend/Workers
+- [ ] **Log Aggregation (Loki + Alloy)** - Structured log collection with Grafana Loki for DynamoGraphDeployments
+- [ ] **Distributed Tracing** - OpenTelemetry integration with Tempo for request tracing across Frontend/Workers
 - [ ] **AIConfigurator** - Automated optimal TP/PP/batch size configuration finder
 - [ ] **SLO-based Planner** - SLA-driven auto-scaling with profiling (`disagg_planner.yaml`, load predictor: constant/arima/prophet)
 - [ ] **TRT-LLM Backend** - TensorRT-LLM serving support (`dynamo-trtllm` component)

@@ -13,6 +13,10 @@ spec:
   envs:
     - name: DYN_LOG
       value: "info"
+{{#if ENABLE_STRUCTURED_LOGGING}}
+    - name: DYN_LOGGING_JSONL
+      value: "true"
+{{/if}}
 {{#if ENABLE_MODEL_CACHE}}
   pvcs:
     - name: {{{MODEL_CACHE_PVC_NAME}}}
@@ -341,4 +345,26 @@ spec:
             value: auto
             effect: NoSchedule
 {{/if}}
+{{/if}}
+{{#if ENABLE_INGRESS}}
+---
+# ==============================================================================
+# Ingress: Expose Frontend API via Ingress controller
+# ==============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{{DEPLOYMENT_NAME}}}-frontend
+spec:
+  ingressClassName: "{{{INGRESS_CLASS}}}"
+  rules:
+    - http:
+        paths:
+          - path: {{{INGRESS_PATH}}}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{{DEPLOYMENT_NAME}}}-frontend
+                port:
+                  number: 8000
 {{/if}}

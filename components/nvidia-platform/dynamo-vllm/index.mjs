@@ -547,8 +547,75 @@ export async function install() {
     type: "input",
     name: "imageTag",
     message: "vLLM runtime image tag:",
-    default: "0.8.1",
+    default: "0.9.0",
   }]);
+  
+  // ============================================
+  // Monitoring: Dynamo Operator handles metrics automatically
+  // when prometheusEndpoint is configured on the platform.
+  // DYN_SYSTEM_PORT is set by the Operator (default: 9090).
+  // ============================================
+  let enableStructuredLogging = false;
+  
+  try {
+    const promCrd = await $`kubectl get crd podmonitors.monitoring.coreos.com`.quiet();
+    if (promCrd.exitCode === 0) {
+      console.log("\n✅ Prometheus detected - Dynamo Operator will auto-configure metrics/health probes.");
+    }
+  } catch {
+    // Prometheus not available
+  }
+  
+  const { wantStructuredLogging } = await inquirer.prompt([{
+    type: "confirm",
+    name: "wantStructuredLogging",
+    message: "Enable structured logging (JSONL format, for Loki/log aggregation)?",
+    default: false,
+  }]);
+  enableStructuredLogging = wantStructuredLogging;
+  
+  // ============================================
+  // Ingress: detect and ask
+  // ============================================
+  let enableIngress = false;
+  let ingressClass = "";
+  let ingressPath = "";
+  
+  try {
+    const icResult = await $`kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}'`.quiet();
+    const detectedClass = icResult.stdout.trim().replace(/'/g, "");
+    if (detectedClass) {
+      console.log(`\n✅ Ingress controller detected: ${detectedClass}`);
+      const { wantIngress } = await inquirer.prompt([{
+        type: "confirm",
+        name: "wantIngress",
+        message: "Create Ingress for Frontend API? (no port-forward needed)",
+        default: true,
+      }]);
+      enableIngress = wantIngress;
+      
+      if (enableIngress) {
+        const ingressAnswers = await inquirer.prompt([
+          {
+            type: "input",
+            name: "ingressClass",
+            message: "Ingress class:",
+            default: detectedClass,
+          },
+          {
+            type: "input",
+            name: "ingressPath",
+            message: "Ingress path prefix (e.g., /v1 or /qwen3):",
+            default: "/v1",
+          },
+        ]);
+        ingressClass = ingressAnswers.ingressClass;
+        ingressPath = ingressAnswers.ingressPath;
+      }
+    }
+  } catch {
+    // No ingress controller
+  }
   
   // ============================================
   // Step 4: Render deployment template
@@ -639,6 +706,15 @@ export async function install() {
     
     // Additional args (inline for shell command)
     ADDITIONAL_ARGS_INLINE: additionalArgsInline,
+    
+    // Monitoring
+    ENABLE_STRUCTURED_LOGGING: enableStructuredLogging,
+    
+    // Ingress
+    ENABLE_INGRESS: enableIngress,
+    INGRESS_CLASS: ingressClass,
+    INGRESS_PATH: ingressPath,
+    NAMESPACE: namespace,
     
     // Platform
     IS_K8S: isK8s,
@@ -805,15 +881,24 @@ spec:
   console.log(`   kubectl get pods -n ${namespace} | grep ${deploymentName}`);
   
   if (isK8s) {
-    // K8s mode: port-forward
-    console.log("\n1. Port-forward the frontend service (after pods are ready):");
-    console.log(`   kubectl port-forward svc/${frontendSvc} 8000:8000 -n ${namespace} &`);
-    console.log("\n2. Test the API:");
-    console.log(`   curl localhost:8000/v1/chat/completions \\`);
-    console.log(`     -H "Content-Type: application/json" \\`);
-    console.log(`     -d '{"model": "${modelName}", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50}'`);
-    console.log("\n3. Stop port-forward:");
-    console.log(`   kill %1    # or: kill $(lsof -ti:8000)`);
+    if (enableIngress) {
+      console.log("\n1. Access via Ingress (find NodePort first):");
+      console.log(`   kubectl get svc -n ingress-nginx`);
+      console.log(`   # Look for PORT(S): 80:<NODE_PORT>/TCP`);
+      console.log(`\n2. Test the API:`);
+      console.log(`   curl http://<node-ip>:<node-port>${ingressPath}/chat/completions \\`);
+      console.log(`     -H "Content-Type: application/json" \\`);
+      console.log(`     -d '{"model": "${modelName}", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50}'`);
+    } else {
+      console.log("\n1. Port-forward the frontend service (after pods are ready):");
+      console.log(`   kubectl port-forward svc/${frontendSvc} 8000:8000 -n ${namespace} --address 0.0.0.0 &`);
+      console.log("\n2. Test the API:");
+      console.log(`   curl localhost:8000/v1/chat/completions \\`);
+      console.log(`     -H "Content-Type: application/json" \\`);
+      console.log(`     -d '{"model": "${modelName}", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50}'`);
+      console.log("\n3. Stop port-forward:");
+      console.log(`   kill %1    # or: kill $(lsof -ti:8000)`);
+    }
   } else {
     // EKS mode: internal URL for LiteLLM + optional external access
     console.log("\n  Internal service URL (for LiteLLM / other in-cluster services):");

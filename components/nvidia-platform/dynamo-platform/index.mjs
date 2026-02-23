@@ -18,10 +18,29 @@ let utils;
 // NGC Helm chart URL
 const NGC_HELM_REPO = "https://helm.ngc.nvidia.com/nvidia/ai-dynamo/charts";
 
+// Monitoring constants
+const MONITORING_NAMESPACE = "monitoring";
+const PROMETHEUS_SVC = `http://prometheus-kube-prometheus-prometheus.${MONITORING_NAMESPACE}.svc.cluster.local:9090`;
+
 export async function init(_BASE_DIR, _config, _utils) {
   BASE_DIR = _BASE_DIR;
   config = _config;
   utils = _utils;
+}
+
+// Check if kube-prometheus-stack / Prometheus is available
+async function isPrometheusAvailable() {
+  try {
+    // Check for Prometheus Operator CRD
+    const crdResult = await $`kubectl get crd podmonitors.monitoring.coreos.com`.quiet();
+    if (crdResult.exitCode !== 0) return false;
+    
+    // Check for Prometheus service in monitoring namespace
+    const svcResult = await $`kubectl get svc prometheus-kube-prometheus-prometheus -n ${MONITORING_NAMESPACE}`.quiet();
+    return svcResult.exitCode === 0;
+  } catch {
+    return false;
+  }
 }
 
 // Check if CRDs are already installed
@@ -50,8 +69,23 @@ export async function install() {
     ? config?.platform?.k8s?.dynamoPlatform || {}
     : config?.platform?.eks?.dynamoPlatform || {};
   
-  const releaseVersion = platformConfig.releaseVersion || "0.8.1";
-  const namespace = platformConfig.namespace || "dynamo-system";
+  const defaultVersion = platformConfig.releaseVersion || "0.9.0";
+  const defaultNamespace = platformConfig.namespace || "dynamo-system";
+  
+  const { releaseVersion, namespace } = await inquirer.prompt([
+    {
+      type: "input",
+      name: "releaseVersion",
+      message: "Dynamo Platform version:",
+      default: defaultVersion,
+    },
+    {
+      type: "input",
+      name: "namespace",
+      message: "Namespace:",
+      default: defaultNamespace,
+    },
+  ]);
   
   console.log("\n========================================");
   console.log("Installing Dynamo Kubernetes Platform");
@@ -239,6 +273,46 @@ parameters:
     }
   }
   
+  // K8s mode: Install ingress-nginx if not present
+  if (isK8s) {
+    let hasIngressController = false;
+    try {
+      const icResult = await $`kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}'`.quiet();
+      hasIngressController = !!icResult.stdout.trim().replace(/'/g, "");
+    } catch {
+      // no IngressClass
+    }
+    
+    if (!hasIngressController) {
+      const { installIngress } = await inquirer.prompt([{
+        type: "confirm",
+        name: "installIngress",
+        message: "No Ingress controller found. Install ingress-nginx? (recommended for accessing Grafana/vLLM API)",
+        default: true,
+      }]);
+      
+      if (installIngress) {
+        console.log("\nInstalling ingress-nginx...");
+        await $`helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update`;
+        await $`helm repo update`;
+        await $`helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+          --namespace ingress-nginx \
+          --create-namespace \
+          --set controller.service.type=NodePort \
+          --wait --timeout 5m`;
+        
+        try {
+          const np = await $`kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}'`.quiet();
+          console.log(`✅ ingress-nginx installed (NodePort: ${np.stdout.trim().replace(/'/g, "")})`);
+        } catch {
+          console.log("✅ ingress-nginx installed.");
+        }
+      }
+    } else {
+      console.log("✅ Ingress controller found.");
+    }
+  }
+  
   // EKS mode: Check for EFA-enabled nodes (recommended for multi-node)
   if (!isK8s) {
     try {
@@ -275,7 +349,7 @@ parameters:
   }
   
   // Configuration prompts
-  // Grove and KAI Scheduler are downloaded from ghcr.io (public) in v0.8.1+
+  // Grove and KAI Scheduler are downloaded from ghcr.io (public) in v0.9.0+
   const { enableGrove, enableKaiScheduler } = await inquirer.prompt([
     {
       type: "confirm",
@@ -360,19 +434,122 @@ parameters:
   
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   
-  // Step 3: Install Platform from NGC
-  console.log("\n[3/3] Installing Dynamo Platform from NGC...");
+  // Step 3: Detect Prometheus for monitoring integration
+  console.log("\n[3/4] Checking monitoring stack...");
+  const prometheusAvailable = await isPrometheusAvailable();
+  let prometheusEndpoint = "";
+  
+  if (prometheusAvailable) {
+    prometheusEndpoint = PROMETHEUS_SVC;
+    console.log(`✅ Prometheus detected: ${prometheusEndpoint}`);
+    console.log("   Dynamo Operator will auto-create PodMonitors for metrics collection.");
+  } else {
+    console.log("⚠️  Prometheus (kube-prometheus-stack) not found in 'monitoring' namespace.");
+    console.log("   Dynamo metrics collection will not be enabled.");
+    console.log("   To enable monitoring, install it first:");
+    console.log("   ./cli nvidia-platform monitoring install\n");
+    
+    const { manualPrometheus } = await inquirer.prompt([{
+      type: "confirm",
+      name: "manualPrometheus",
+      message: "Do you have a Prometheus endpoint to configure? (e.g., custom installation)",
+      default: false,
+    }]);
+    
+    if (manualPrometheus) {
+      const { inputEndpoint } = await inquirer.prompt([{
+        type: "input",
+        name: "inputEndpoint",
+        message: "Enter Prometheus endpoint (e.g., http://prometheus.monitoring:9090):",
+        validate: (input) => input.startsWith("http") ? true : "Must start with http:// or https://",
+      }]);
+      prometheusEndpoint = inputEndpoint;
+    }
+  }
+  
+  // Step 4: Install Platform from NGC
+  console.log("\n[4/4] Installing Dynamo Platform from NGC...");
   console.log(`  Version: ${releaseVersion}`);
   console.log(`  Grove: ${enableGrove}`);
   console.log(`  KAI Scheduler: ${enableKaiScheduler}`);
+  console.log(`  Prometheus: ${prometheusEndpoint || "(disabled)"}`);
+  
+  // Build helm set args for prometheusEndpoint
+  const helmSetArgs = [];
+  if (prometheusEndpoint) {
+    helmSetArgs.push("--set", `prometheusEndpoint=${prometheusEndpoint}`);
+  }
   
   await $`helm fetch ${NGC_HELM_REPO}/dynamo-platform-${releaseVersion}.tgz`;
-  await $`helm upgrade --install dynamo-platform dynamo-platform-${releaseVersion}.tgz \
-    --namespace ${namespace} \
-    --create-namespace \
-    -f ${valuesRenderedPath} \
-    --wait --timeout 10m`;
-  await $`rm -f dynamo-platform-${releaseVersion}.tgz`;
+  
+  // Extract and patch chart (workaround: v0.9.0 chart has --enable-webhooks flag removed from operator binary)
+  await $`tar -xzf dynamo-platform-${releaseVersion}.tgz`.nothrow();
+  await $`sed -i '/--enable-webhooks/d' dynamo-platform/charts/dynamo-operator/templates/deployment.yaml`.nothrow();
+  
+  const chartSource = "dynamo-platform";  // use extracted directory
+  
+  try {
+    await $`helm upgrade --install dynamo-platform ${chartSource} \
+      --namespace ${namespace} \
+      --create-namespace \
+      -f ${valuesRenderedPath} \
+      ${helmSetArgs} \
+      --wait --timeout 10m`;
+  } catch (e) {
+    const errMsg = e.stderr || e.message || "";
+    
+    // StatefulSet immutable field error (etcd/NATS storageClass, etc.)
+    if (errMsg.includes("updates to statefulset spec") && errMsg.includes("Forbidden")) {
+      console.log("\n⚠️  Helm upgrade failed: StatefulSet immutable field conflict (etcd/NATS).");
+      console.log("   This happens when upgrading with changed storage settings.\n");
+      
+      const { recoveryAction } = await inquirer.prompt([{
+        type: "list",
+        name: "recoveryAction",
+        message: "How would you like to proceed?",
+        choices: [
+          { name: "Delete conflicting StatefulSets and retry (etcd/NATS data will be recreated)", value: "delete-sts" },
+          { name: "Full uninstall and reinstall (clean slate)", value: "reinstall" },
+          { name: "Abort", value: "abort" },
+        ],
+      }]);
+      
+      if (recoveryAction === "abort") {
+        await $`rm -rf dynamo-platform-${releaseVersion}.tgz dynamo-platform`;
+        console.log("Aborted.");
+        return;
+      }
+      
+      if (recoveryAction === "reinstall") {
+        console.log("\nUninstalling existing Dynamo Platform...");
+        await $`helm uninstall dynamo-platform --namespace ${namespace}`.nothrow();
+        // Clean up leftover PVCs (etcd/NATS)
+        await $`kubectl delete pvc -n ${namespace} -l app.kubernetes.io/instance=dynamo-platform --ignore-not-found`.nothrow();
+        console.log("Existing release removed. Reinstalling...\n");
+      }
+      
+      if (recoveryAction === "delete-sts") {
+        console.log("\nDeleting conflicting StatefulSets...");
+        await $`kubectl delete statefulset dynamo-platform-etcd -n ${namespace} --ignore-not-found`.nothrow();
+        await $`kubectl delete statefulset dynamo-platform-nats -n ${namespace} --ignore-not-found`.nothrow();
+        console.log("StatefulSets deleted. Retrying upgrade...\n");
+      }
+      
+      // Retry
+      await $`helm upgrade --install dynamo-platform ${chartSource} \
+        --namespace ${namespace} \
+        --create-namespace \
+        -f ${valuesRenderedPath} \
+        ${helmSetArgs} \
+        --wait --timeout 10m`;
+    } else {
+      // Unknown error - re-throw
+      await $`rm -rf dynamo-platform-${releaseVersion}.tgz dynamo-platform`;
+      throw e;
+    }
+  }
+  
+  await $`rm -rf dynamo-platform-${releaseVersion}.tgz dynamo-platform`;
   
   console.log("\n✅ Dynamo Platform installed successfully!");
   await printStatus(namespace);
@@ -386,6 +563,17 @@ parameters:
   console.log(`     --from-literal=HF_TOKEN=\${HF_TOKEN} \\`);
   console.log(`     -n ${namespace}`);
   console.log("\n2. Deploy a model using Dynamo vLLM or TRT-LLM component");
+  
+  if (prometheusEndpoint) {
+    console.log("\n3. Monitoring is enabled! Access Grafana:");
+    console.log(`   kubectl port-forward svc/prometheus-grafana 3000:80 -n ${MONITORING_NAMESPACE}`);
+    console.log("   Open: http://localhost:3000");
+    console.log("   Look for 'Dynamo Dashboard' under Dashboards.");
+  } else {
+    console.log("\n3. (Optional) To enable monitoring later:");
+    console.log("   ./cli nvidia-platform monitoring install");
+    console.log("   Then re-run: ./cli nvidia-platform dynamo-platform install (upgrade)");
+  }
 }
 
 async function printStatus(namespace) {

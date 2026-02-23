@@ -27,7 +27,8 @@ dynamo-operator:
 
 # ==============================================================================
 # etcd - Distributed key-value store
-# - Required for Dynamo worker coordination
+# - Optional in v0.9.0+ (K8s-native service discovery can replace etcd)
+# - Still enabled for backward compatibility and non-K8s discovery backends
 # ==============================================================================
 etcd:
   enabled: true
@@ -41,7 +42,8 @@ etcd:
 
 # ==============================================================================
 # NATS - High-performance messaging
-# - Required for Dynamo service communication
+# - Optional in v0.9.0+ (Event Plane uses ZMQ by default, NATS for backward compat)
+# - Still enabled for legacy KV router and event transport
 # ==============================================================================
 nats:
   enabled: true
