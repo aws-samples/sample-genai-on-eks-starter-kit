@@ -15,6 +15,9 @@ EXAMPLES=(
     "mcp-server/calculator:mcp-server-calculator"
     "strands-agents/calculator-agent:strands-agents-calculator-agent"
     "agno/calculator-agent:agno-calculator-agent"
+    "openclaw/shared:openclaw-bridge-server"
+    "openclaw/devops-agent:openclaw-devops-agent"
+    "openclaw/doc-writer:openclaw-doc-writer"
 )
 
 # Prompt for AWS configuration

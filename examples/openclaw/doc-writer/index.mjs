@@ -4,16 +4,20 @@ import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 import handlebars from "handlebars";
-import { $, cd } from "zx";
+import { $ } from "zx";
 $.verbose = true;
 
 export const name = "Document Writer Agent";
 const __filename = fileURLToPath(import.meta.url);
 const DIR = path.dirname(__filename);
-const SHARED_DIR = path.join(DIR, "..", "shared");
 let BASE_DIR;
 let config;
 let utils;
+
+// Pre-built public ECR image
+const ECR_REGISTRY_ALIAS = "agentic-ai-platforms-on-k8s";
+const IMAGE_NAME = "openclaw-doc-writer";
+const IMAGE_URL = `public.ecr.aws/${ECR_REGISTRY_ALIAS}/${IMAGE_NAME}:latest`;
 
 export async function init(_BASE_DIR, _config, _utils) {
   BASE_DIR = _BASE_DIR;
@@ -23,32 +27,8 @@ export async function init(_BASE_DIR, _config, _utils) {
 
 export async function install() {
   // Check required environment variables
-  const requiredEnvVars = ["REGION", "LITELLM_API_KEY"];
+  const requiredEnvVars = ["LITELLM_API_KEY"];
   utils.checkRequiredEnvVars(requiredEnvVars);
-
-  const { REGION } = process.env;
-  console.log("Applying Terraform configuration for doc-writer...");
-  await utils.terraform.apply(DIR);
-  const ecrRepoUrl = await utils.terraform.output(DIR, { outputName: "ecr_repository_url" });
-
-  // Build Docker image using shared bridge code + doc-writer Dockerfile
-  console.log("Building doc-writer agent Docker image...");
-  cd(SHARED_DIR);
-  try {
-    await $`aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${ecrRepoUrl.split("/")[0]}`;
-    const { useBuildx, arch } = config.docker;
-    const dockerfilePath = path.join(DIR, "Dockerfile");
-
-    if (useBuildx) {
-      await $`docker buildx build --platform linux/amd64,linux/arm64 -f ${dockerfilePath} -t ${ecrRepoUrl}:latest --push .`;
-    } else {
-      await $`docker build -f ${dockerfilePath} -t ${ecrRepoUrl}:latest .`;
-      await $`docker push ${ecrRepoUrl}:latest`;
-    }
-  } catch (error) {
-    console.error("Docker build/push failed:", error.message || error);
-    throw error;
-  }
 
   // Apply namespace and K8s manifests
   console.log("Applying Kubernetes manifests...");
@@ -60,7 +40,7 @@ export async function install() {
   const agentTemplate = handlebars.compile(agentTemplateString);
   const { LITELLM_API_KEY } = process.env;
   const agentVars = {
-    IMAGE: `${ecrRepoUrl}:latest`,
+    IMAGE: IMAGE_URL,
     ...config["examples"]["openclaw"]["doc-writer"].env,
     LITELLM_BASE_URL: "http://litellm.litellm:4000",
     LITELLM_API_KEY: LITELLM_API_KEY,
@@ -89,9 +69,5 @@ export async function install() {
 export async function uninstall() {
   console.log("Uninstalling Document Writer Agent...");
   await $`kubectl delete -f ${DIR}/agent.rendered.yaml --ignore-not-found`;
-
-  console.log("Destroying Terraform resources...");
-  await utils.terraform.destroy(DIR);
-
   console.log("Document Writer Agent uninstalled successfully!");
 }

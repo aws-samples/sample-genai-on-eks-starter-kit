@@ -43,8 +43,6 @@ The OpenClaw component deploys a central bridge server that:
 
 - EKS cluster (Auto Mode or Standard Mode)
 - LiteLLM component installed (`./cli ai-gateway litellm install`)
-- Docker with Buildx support (for multi-arch builds)
-- AWS CLI configured with ECR access
 - kubectl configured to access the cluster
 
 ## Installation
@@ -69,11 +67,8 @@ LANGFUSE_SECRET_KEY=sk-lf-xxx
 ```
 
 This will:
-1. Create ECR repository for the bridge server image
-2. Build multi-arch Docker image (amd64, arm64)
-3. Push image to ECR
-4. Deploy bridge server to `openclaw` namespace
-5. Create Kubernetes Service at `http://openclaw.openclaw:8080`
+1. Deploy bridge server to `openclaw` namespace using a pre-built image
+2. Create Kubernetes Service at `http://openclaw.openclaw:8080`
 
 ### 3. Verify Installation
 
@@ -108,7 +103,7 @@ The bridge server uses the following environment variables (configured via `conf
 | `OPENCLAW_GATEWAY_TOKEN` | Authentication token for OpenClaw Gateway | `openclaw-gateway-token` |
 | `LITELLM_BASE_URL` | LiteLLM API endpoint | `http://litellm.litellm:4000` |
 | `LITELLM_API_KEY` | LiteLLM API key | From `.env` |
-| `LITELLM_MODEL_NAME` | Default model to use | `vllm/qwen3-30b-instruct-fp8` |
+| `LITELLM_MODEL_NAME` | Default model to use | `bedrock/claude-4.5-sonnet` |
 | `LANGFUSE_HOST` | Langfuse endpoint (optional) | `http://langfuse-web.langfuse:3000` |
 | `LANGFUSE_PUBLIC_KEY` | Langfuse public key (optional) | From `.env` |
 | `LANGFUSE_SECRET_KEY` | Langfuse secret key (optional) | From `.env` |
@@ -120,7 +115,7 @@ The bridge server uses the following environment variables (configured via `conf
   "ai-agent": {
     "openclaw": {
       "env": {
-        "LITELLM_MODEL_NAME": "vllm/qwen3-30b-instruct-fp8",
+        "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
         "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
       }
     }
@@ -248,17 +243,6 @@ kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
   curl http://openclaw.openclaw:8080/health
 ```
 
-### Image Pull Errors
-
-```bash
-# Check ECR repository
-aws ecr describe-repositories --repository-names genai-on-eks-openclaw-openclaw
-
-# Re-authenticate Docker
-aws ecr get-login-password --region us-west-2 | \
-  docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-west-2.amazonaws.com
-```
-
 ### Langfuse Integration Not Working
 
 ```bash
@@ -275,9 +259,7 @@ kubectl get deployment -n openclaw openclaw -o yaml | grep LANGFUSE
 ./cli ai-agent openclaw uninstall
 ```
 
-This will:
-1. Delete Kubernetes resources (Deployment, Service, ServiceAccount)
-2. Destroy ECR repository via Terraform
+This will delete Kubernetes resources (Deployment, Service, ServiceAccount).
 
 ## Examples
 

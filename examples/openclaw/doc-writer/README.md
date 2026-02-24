@@ -35,7 +35,7 @@ Doc Writer Agent (K8s Job)
 - LiteLLM component installed (`./cli ai-gateway litellm install`)
 - Open WebUI component installed (`./cli gui-app openwebui install`)
 - Git credentials configured in `.env`
-- Docker with Buildx support
+- kubectl configured to access the cluster
 
 ## Installation
 
@@ -59,15 +59,12 @@ LANGFUSE_SECRET_KEY=sk-lf-xxx
 ### 2. Install Document Writer Agent
 
 ```bash
-./cli examples openclaw doc-writer install
+./cli openclaw doc-writer install
 ```
 
 This will:
-1. Create ECR repository for the agent image
-2. Build multi-arch Docker image with Git and Claude Code
-3. Push image to ECR
-4. Deploy agent as Kubernetes Deployment
-5. Create Service at `http://doc-writer.openclaw:8080`
+1. Deploy agent as Kubernetes Deployment using a pre-built image
+2. Create Service at `http://doc-writer.openclaw:8080`
 
 ### 3. Verify Installation
 
@@ -95,7 +92,7 @@ curl http://localhost:8080/health
 | `OPENCLAW_GATEWAY_TOKEN` | Authentication token | `openclaw-gateway-token` |
 | `LITELLM_BASE_URL` | LiteLLM API endpoint | `http://litellm.litellm:4000` |
 | `LITELLM_API_KEY` | LiteLLM API key | From `.env` |
-| `LITELLM_MODEL_NAME` | Model to use | `vllm/qwen3-30b-instruct-fp8` |
+| `LITELLM_MODEL_NAME` | Model to use | `bedrock/claude-4.5-sonnet` |
 | `GIT_USERNAME` | Git username | From `.env` |
 | `GIT_TOKEN` | Git personal access token | From `.env` |
 | `LANGFUSE_HOST` | Langfuse endpoint (optional) | Auto-detected |
@@ -108,7 +105,7 @@ curl http://localhost:8080/health
     "openclaw": {
       "doc-writer": {
         "env": {
-          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-instruct-fp8",
+          "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
           "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
         }
       }
@@ -289,7 +286,7 @@ curl http://localhost:4000/health
 
 ### Slow Response Times
 
-- **Model selection**: Try a faster model (e.g., `vllm/qwen3-8b` instead of `qwen3-30b`)
+- **Model selection**: Try a faster model (e.g., `bedrock/claude-4.5-haiku`)
 - **Repository size**: Large repos take longer to analyze
 - **Network latency**: Check Git clone speed
 
@@ -337,12 +334,10 @@ If Langfuse is installed, view agent traces:
 ## Uninstallation
 
 ```bash
-./cli examples openclaw doc-writer uninstall
+./cli openclaw doc-writer uninstall
 ```
 
-This will:
-1. Delete Kubernetes resources (Deployment, Service, ServiceAccount, KEDA ScaledObject)
-2. Destroy ECR repository via Terraform
+This will delete Kubernetes resources (Deployment, Service, ServiceAccount, KEDA ScaledObject).
 
 ## References
 

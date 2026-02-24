@@ -34,7 +34,6 @@ DevOps Agent (K8s Deployment)
 - OpenClaw bridge server installed (`./cli ai-agent openclaw install`)
 - LiteLLM component installed (`./cli ai-gateway litellm install`)
 - Open WebUI component installed (`./cli gui-app openwebui install`)
-- Docker with Buildx support
 - Kubernetes cluster with RBAC enabled
 
 ## Installation
@@ -55,16 +54,13 @@ LANGFUSE_SECRET_KEY=sk-lf-xxx
 ### 2. Install DevOps Agent
 
 ```bash
-./cli examples openclaw devops-agent install
+./cli openclaw devops-agent install
 ```
 
 This will:
-1. Create ECR repository for the agent image
-2. Build multi-arch Docker image with kubectl, helm, AWS CLI
-3. Push image to ECR
-4. Deploy agent as Kubernetes Deployment
-5. Create ServiceAccount with read-only ClusterRole
-6. Create Service at `http://devops-agent.openclaw:8080`
+1. Deploy agent as Kubernetes Deployment using a pre-built image
+2. Create ServiceAccount with read-only ClusterRole
+3. Create Service at `http://devops-agent.openclaw:8080`
 
 ### 3. Verify Installation
 
@@ -96,7 +92,7 @@ curl http://localhost:8080/health
 | `OPENCLAW_GATEWAY_TOKEN` | Authentication token | `openclaw-gateway-token` |
 | `LITELLM_BASE_URL` | LiteLLM API endpoint | `http://litellm.litellm:4000` |
 | `LITELLM_API_KEY` | LiteLLM API key | From `.env` |
-| `LITELLM_MODEL_NAME` | Model to use | `vllm/qwen3-30b-instruct-fp8` |
+| `LITELLM_MODEL_NAME` | Model to use | `bedrock/claude-4.5-sonnet` |
 | `LANGFUSE_HOST` | Langfuse endpoint (optional) | Auto-detected |
 
 ### config.json
@@ -107,7 +103,7 @@ curl http://localhost:8080/health
     "openclaw": {
       "devops-agent": {
         "env": {
-          "LITELLM_MODEL_NAME": "vllm/qwen3-30b-instruct-fp8",
+          "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
           "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
         }
       }
@@ -395,13 +391,10 @@ Estimated cost: ~$0.01-0.02 per hour (excluding LLM API costs)
 ## Uninstallation
 
 ```bash
-./cli examples openclaw devops-agent uninstall
+./cli openclaw devops-agent uninstall
 ```
 
-This will:
-1. Delete Kubernetes resources (Deployment, Service, ServiceAccount)
-2. Delete RBAC resources (ClusterRole, ClusterRoleBinding)
-3. Destroy ECR repository via Terraform
+This will delete Kubernetes resources (Deployment, Service, ServiceAccount) and RBAC resources (ClusterRole, ClusterRoleBinding).
 
 ## References
 

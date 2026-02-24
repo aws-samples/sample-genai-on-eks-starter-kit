@@ -59,11 +59,8 @@ The OpenClaw bridge server orchestrates communication between Open WebUI and age
 ```
 
 This will:
-1. Create an ECR repository for the bridge server image
-2. Build a multi-arch Docker image (amd64, arm64)
-3. Push the image to ECR
-4. Deploy the bridge server to the `openclaw` namespace
-5. Create a Kubernetes Service at `http://openclaw.openclaw:8080`
+1. Deploy the bridge server to the `openclaw` namespace using a pre-built image
+2. Create a Kubernetes Service at `http://openclaw.openclaw:8080`
 
 ### Verify Installation
 
@@ -97,14 +94,12 @@ The DevOps Agent provides read-only access to your Kubernetes cluster for inspec
 
 ```bash
 # Install the DevOps Agent
-./cli examples openclaw devops-agent install
+./cli openclaw devops-agent install
 ```
 
 This will:
-1. Create an ECR repository for the agent image
-2. Build a Docker image with kubectl, helm, and AWS CLI
-3. Deploy the agent with read-only RBAC permissions
-4. Create a Service at `http://devops-agent.openclaw:8080`
+1. Deploy the agent with read-only RBAC permissions using a pre-built image
+2. Create a Service at `http://devops-agent.openclaw:8080`
 
 ### Verify Installation
 
@@ -247,7 +242,7 @@ The Doc Writer Agent can clone Git repositories, analyze code, and generate docu
 
 ```bash
 # Install the Doc Writer Agent
-./cli examples openclaw doc-writer install
+./cli openclaw doc-writer install
 ```
 
 Then follow the same process as Step 3 to add the Doc Writer Pipe Function to Open WebUI using `examples/openclaw/doc-writer/openwebui_pipe_function.py`.
@@ -420,8 +415,8 @@ To remove all OpenClaw components:
 
 ```bash
 # Uninstall agents
-./cli examples openclaw devops-agent uninstall
-./cli examples openclaw doc-writer uninstall
+./cli openclaw devops-agent uninstall
+./cli openclaw doc-writer uninstall
 
 # Uninstall bridge server
 ./cli ai-agent openclaw uninstall
