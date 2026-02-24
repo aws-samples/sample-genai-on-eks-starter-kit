@@ -15,7 +15,7 @@ class Pipe:
     def pipes(self):
         return [
             {
-                "id": "openclaw-doc-writer",
+                "id": "openclaw_doc_writer",
                 "name": "OpenClaw - Document Writer",
             }
         ]

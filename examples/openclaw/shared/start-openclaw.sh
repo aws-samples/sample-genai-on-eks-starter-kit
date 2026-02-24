@@ -1,17 +1,49 @@
 #!/bin/bash
 set -euo pipefail
 
-CONFIG_PATH="/home/openclaw/.config/openclaw/openclaw.json"
+# node:22-slim has uid 1000 = 'node' user; K8s runAsUser: 1000 maps here
+export HOME="/home/node"
 
-echo "[start] Patching openclaw.json..."
-node /app/dist/patch-config.js "${CONFIG_PATH}" 2>&1 || echo "[start] WARNING: patch-config exited with code $?"
+# OpenClaw stores config at ~/.openclaw/openclaw.json (not ~/.config/openclaw/)
+OPENCLAW_DIR="${HOME}/.openclaw"
+CONFIG_PATH="${OPENCLAW_DIR}/openclaw.json"
+AUTH_DIR="${OPENCLAW_DIR}/agents/main/agent"
+AUTH_PATH="${AUTH_DIR}/auth-profiles.json"
+
+# Ensure directories exist
+mkdir -p "${OPENCLAW_DIR}" "${AUTH_DIR}"
+
+# Create config with gateway settings + agent model override.
+# Use "openai" provider so the gateway reads OPENAI_API_KEY / OPENAI_BASE_URL env vars
+# to route LLM calls through LiteLLM instead of defaulting to Anthropic.
+GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-}"
+LITELLM_MODEL="${LITELLM_MODEL_NAME:-vllm/default}"
+
+echo "[start] Writing openclaw.json..."
+cat > "${CONFIG_PATH}" <<CFGEOF
+{
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "${GATEWAY_TOKEN}"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "openai/${LITELLM_MODEL}"
+    }
+  }
+}
+CFGEOF
+echo "[start] Config written: $(cat "${CONFIG_PATH}")"
 
 echo "[start] Starting Bridge server (background)..."
 node /app/dist/index.js &
 BRIDGE_PID=$!
 
 echo "[start] Starting OpenClaw Gateway (foreground)..."
-openclaw gateway --port 18789 --verbose --allow-unconfigured --bind loopback 2>&1 &
+openclaw gateway --port 18789 --verbose --bind loopback 2>&1 &
 GATEWAY_PID=$!
 
 cleanup() {

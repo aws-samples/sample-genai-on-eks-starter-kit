@@ -153,10 +153,13 @@ On first access, you'll need to create an admin account.
 
 1. Log in to Open WebUI as an admin user
 2. Navigate to **Admin Panel** → **Functions**
-3. Click **+ Add Function**
-4. Copy the contents of `examples/openclaw/devops-agent/openwebui_pipe_function.py`
-5. Paste into the function editor
-6. Click **Save**
+3. Click **New Function** (far right side of the page)
+4. Fill in the form fields:
+   - **Function Name**: `OpenClaw DevOps Agent`
+   - **Description**: `Interactive Kubernetes cluster management and troubleshooting assistant with read-only access`
+5. Copy the contents of `examples/openclaw/devops-agent/openwebui_pipe_function.py`
+6. Paste into the code editor below the form
+7. Click **Save**
 
 ### 3.3 Configure Function Settings (Valves)
 

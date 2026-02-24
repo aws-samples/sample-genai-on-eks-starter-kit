@@ -22,27 +22,24 @@ RUN apt-get update && \
 RUN npm install -g openclaw@latest && \
     npm cache clean --force
 
-# Create non-root user
-RUN groupadd -r openclaw && useradd -r -g openclaw -m openclaw
-
-# Pre-generate openclaw config (skip onboard at runtime)
-RUN mkdir -p /home/openclaw/.config/openclaw && \
-    echo '{"auth":{"method":"env"},"gateway":{"port":18789}}' > /home/openclaw/.config/openclaw/openclaw.json && \
-    chown -R openclaw:openclaw /home/openclaw/.config
+# Use existing 'node' user (uid 1000) from node:22-slim base image.
+# K8s securityContext runAsUser: 1000 maps to this user.
+RUN mkdir -p /home/node/.openclaw && \
+    chown -R node:node /home/node/.openclaw
 
 WORKDIR /app
 
 # Copy production dependencies
 COPY --from=builder /build/node_modules/ /app/node_modules/
-COPY --from=builder --chown=openclaw:openclaw /build/dist/ /app/dist/
-COPY --chown=openclaw:openclaw package.json /app/
-COPY --chown=openclaw:openclaw start-openclaw.sh /app/
+COPY --from=builder --chown=node:node /build/dist/ /app/dist/
+COPY --chown=node:node package.json /app/
+COPY --chown=node:node start-openclaw.sh /app/
 
 RUN chmod +x /app/start-openclaw.sh && \
     mkdir -p /data/workspace && \
-    chown openclaw:openclaw /data/workspace
+    chown node:node /data/workspace
 
-USER openclaw
+USER node
 
 EXPOSE 8080
 

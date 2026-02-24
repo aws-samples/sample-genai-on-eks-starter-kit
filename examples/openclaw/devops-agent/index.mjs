@@ -60,8 +60,6 @@ export async function install() {
   const agentTemplate = handlebars.compile(agentTemplateString);
   const { LITELLM_API_KEY } = process.env;
   const agentVars = {
-    useBuildx,
-    arch,
     IMAGE: `${ecrRepoUrl}:latest`,
     ...config["examples"]["openclaw"]["devops-agent"].env,
     LITELLM_BASE_URL: "http://litellm.litellm:4000",

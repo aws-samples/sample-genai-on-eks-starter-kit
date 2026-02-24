@@ -15,7 +15,7 @@ class Pipe:
     def pipes(self):
         return [
             {
-                "id": "openclaw-devops-agent",
+                "id": "openclaw_devops_agent",
                 "name": "OpenClaw - DevOps Agent",
             }
         ]

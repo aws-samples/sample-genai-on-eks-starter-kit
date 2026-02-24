@@ -28,7 +28,9 @@ function createApp(deps) {
     });
     app.post("/message", async (req, res) => {
         const body = req.body;
+        console.log("[bridge] POST /message received, message length:", body.message?.length ?? 0);
         if (!body.message) {
+            console.warn("[bridge] Missing 'message' field in request body. Keys:", Object.keys(body));
             res.status(400).json({ error: "Missing required field: message" });
             return;
         }
@@ -37,24 +39,30 @@ function createApp(deps) {
         let clientDisconnected = false;
         req.on("close", () => {
             clientDisconnected = true;
-            console.log("Client disconnected");
+            console.log("[bridge] Client disconnected");
         });
         try {
+            console.log("[bridge] Sending message to OpenClaw Gateway...");
             const generator = deps.openclawClient.sendMessage(body.message);
+            let chunkCount = 0;
             for await (const chunk of generator) {
                 if (clientDisconnected) {
-                    console.log("Stopping iteration due to client disconnect");
+                    console.log("[bridge] Stopping iteration due to client disconnect");
                     break;
                 }
+                chunkCount++;
                 sse.sendChunk(chunk);
             }
+            console.log(`[bridge] Stream finished, ${chunkCount} chunks delivered`);
             if (!clientDisconnected) {
                 sse.sendDone();
             }
         }
         catch (err) {
+            const errMsg = err instanceof Error ? err.message : "Unknown error";
+            console.error("[bridge] Error during message processing:", errMsg);
             if (!clientDisconnected) {
-                sse.sendError(err instanceof Error ? err.message : "Unknown error");
+                sse.sendError(errMsg);
                 sse.sendDone();
             }
         }

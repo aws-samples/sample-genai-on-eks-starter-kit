@@ -30,14 +30,24 @@ spec:
             runAsUser: 1000
             allowPrivilegeEscalation: false
           env:
+            # Ensure HOME points to node user's home (uid 1000)
+            - name: HOME
+              value: "/home/node"
+            - name: OPENCLAW_CONFIG_PATH
+              value: "/home/node/.openclaw/openclaw.json"
             - name: OPENCLAW_GATEWAY_TOKEN
               value: "{{{OPENCLAW_GATEWAY_TOKEN}}}"
             - name: LITELLM_BASE_URL
-              value: {{{LITELLM_BASE_URL}}}
+              value: "{{{LITELLM_BASE_URL}}}"
             - name: LITELLM_API_KEY
               value: "{{{LITELLM_API_KEY}}}"
             - name: LITELLM_MODEL_NAME
-              value: {{{LITELLM_MODEL_NAME}}}
+              value: "{{{LITELLM_MODEL_NAME}}}"
+            # OpenAI SDK compatible env vars for OpenClaw Gateway LLM calls
+            - name: OPENAI_API_KEY
+              value: "{{{LITELLM_API_KEY}}}"
+            - name: OPENAI_BASE_URL
+              value: "{{{LITELLM_BASE_URL}}}/v1"
             {{#if LANGFUSE_HOST}}
             - name: LANGFUSE_HOST
               value: {{{LANGFUSE_HOST}}}
@@ -70,6 +80,12 @@ spec:
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
+          volumeMounts:
+            - name: openclaw-config
+              mountPath: /home/node/.openclaw
+      volumes:
+        - name: openclaw-config
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
