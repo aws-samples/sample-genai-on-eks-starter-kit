@@ -24,14 +24,17 @@ cat > "${CONFIG_PATH}" <<CFGEOF
 {
   "gateway": {
     "mode": "local",
-    "port": 18789
-  },
-  "auth": {
-    "method": "env"
+    "port": 18789,
+    "auth": {
+      "mode": "token",
+      "token": "${OPENCLAW_GATEWAY_TOKEN:-openclaw-gateway-token}"
+    }
   },
   "agents": {
     "defaults": {
-      "model": "openai/${LITELLM_MODEL}"
+      "model": {
+        "primary": "openai/${LITELLM_MODEL}"
+      }
     }
   }
 }
