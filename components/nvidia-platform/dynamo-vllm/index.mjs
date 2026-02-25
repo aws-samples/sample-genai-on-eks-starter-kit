@@ -228,7 +228,7 @@ export async function install() {
     type: "input",
     name: "model",
     message: "Enter model name (HuggingFace format):",
-    default: "nvidia/Llama-3.3-70B-Instruct-FP8",
+    default: "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8",
   }]);
   const servedModelName = model; // API served name = model name
   
@@ -361,22 +361,12 @@ export async function install() {
     default: false,
   }]);
   
-  let kvRouterConfig = {};
+  const kvRouterConfig = {
+    routerTemperature: "0.5",
+    overlapScoreWeight: "1.0",
+  };
   if (enableKvRouter) {
-    kvRouterConfig = await inquirer.prompt([
-      {
-        type: "input",
-        name: "routerTemperature",
-        message: "Router temperature (0.0 = deterministic, higher = more random):",
-        default: "0.5",
-      },
-      {
-        type: "input",
-        name: "overlapScoreWeight",
-        message: "KV overlap score weight (>1.0 prioritize TTFT, <1.0 prioritize ITL):",
-        default: "1.0",
-      },
-    ]);
+    console.log("  Router temperature: 0.5, Overlap score weight: 1.0 (Dynamo defaults)");
   }
   
   // KV Cache Offloading (KVBM)
@@ -394,7 +384,7 @@ export async function install() {
       type: "input",
       name: "cpuCacheGB",
       message: "CPU pinned memory cache size (GB):",
-      default: "100",
+      default: "20",
       validate: (input) => parseInt(input) > 0 ? true : "Must be > 0",
     }]);
     kvbmConfig.cpuCacheGB = cpuCacheGB;
@@ -408,31 +398,15 @@ export async function install() {
     }]);
     
     if (enableDiskCache) {
-      const diskConfig = await inquirer.prompt([
-        {
-          type: "input",
-          name: "diskCacheGB",
-          message: "Disk cache size (GB):",
-          default: "200",
-        },
-        {
-          type: "input",
-          name: "diskCacheDir",
-          message: "Disk cache directory (use fast SSD/NVMe path):",
-          default: isK8s ? "/tmp" : "/mnt/nvme/kvbm_cache",
-        },
-        {
-          type: "confirm",
-          name: "enableDiskFilter",
-          message: "Enable disk offload frequency filter (recommended for SSD lifespan)?",
-          default: true,
-        },
-      ]);
-      kvbmConfig.diskCacheGB = diskConfig.diskCacheGB;
-      kvbmConfig.diskCacheDir = diskConfig.diskCacheDir;
-      kvbmConfig.disableDiskFilter = !diskConfig.enableDiskFilter;
-      // zerofill is only needed for network filesystems (NFS/EFS/Lustre)
-      // Disk cache should always be on local SSD, so this is almost never needed
+      const { diskCacheGB } = await inquirer.prompt([{
+        type: "input",
+        name: "diskCacheGB",
+        message: "Disk cache size (GB):",
+        default: "200",
+      }]);
+      kvbmConfig.diskCacheGB = diskCacheGB;
+      kvbmConfig.diskCacheDir = isK8s ? "/tmp" : "/mnt/nvme/kvbm_cache";
+      kvbmConfig.disableDiskFilter = false;
       kvbmConfig.zerofillFallback = false;
     } else {
       kvbmConfig.diskCacheGB = "0";
@@ -542,79 +516,42 @@ export async function install() {
     default: "--gpu-memory-utilization 0.90 --block-size 128",
   }]);
   
-  // Image tag
-  const { imageTag } = await inquirer.prompt([{
-    type: "input",
-    name: "imageTag",
-    message: "vLLM runtime image tag:",
-    default: "0.9.0",
-  }]);
+  // Image tag: match Dynamo Platform version from config
+  const platformConfig2 = isK8s
+    ? config?.platform?.k8s?.dynamoPlatform || {}
+    : config?.platform?.eks?.dynamoPlatform || {};
+  // vLLM runtime uses base version (e.g., 0.9.0), not post-release (e.g., 0.9.0-post1)
+  const imageTag = (platformConfig2.releaseVersion || "0.9.0").replace(/-post\d+$/, "");
   
-  // ============================================
-  // Monitoring: Dynamo Operator handles metrics automatically
-  // when prometheusEndpoint is configured on the platform.
-  // DYN_SYSTEM_PORT is set by the Operator (default: 9090).
-  // ============================================
+  // Structured logging: auto-enable if monitoring is installed
   let enableStructuredLogging = false;
-  
+  let hasMonitoring = false;
   try {
     const promCrd = await $`kubectl get crd podmonitors.monitoring.coreos.com`.quiet();
     if (promCrd.exitCode === 0) {
-      console.log("\n✅ Prometheus detected - Dynamo Operator will auto-configure metrics/health probes.");
+      hasMonitoring = true;
+      enableStructuredLogging = true;
+      console.log("\n✅ Monitoring detected → structured logging enabled, metrics auto-configured.");
     }
   } catch {
-    // Prometheus not available
+    // no monitoring
   }
   
-  const { wantStructuredLogging } = await inquirer.prompt([{
-    type: "confirm",
-    name: "wantStructuredLogging",
-    message: "Enable structured logging (JSONL format, for Loki/log aggregation)?",
-    default: false,
-  }]);
-  enableStructuredLogging = wantStructuredLogging;
-  
-  // ============================================
-  // Ingress: detect and ask
-  // ============================================
+  // Ingress: auto-detect, no prompts
   let enableIngress = false;
   let ingressClass = "";
-  let ingressPath = "";
+  let ingressPath = "/v1";
   
   try {
     const icResult = await $`kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}'`.quiet();
     const detectedClass = icResult.stdout.trim().replace(/'/g, "");
     if (detectedClass) {
-      console.log(`\n✅ Ingress controller detected: ${detectedClass}`);
-      const { wantIngress } = await inquirer.prompt([{
-        type: "confirm",
-        name: "wantIngress",
-        message: "Create Ingress for Frontend API? (no port-forward needed)",
-        default: true,
-      }]);
-      enableIngress = wantIngress;
-      
-      if (enableIngress) {
-        const ingressAnswers = await inquirer.prompt([
-          {
-            type: "input",
-            name: "ingressClass",
-            message: "Ingress class:",
-            default: detectedClass,
-          },
-          {
-            type: "input",
-            name: "ingressPath",
-            message: "Ingress path prefix (e.g., /v1 or /qwen3):",
-            default: "/v1",
-          },
-        ]);
-        ingressClass = ingressAnswers.ingressClass;
-        ingressPath = ingressAnswers.ingressPath;
-      }
+      enableIngress = true;
+      ingressClass = detectedClass;
+      console.log(`✅ Ingress detected: ${detectedClass} → Frontend Ingress enabled (path: /v1)`);
     }
   } catch {
-    // No ingress controller
+    // no ingress controller
   }
   
   // ============================================
@@ -864,6 +801,10 @@ spec:
     }
   }
   
+  // Clean up any leftover resources from previous failed deployments
+  await $`kubectl delete ingress ${deploymentName}-frontend -n ${namespace} --ignore-not-found`.quiet().nothrow();
+  await $`kubectl delete dynamographdeployment ${deploymentName} -n ${namespace} --ignore-not-found`.quiet().nothrow();
+  
   // Deploy
   console.log("\nDeploying...");
   await $`kubectl apply -f ${renderedPath} -n ${namespace}`;
@@ -931,8 +872,7 @@ export async function uninstall() {
   
   try {
     const result = await $`kubectl get dynamographdeployment -n ${namespace} -o jsonpath='{.items[*].metadata.name}'`.quiet();
-    const allDeployments = result.stdout.trim().split(" ").filter(d => d);
-    const vllmDeployments = allDeployments.filter(d => d.startsWith("vllm-"));
+    const vllmDeployments = result.stdout.trim().replace(/'/g, "").split(" ").filter(d => d);
     
     if (vllmDeployments.length === 0) {
       console.log("No vLLM deployments found.");

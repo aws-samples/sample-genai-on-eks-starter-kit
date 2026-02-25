@@ -26,9 +26,7 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 | GPU Operator | NVIDIA GPU resource management | `./cli nvidia-platform gpu-operator install` |
 | Monitoring | Prometheus + Grafana + Dynamo Dashboard | `./cli nvidia-platform monitoring install` |
 | Dynamo Platform | CRDs, Operator, etcd, NATS, Grove, KAI Scheduler | `./cli nvidia-platform dynamo-platform install` |
-| Dynamo vLLM Serving | vLLM model deployment (Device Plugin) | `./cli nvidia-platform dynamo-vllm install` |
-| DRA | DRA Driver + GPU Operator reconfiguration | `./cli nvidia-platform dra install` |
-| Dynamo vLLM (DRA) | vLLM model deployment (DRA ResourceClaims) | `./cli nvidia-platform dra-dynamo-vllm install` |
+| Dynamo vLLM Serving | vLLM model deployment with advanced features | `./cli nvidia-platform dynamo-vllm install` |
 
 ## Installation Order
 
@@ -46,13 +44,6 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 # 4. Deploy a model
 ./cli nvidia-platform dynamo-vllm install
 
-# === DRA Path (Dynamic Resource Allocation) ===
-# 1~3 same as above, then:
-# 4. Install DRA (disables Device Plugin, installs DRA Driver)
-./cli nvidia-platform dra install
-
-# 5. Deploy a model with DRA
-./cli nvidia-platform dra-dynamo-vllm install
 ```
 
 ---
@@ -63,23 +54,37 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 
 **Environment**: `PLATFORM=k8s` in `.env`
 
-#### Prerequisites
+#### Prerequisites (user must prepare)
 
 | Requirement | Details |
 |-------------|---------|
-| Kubernetes v1.34+ | kubeadm, kubelet, kubectl |
-| NVIDIA Driver | Pre-installed on worker nodes |
+| Kubernetes v1.33+ | kubeadm, kubelet, kubectl |
+| NVIDIA Driver 580+ | Pre-installed on worker nodes |
 | NVIDIA Container Toolkit | CDI configured (`nvidia-ctk cdi generate`) |
 | Fabric Manager | Required for H100 SXM / NVSwitch GPUs |
-| GPU Operator | With DCGM Exporter + ServiceMonitor enabled |
-| StorageClass | ReadWriteMany for model cache (e.g., NFS) + ReadWriteOnce for etcd/NATS |
+| StorageClass (RWX) | For shared model cache (e.g., NFS, CephFS) |
+
+#### Auto-installed by CLI
+
+The following are automatically installed/detected during `dynamo-platform install`:
+
+| Component | Condition | Action |
+|-----------|-----------|--------|
+| `local-path` StorageClass | Not found | Auto-install local-path-provisioner |
+| `ingress-nginx` | Not found (K8s mode only) | Prompt to install |
+| Prometheus (`prometheusEndpoint`) | Detected if `monitoring` installed | Auto-configure |
+| GPU Operator | Detected | Status check only (install via `gpu-operator install`) |
 
 #### Storage
 
-| StorageClass | Purpose | Access Mode | Example |
+The CLI uses **two different StorageClasses** depending on purpose:
+
+| StorageClass | Purpose | Access Mode | Used By |
 |--------------|---------|-------------|---------|
-| `nfs` | Model cache PVC | ReadWriteMany | NFS, CephFS, etc. |
-| `local-path` | etcd, NATS persistence | ReadWriteOnce | Node local disk |
+| `nfs` (config: `platform.k8s.storageClass`) | Model cache PVC | ReadWriteMany | `dynamo-vllm` (model download) |
+| `local-path` (default for etcd/NATS) | etcd, NATS persistence | ReadWriteOnce | `dynamo-platform` |
+
+> Note: `config.json`'s `platform.k8s.storageClass` is used for model cache PVC. etcd/NATS StorageClass defaults to `local-path` in the Dynamo Platform Helm values.
 
 #### Access
 
@@ -91,9 +96,9 @@ kubectl get svc -n ingress-nginx
 # PORT(S): 80:<NODE_PORT>/TCP
 
 # All services via single endpoint
-curl http://<node-ip>:<node-port>/v1/models          # vLLM API
-http://<node-ip>:<node-port>/grafana                  # Grafana
-http://<node-ip>:<node-port>/prometheus               # Prometheus
+http://<node-ip>:<node-port>/v1/models          # vLLM API
+http://<node-ip>:<node-port>/grafana             # Grafana
+http://<node-ip>:<node-port>/prometheus          # Prometheus
 ```
 
 **Remote access (SSH tunnel)** — if the cluster is behind a remote server:
@@ -119,15 +124,22 @@ curl localhost:8000/v1/chat/completions \
 
 **Environment**: `PLATFORM=eks` in `.env`
 
-#### Prerequisites
+#### Prerequisites (user must prepare)
 
 | Requirement | Details |
 |-------------|---------|
-| EKS Cluster v1.28+ | With GPU node groups (g6e, p5, p4d, etc.) |
-| GPU Operator | Installed via CLI or EKS GPU AMI |
-| EFS | Shared model cache storage |
-| EFS CSI Driver | EKS addon `aws-efs-csi-driver` |
+| EKS Cluster v1.33+ | GPU node groups (g6e, p5, p4d, etc.) |
+| NVIDIA Driver 580+ | Pre-installed by EKS GPU AMI |
 | HuggingFace Token | For gated model access (K8s Secret) |
+
+#### Auto-installed by CLI
+
+| Component | Condition | Action |
+|-----------|-----------|--------|
+| GPU Operator | `gpu-operator install` | Helm install (GFD + DCGM + GDS) |
+| EFS CSI Driver | Not found | Auto-install via EKS addon |
+| EFS StorageClass | Not found | Prompt to select/create EFS + StorageClass |
+| Prometheus (`prometheusEndpoint`) | Detected if `monitoring` installed | Auto-configure |
 
 #### EFS Setup
 
@@ -149,15 +161,29 @@ aws eks create-addon --cluster-name $EKS_CLUSTER_NAME --addon-name aws-efs-csi-d
 
 #### Access
 
+**With ALB Ingress (recommended for production)** — if AWS Load Balancer Controller is installed, monitoring and vLLM API are accessible via ALB:
+
 ```bash
-# Internal URL (for LiteLLM / in-cluster services)
+# Check ALB URL
+kubectl get ingress -A
+# ADDRESS: k8s-dynamomo-xxxx.us-east-1.elb.amazonaws.com
+
+# All services via ALB
+http://<alb-url>/v1/models          # vLLM API
+http://<alb-url>/grafana             # Grafana
+http://<alb-url>/prometheus          # Prometheus
+```
+
+**Internal URL (for LiteLLM / in-cluster services)**:
+
+```
 http://<deployment>-frontend.dynamo-system:8000/v1
+```
 
-# Optional: expose via LoadBalancer
-kubectl patch svc <deployment>-frontend -n dynamo-system \
-  -p '{"spec": {"type": "LoadBalancer"}}'
+**Port-forward (development)**:
 
-# EKS instance family selection supported (e.g., p5, g6e)
+```bash
+kubectl port-forward svc/<deployment>-frontend 8000:8000 -n dynamo-system
 ```
 
 ---
@@ -199,17 +225,17 @@ Grafana ──► Queries Prometheus ──► Dynamo Dashboard
 | DCGM → Prometheus | GPU Operator's DCGM Exporter + ServiceMonitor |
 | Grafana Dashboard | ConfigMap with `grafana_dashboard: "1"` label, auto-discovered by sidecar |
 
-### Interactive Configuration
+### Default Configuration
 
-```
-? Grafana admin password: (admin)
-? Prometheus data retention period: (7d)
-? Enable persistent storage for Prometheus? (No)
-? Enable Alertmanager? (No)
-? Enable Ingress for Grafana and Prometheus? (Yes)   ← auto-detected if Ingress controller exists
-? Ingress class: (nginx)
-? Ingress host: ()                                    ← empty = any host
-```
+No interactive prompts — all settings are from `config.json` (`platform.monitoring`):
+
+| Setting | Default | Customizable via |
+|---------|---------|-----------------|
+| Grafana password | `admin` | `config.json` → `grafanaAdminPassword` |
+| Retention | `7d` | `config.json` → `retention` |
+| Alertmanager | `false` | `config.json` → `alertmanagerEnabled` |
+| Ingress | Auto-detect | Enabled if Ingress controller exists |
+| ALB annotations (EKS) | Auto-added | When `PLATFORM=eks` and Ingress detected |
 
 ### Access
 
@@ -247,9 +273,18 @@ ssh -N -L <local-port>:<node-ip>:<node-port> <user>@<remote-host>
 # Prometheus: http://localhost:<local-port>/prometheus
 ```
 
-#### With EKS (LoadBalancer)
+#### With EKS (ALB)
 
-On EKS, the Ingress controller typically uses an ALB/NLB with an external URL. Access Grafana/Prometheus directly via the ALB URL. Alternatively, use `kubectl port-forward` from your local machine (no tunnel needed since kubectl runs locally).
+When `PLATFORM=eks` and ALB Ingress Controller is detected, ALB annotations are automatically added. Grafana and Prometheus share a single ALB:
+
+```bash
+kubectl get ingress -n monitoring
+# ADDRESS: k8s-dynamomo-xxxx.us-east-1.elb.amazonaws.com
+
+# Access
+http://<alb-url>/grafana
+http://<alb-url>/prometheus
+```
 
 #### Without Ingress (port-forward fallback)
 
@@ -282,61 +317,6 @@ The Dynamo Grafana dashboard JSON is stored in the repo at:
 - `monitoring/dashboards/grafana-dynamo-dashboard-configmap.template.yaml` (K8s ConfigMap template)
 
 Based on the official dashboard from [ai-dynamo/dynamo](https://github.com/ai-dynamo/dynamo/tree/main/deploy/observability/k8s).
-
----
-
-## DRA (Dynamic Resource Allocation)
-
-DRA is a Kubernetes-native GPU allocation mechanism that replaces the traditional device plugin approach. It provides flexible GPU requesting, sharing, and dynamic reconfiguration.
-
-### Requirements
-
-| Requirement | Version |
-|-------------|---------|
-| Kubernetes | 1.34+ (DRA enabled by default) |
-| GPU Operator | 25.10.0+ |
-| NVIDIA Driver | 580+ |
-| DRA Driver | 25.12.0 |
-
-### How It Works
-
-```
-Traditional (Device Plugin):
-  resources.limits.gpu: "4"  →  nvidia.com/gpu: 4  →  Device Plugin allocates GPUs
-
-DRA (Dynamic Resource Allocation):
-  resources.claims:
-    - name: gpu
-      resourceClaimTemplateName: my-gpu  →  DRA Driver allocates via DeviceClass
-```
-
-### Auto-Detection
-
-- `dynamo-vllm install` automatically detects DRA DeviceClass `gpu.nvidia.com`
-- If detected, uses `resources.claims` instead of `resources.limits.gpu`
-- If not detected, falls back to traditional device plugin
-- `gpu-operator install` prompts to enable DRA and installs DRA Driver
-
-### DRA + MIG (Multi-Instance GPU)
-
-For small LLM demos (e.g., Qwen3-8B on a single MIG instance):
-
-```
-H100 (80GB) → MIG split → 7x 1g.10gb instances
-Each MIG instance runs a small LLM independently via DRA
-```
-
-- `migManager.enabled=true` in GPU Operator
-- DRA Driver auto-creates `mig.nvidia.com` DeviceClass
-- `dynamo-vllm install` detects MIG DeviceClass and prompts for MIG mode
-- ResourceClaimTemplate uses `deviceClassName: mig.nvidia.com`
-
-### EKS Considerations
-
-| EKS Version | DRA Status | Action |
-|-------------|-----------|--------|
-| 1.32 | Feature gate required | Manual enablement |
-| 1.33+ | Default enabled | Ready to use |
 
 ---
 
@@ -398,24 +378,31 @@ GPU (G1) → CPU Pinned Memory (G2) → Local SSD/NVMe (G3)
 
 ### Interactive Configuration
 
+**Interactive prompts** (only essential config):
+
 ```
-? Deployment name: qwen3-14b-fp8
-? Enter model name (HuggingFace format): nvidia/Qwen3-14B-FP8
+? Enter model name: (Qwen/Qwen3-30B-A3B-Instruct-2507-FP8)
 ? Select deployment mode: Aggregated / Disaggregated
-? Tensor Parallel Size (TP): 4
-? Pipeline Parallel Size (PP): 1
-? Enable Expert Parallel (EP)? No
+? Tensor Parallel Size (TP): 1
 ? Enable KV Router? No
 ? Enable KV Cache Offloading (KVBM)? No
 ? Worker replicas: 1
 ? Additional vLLM args: --gpu-memory-utilization 0.90 --block-size 128
-? vLLM runtime image tag: 0.9.0
-? Enable structured logging (JSONL format)? No
-? Create Ingress for Frontend API? Yes              ← auto-detected if Ingress controller exists
-? Ingress class: (nginx)
-? Ingress path prefix: /v1
+? Deployment name: (qwen3-30b-a3b-instruct-25)
 ? What would you like to do? Deploy now / Review first / Save only
 ```
+
+**Auto-configured** (no prompts, from config.json or auto-detection):
+
+| Setting | Source |
+|---------|--------|
+| vLLM image tag | `config.json` → `dynamoPlatform.releaseVersion` |
+| Structured logging | Auto-enable if monitoring installed |
+| Ingress | Auto-detect controller + auto-create (ALB annotations on EKS) |
+| KV Router temperature | `0.5` (Dynamo default) |
+| KV overlap score weight | `1.0` (Dynamo default) |
+| KVBM disk directory | `/tmp` (K8s) / `/mnt/nvme/kvbm_cache` (EKS) |
+| KVBM disk offload filter | `true` (default) |
 
 ---
 
@@ -457,10 +444,10 @@ curl http://$ENDPOINT/v1/chat/completions \
 
 - [x] **Monitoring (Prometheus + Grafana + Dynamo Dashboard)** - kube-prometheus-stack, PodMonitor auto-detection, DCGM ServiceMonitor, Grafana Dynamo Dashboard, Ingress support
 - [x] **Ingress Support** - Auto-detect Ingress controller, expose Grafana/Prometheus/vLLM API via path routing (no port-forward needed)
-- [x] **DRA (Dynamic Resource Allocation)** - GPU allocation via DRA ResourceClaims instead of device plugin (K8s 1.34+, NVIDIA Driver 580+)
 
 ### Not Yet Implemented
 
+- [ ] **DRA (Dynamic Resource Allocation)** - GPU allocation via DRA ResourceClaims (K8s 1.34+, separate `dra` + `dra-dynamo-vllm` components)
 - [ ] **AIPerf Benchmark** - Automated benchmarking with `aiperf profile` for TTFT/ITL measurement
 - [ ] **Log Aggregation (Loki + Alloy)** - Structured log collection with Grafana Loki for DynamoGraphDeployments
 - [ ] **Distributed Tracing** - OpenTelemetry integration with Tempo for request tracing across Frontend/Workers

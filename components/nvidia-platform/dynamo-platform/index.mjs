@@ -69,23 +69,8 @@ export async function install() {
     ? config?.platform?.k8s?.dynamoPlatform || {}
     : config?.platform?.eks?.dynamoPlatform || {};
   
-  const defaultVersion = platformConfig.releaseVersion || "0.9.0";
-  const defaultNamespace = platformConfig.namespace || "dynamo-system";
-  
-  const { releaseVersion, namespace } = await inquirer.prompt([
-    {
-      type: "input",
-      name: "releaseVersion",
-      message: "Dynamo Platform version:",
-      default: defaultVersion,
-    },
-    {
-      type: "input",
-      name: "namespace",
-      message: "Namespace:",
-      default: defaultNamespace,
-    },
-  ]);
+  const releaseVersion = platformConfig.releaseVersion || "0.9.0-post1";
+  const namespace = platformConfig.namespace || "dynamo-system";
   
   console.log("\n========================================");
   console.log("Installing Dynamo Kubernetes Platform");
@@ -94,19 +79,18 @@ export async function install() {
   console.log(`Version: ${releaseVersion}`);
   console.log(`Namespace: ${namespace}`);
   
-  // Check StorageClass based on platform
+  // Check model cache StorageClass (RWX)
   const storageClass = isK8s 
     ? (config?.platform?.k8s?.storageClass || "local-path")
     : (config?.platform?.eks?.storageClass || "efs");
   
-  console.log(`\nChecking StorageClass: ${storageClass}`);
+  console.log(`\nChecking model cache StorageClass: ${storageClass}`);
   
   try {
     await $`kubectl get storageclass ${storageClass}`.quiet();
     console.log(`StorageClass '${storageClass}' found.`);
   } catch {
     if (isK8s && storageClass === "local-path") {
-      // K8s mode: Auto-install local-path-provisioner
       console.log(`StorageClass '${storageClass}' not found. Installing local-path-provisioner...`);
       await $`kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml`;
       await $`kubectl patch storageclass local-path -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'`;
@@ -273,6 +257,18 @@ parameters:
     }
   }
   
+  // K8s mode: Check/install local-path for etcd/NATS persistence (separate from model cache SC)
+  if (isK8s) {
+    try {
+      await $`kubectl get storageclass local-path`.quiet();
+      console.log("StorageClass 'local-path' found (for etcd/NATS).");
+    } catch {
+      console.log("StorageClass 'local-path' not found. Installing local-path-provisioner...");
+      await $`kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml`;
+      console.log("local-path-provisioner installed successfully.");
+    }
+  }
+  
   // K8s mode: Install ingress-nginx if not present
   if (isK8s) {
     let hasIngressController = false;
@@ -348,73 +344,26 @@ parameters:
     }
   }
   
-  // Configuration prompts
-  // Grove and KAI Scheduler are downloaded from ghcr.io (public) in v0.9.0+
-  const { enableGrove, enableKaiScheduler } = await inquirer.prompt([
-    {
-      type: "confirm",
-      name: "enableGrove",
-      message: "Enable Grove for multi-node inference orchestration?",
-      default: platformConfig.groveEnabled ?? true,
-    },
-    {
-      type: "confirm",
-      name: "enableKaiScheduler",
-      message: "Enable KAI Scheduler for AI workload scheduling?",
-      default: platformConfig.kaiSchedulerEnabled ?? true,
-    },
-  ]);
+  // Use defaults from config.json (no interactive prompts)
+  const enableGrove = platformConfig.groveEnabled ?? true;
+  const enableKaiScheduler = platformConfig.kaiSchedulerEnabled ?? true;
   
-  // NGC API Key (optional, for future versions that may require it)
-  let ngcApiKey = "";
-  const { needNgcKey } = await inquirer.prompt([{
-    type: "confirm",
-    name: "needNgcKey",
-    message: "Do you have an NGC API Key? (optional, for private images)",
-    default: false,
-  }]);
-  
-  if (needNgcKey) {
-    const { inputNgcKey } = await inquirer.prompt([{
-      type: "password",
-      name: "inputNgcKey",
-      message: "Enter NGC API Key:",
-      mask: "*",
-    }]);
-    ngcApiKey = inputNgcKey;
-  }
-  
-  // Create NGC imagePullSecret if provided
-  if (ngcApiKey) {
-    console.log("\nCreating NGC imagePullSecret...");
-    await $`kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -`.quiet();
-    try {
-      await $`kubectl create secret docker-registry ngc-secret \
-        --namespace ${namespace} \
-        --docker-server=nvcr.io \
-        --docker-username='$oauthtoken' \
-        --docker-password=${ngcApiKey} \
-        --dry-run=client -o yaml | kubectl apply -f -`.quiet();
-      console.log("NGC imagePullSecret created/updated.");
-    } catch (e) {
-      console.error("Warning: Failed to create NGC secret:", e.message);
-    }
-  }
-  
-  // Step 1: Install CRDs (if not already installed)
-  console.log("\n[1/3] Checking CRDs...");
+  // Step 1: Install CRDs
+  console.log("\n[1/4] Checking CRDs...");
   const crdsInstalled = await areCRDsInstalled();
   if (!crdsInstalled) {
     console.log(`Downloading CRDs from NGC (v${releaseVersion})...`);
-    await $`helm fetch ${NGC_HELM_REPO}/dynamo-crds-${releaseVersion}.tgz`;
-    await $`helm install dynamo-crds dynamo-crds-${releaseVersion}.tgz --namespace default`;
-    await $`rm -f dynamo-crds-${releaseVersion}.tgz`;
+    // CRDs use base version (e.g., 0.9.0) even if platform uses post-release (e.g., 0.9.0-post1)
+    const crdsVersion = releaseVersion.replace(/-post\d+$/, "");
+    await $`helm fetch ${NGC_HELM_REPO}/dynamo-crds-${crdsVersion}.tgz`;
+    await $`helm install dynamo-crds dynamo-crds-${crdsVersion}.tgz --namespace default`;
+    await $`rm -f dynamo-crds-${crdsVersion}.tgz`;
   } else {
     console.log("CRDs already installed, skipping.");
   }
   
   // Step 2: Render values template
-  console.log("\n[2/3] Preparing values...");
+  console.log("\n[2/4] Preparing values...");
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
   const valuesTemplateString = fs.readFileSync(valuesTemplatePath, "utf8");
@@ -425,16 +374,16 @@ parameters:
     IS_EKS: !isK8s,
     GROVE_ENABLED: enableGrove,
     KAI_SCHEDULER_ENABLED: enableKaiScheduler,
-    NGC_SECRET_ENABLED: !!ngcApiKey,
-    // Storage class for etcd/nats persistence
+    NGC_SECRET_ENABLED: false,
+    // Storage class for etcd/nats persistence (RWO, not model cache)
     STORAGE_CLASS: isK8s 
-      ? (config?.platform?.k8s?.storageClass || "local-path")
+      ? "local-path"
       : (config?.platform?.eks?.storageClass || "efs"),
   };
   
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   
-  // Step 3: Detect Prometheus for monitoring integration
+  // Step 3: Detect Prometheus
   console.log("\n[3/4] Checking monitoring stack...");
   const prometheusAvailable = await isPrometheusAvailable();
   let prometheusEndpoint = "";
@@ -444,27 +393,8 @@ parameters:
     console.log(`✅ Prometheus detected: ${prometheusEndpoint}`);
     console.log("   Dynamo Operator will auto-create PodMonitors for metrics collection.");
   } else {
-    console.log("⚠️  Prometheus (kube-prometheus-stack) not found in 'monitoring' namespace.");
-    console.log("   Dynamo metrics collection will not be enabled.");
-    console.log("   To enable monitoring, install it first:");
-    console.log("   ./cli nvidia-platform monitoring install\n");
-    
-    const { manualPrometheus } = await inquirer.prompt([{
-      type: "confirm",
-      name: "manualPrometheus",
-      message: "Do you have a Prometheus endpoint to configure? (e.g., custom installation)",
-      default: false,
-    }]);
-    
-    if (manualPrometheus) {
-      const { inputEndpoint } = await inquirer.prompt([{
-        type: "input",
-        name: "inputEndpoint",
-        message: "Enter Prometheus endpoint (e.g., http://prometheus.monitoring:9090):",
-        validate: (input) => input.startsWith("http") ? true : "Must start with http:// or https://",
-      }]);
-      prometheusEndpoint = inputEndpoint;
-    }
+    console.log("⚠️  Prometheus not found. Metrics collection disabled.");
+    console.log("   To enable: ./cli nvidia-platform monitoring install");
   }
   
   // Step 4: Install Platform from NGC
@@ -482,11 +412,7 @@ parameters:
   
   await $`helm fetch ${NGC_HELM_REPO}/dynamo-platform-${releaseVersion}.tgz`;
   
-  // Extract and patch chart (workaround: v0.9.0 chart has --enable-webhooks flag removed from operator binary)
-  await $`tar -xzf dynamo-platform-${releaseVersion}.tgz`.nothrow();
-  await $`sed -i '/--enable-webhooks/d' dynamo-platform/charts/dynamo-operator/templates/deployment.yaml`.nothrow();
-  
-  const chartSource = "dynamo-platform";  // use extracted directory
+  const chartSource = `dynamo-platform-${releaseVersion}.tgz`;
   
   try {
     await $`helm upgrade --install dynamo-platform ${chartSource} \
@@ -515,7 +441,7 @@ parameters:
       }]);
       
       if (recoveryAction === "abort") {
-        await $`rm -rf dynamo-platform-${releaseVersion}.tgz dynamo-platform`;
+        await $`rm -f dynamo-platform-${releaseVersion}.tgz`;
         console.log("Aborted.");
         return;
       }
@@ -523,8 +449,9 @@ parameters:
       if (recoveryAction === "reinstall") {
         console.log("\nUninstalling existing Dynamo Platform...");
         await $`helm uninstall dynamo-platform --namespace ${namespace}`.nothrow();
-        // Clean up leftover PVCs (etcd/NATS)
         await $`kubectl delete pvc -n ${namespace} -l app.kubernetes.io/instance=dynamo-platform --ignore-not-found`.nothrow();
+        await $`kubectl delete jobs -n ${namespace} -l app.kubernetes.io/instance=dynamo-platform --ignore-not-found`.nothrow();
+        await $`kubectl delete validatingwebhookconfiguration -l app.kubernetes.io/instance=dynamo-platform --ignore-not-found`.nothrow();
         console.log("Existing release removed. Reinstalling...\n");
       }
       
@@ -544,12 +471,12 @@ parameters:
         --wait --timeout 10m`;
     } else {
       // Unknown error - re-throw
-      await $`rm -rf dynamo-platform-${releaseVersion}.tgz dynamo-platform`;
+      await $`rm -f dynamo-platform-${releaseVersion}.tgz`;
       throw e;
     }
   }
   
-  await $`rm -rf dynamo-platform-${releaseVersion}.tgz dynamo-platform`;
+  await $`rm -f dynamo-platform-${releaseVersion}.tgz`;
   
   console.log("\n✅ Dynamo Platform installed successfully!");
   await printStatus(namespace);

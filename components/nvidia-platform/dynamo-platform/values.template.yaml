@@ -15,15 +15,15 @@ imagePullSecrets:
 # ==============================================================================
 dynamo-operator:
   enabled: true
+  # K8s-native service discovery (default in v0.9.0+, replaces etcd for discovery)
+  discoveryBackend: kubernetes
+  # Webhooks enabled (operator 0.9.0 in 0.9.0-post1 chart supports webhook natively)
+  webhook:
+    enabled: true
 {{#if NGC_SECRET_ENABLED}}
   imagePullSecrets:
     - name: ngc-secret
 {{/if}}
-  
-  # Image configuration (NGC public registry)
-  image:
-    repository: nvcr.io/nvidia/ai-dynamo/dynamo-operator
-    # tag: Uses chart default
 
 # ==============================================================================
 # etcd - Distributed key-value store
@@ -33,6 +33,13 @@ dynamo-operator:
 etcd:
   enabled: true
   replicaCount: 1
+  # Workaround for bitnami secure image validation
+  # See: https://github.com/bitnami/charts/tree/main/bitnami/etcd
+  image:
+    repository: bitnamilegacy/etcd
+  global:
+    security:
+      allowInsecureImages: true
   
   # Persistence for etcd data
   persistence:

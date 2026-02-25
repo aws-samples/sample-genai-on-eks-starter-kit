@@ -36,6 +36,12 @@ prometheus:
   ingress:
     enabled: true
     ingressClassName: "{{{INGRESS_CLASS}}}"
+{{#if IS_EKS}}
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/group.name: dynamo-monitoring
+{{/if}}
     paths:
       - /prometheus
     hosts:
@@ -60,6 +66,12 @@ grafana:
   ingress:
     enabled: true
     ingressClassName: "{{{INGRESS_CLASS}}}"
+{{#if IS_EKS}}
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/group.name: dynamo-monitoring
+{{/if}}
     path: /grafana
     hosts:
       - "{{{INGRESS_HOST}}}"

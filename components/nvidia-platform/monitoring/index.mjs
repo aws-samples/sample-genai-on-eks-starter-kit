@@ -96,91 +96,25 @@ export async function install() {
     }
   }
   
-  // Configuration prompts
-  const defaults = {
-    grafanaPassword: monitoringConfig.grafanaAdminPassword || "admin",
-    retention: monitoringConfig.retention || "7d",
-    enablePersistentStorage: monitoringConfig.enablePersistentStorage ?? false,
-    prometheusStorageSize: monitoringConfig.prometheusStorageSize || "50Gi",
-    alertmanagerEnabled: monitoringConfig.alertmanagerEnabled ?? false,
-  };
+  // Use defaults from config.json (no interactive prompts)
+  const grafanaPassword = monitoringConfig.grafanaAdminPassword || "admin";
+  const retention = monitoringConfig.retention || "7d";
+  const enablePersistentStorage = monitoringConfig.enablePersistentStorage ?? false;
+  const storageSize = monitoringConfig.prometheusStorageSize || "50Gi";
+  const alertmanagerEnabled = monitoringConfig.alertmanagerEnabled ?? false;
   
-  const answers = await inquirer.prompt([
-    {
-      type: "input",
-      name: "grafanaPassword",
-      message: "Grafana admin password:",
-      default: defaults.grafanaPassword,
-      validate: (input) => input.length > 0 ? true : "Password cannot be empty",
-    },
-    {
-      type: "input",
-      name: "retention",
-      message: "Prometheus data retention period:",
-      default: defaults.retention,
-    },
-    {
-      type: "confirm",
-      name: "enablePersistentStorage",
-      message: "Enable persistent storage for Prometheus?",
-      default: defaults.enablePersistentStorage,
-    },
-    {
-      type: "confirm",
-      name: "alertmanagerEnabled",
-      message: "Enable Alertmanager?",
-      default: defaults.alertmanagerEnabled,
-    },
-  ]);
-  
-  let storageSize = defaults.prometheusStorageSize;
-  if (answers.enablePersistentStorage) {
-    const { inputStorageSize } = await inquirer.prompt([{
-      type: "input",
-      name: "inputStorageSize",
-      message: "Prometheus storage size:",
-      default: storageSize,
-    }]);
-    storageSize = inputStorageSize;
-  }
-  
-  // Ingress configuration
+  // Auto-detect Ingress controller
   let enableIngress = false;
   let ingressClass = "";
   let ingressHost = "";
   
   const detectedIngressClass = await detectIngressClass();
   if (detectedIngressClass) {
-    console.log(`\n✅ Ingress controller detected: ${detectedIngressClass}`);
-    const { wantIngress } = await inquirer.prompt([{
-      type: "confirm",
-      name: "wantIngress",
-      message: "Enable Ingress for Grafana and Prometheus? (no port-forward needed)",
-      default: true,
-    }]);
-    enableIngress = wantIngress;
-    
-    if (enableIngress) {
-      const ingressAnswers = await inquirer.prompt([
-        {
-          type: "input",
-          name: "ingressClass",
-          message: "Ingress class:",
-          default: detectedIngressClass,
-        },
-        {
-          type: "input",
-          name: "ingressHost",
-          message: "Ingress host (IP or domain, empty for any):",
-          default: "",
-        },
-      ]);
-      ingressClass = ingressAnswers.ingressClass;
-      ingressHost = ingressAnswers.ingressHost;
-    }
+    enableIngress = true;
+    ingressClass = detectedIngressClass;
+    console.log(`✅ Ingress controller detected: ${detectedIngressClass} → Ingress enabled`);
   } else {
-    console.log("\n⚠️  No Ingress controller found. Skipping Ingress setup.");
-    console.log("   You can use port-forward to access Grafana/Prometheus.");
+    console.log("⚠️  No Ingress controller found. Use port-forward to access Grafana/Prometheus.");
   }
   
   // Determine storage class
@@ -203,12 +137,12 @@ export async function install() {
   const valuesVars = {
     IS_K8S: isK8s,
     IS_EKS: !isK8s,
-    RETENTION: answers.retention,
-    ENABLE_PERSISTENT_STORAGE: answers.enablePersistentStorage,
+    RETENTION: retention,
+    ENABLE_PERSISTENT_STORAGE: enablePersistentStorage,
     STORAGE_CLASS: storageClass,
     PROMETHEUS_STORAGE_SIZE: storageSize,
-    GRAFANA_ADMIN_PASSWORD: answers.grafanaPassword,
-    ALERTMANAGER_ENABLED: answers.alertmanagerEnabled,
+    GRAFANA_ADMIN_PASSWORD: grafanaPassword,
+    ALERTMANAGER_ENABLED: alertmanagerEnabled,
     ENABLE_INGRESS: enableIngress,
     INGRESS_CLASS: ingressClass,
     INGRESS_HOST: ingressHost,
@@ -219,10 +153,10 @@ export async function install() {
   // Step 3: Install/Upgrade kube-prometheus-stack
   console.log("\n[3/4] Installing kube-prometheus-stack...");
   console.log(`  Namespace: ${MONITORING_NAMESPACE}`);
-  console.log(`  Retention: ${answers.retention}`);
-  console.log(`  Persistent Storage: ${answers.enablePersistentStorage}`);
-  console.log(`  Alertmanager: ${answers.alertmanagerEnabled}`);
-  console.log(`  Ingress: ${enableIngress ? `${ingressClass} (host: ${ingressHost || "*"})` : "disabled"}`);
+  console.log(`  Grafana password: ${grafanaPassword}`);
+  console.log(`  Retention: ${retention}`);
+  console.log(`  Alertmanager: ${alertmanagerEnabled}`);
+  console.log(`  Ingress: ${enableIngress ? ingressClass : "disabled"}`);
   
   await $`helm upgrade --install prometheus \
     prometheus-community/kube-prometheus-stack \
@@ -248,22 +182,14 @@ export async function install() {
   console.log("");
   
   if (enableIngress) {
-    const host = ingressHost || "<node-ip>";
-    console.log("2. Access Grafana:");
-    console.log(`   http://${host}/grafana`);
-    console.log(`   User: admin / Password: ${answers.grafanaPassword}`);
-    console.log("");
-    console.log("3. Access Prometheus:");
-    console.log(`   http://${host}/prometheus`);
+    console.log("2. Access (via Ingress):");
+    console.log(`   Grafana:    http://<node-ip>:<node-port>/grafana`);
+    console.log(`   Prometheus: http://<node-ip>:<node-port>/prometheus`);
+    console.log(`   User: admin / Password: ${grafanaPassword}`);
   } else {
-    console.log("2. Access Grafana:");
+    console.log("2. Access (port-forward):");
     console.log(`   kubectl port-forward svc/prometheus-grafana 3000:80 -n ${MONITORING_NAMESPACE} --address 0.0.0.0`);
-    console.log(`   Open: http://localhost:3000`);
-    console.log(`   User: admin / Password: ${answers.grafanaPassword}`);
-    console.log("");
-    console.log("3. Access Prometheus:");
-    console.log(`   kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n ${MONITORING_NAMESPACE} --address 0.0.0.0`);
-    console.log(`   Open: http://localhost:9090`);
+    console.log(`   User: admin / Password: ${grafanaPassword}`);
   }
 }
 
