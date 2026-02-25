@@ -16,7 +16,7 @@ mkdir -p "${OPENCLAW_DIR}" "${AUTH_DIR}"
 # Create config with gateway settings + agent model override.
 # Use "openai" provider so the gateway reads OPENAI_API_KEY / OPENAI_BASE_URL env vars
 # to route LLM calls through LiteLLM instead of defaulting to Anthropic.
-GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-}"
+# Auth uses "env" method — the gateway reads OPENCLAW_GATEWAY_TOKEN from environment directly.
 LITELLM_MODEL="${LITELLM_MODEL_NAME:-vllm/default}"
 
 echo "[start] Writing openclaw.json..."
@@ -24,10 +24,10 @@ cat > "${CONFIG_PATH}" <<CFGEOF
 {
   "gateway": {
     "mode": "local",
-    "auth": {
-      "mode": "token",
-      "token": "${GATEWAY_TOKEN}"
-    }
+    "port": 18789
+  },
+  "auth": {
+    "method": "env"
   },
   "agents": {
     "defaults": {

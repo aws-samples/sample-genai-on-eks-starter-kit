@@ -44,7 +44,7 @@ Before starting, ensure you have:
 - EKS cluster deployed (Auto Mode or Standard Mode)
 - LiteLLM installed: `./cli ai-gateway litellm install`
 - Open WebUI installed: `./cli gui-app openwebui install`
-- Langfuse installed (optional, for observability): `./cli observability langfuse install`
+- Langfuse installed (optional, for observability): `./cli o11y langfuse install`
 - Domain configured in `.env.local` (optional, for HTTPS access via ALB)
 
 **Quick Start**: If you've run `./cli demo-setup`, most components are already installed. You only need to install Open WebUI and OpenClaw separately.
@@ -86,7 +86,7 @@ kubectl logs -n openclaw deployment/openclaw --tail=20
 You should see logs indicating:
 - OpenClaw Gateway is connected
 - Bridge server is listening on port 8080
-- Agent model is configured (e.g., `anthropic/claude-opus-4-6`)
+- Agent model is configured (e.g., `bedrock/claude-4.5-sonnet`)
 
 ## Step 2: Install DevOps Agent
 

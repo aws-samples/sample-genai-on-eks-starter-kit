@@ -17,10 +17,6 @@ spec:
     spec:
       serviceAccountName: openclaw
       automountServiceAccountToken: false
-      {{#unless useBuildx}}
-      nodeSelector:
-        kubernetes.io/arch: {{{arch}}}
-      {{/unless}}
       containers:
         - name: openclaw
           image: {{{IMAGE}}}

@@ -17,10 +17,6 @@ spec:
     spec:
       serviceAccountName: devops-agent
       automountServiceAccountToken: true
-      {{#unless useBuildx}}
-      nodeSelector:
-        kubernetes.io/arch: {{{arch}}}
-      {{/unless}}
       containers:
         - name: agent
           image: {{{IMAGE}}}

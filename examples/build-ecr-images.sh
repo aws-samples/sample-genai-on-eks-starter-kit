@@ -10,14 +10,17 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Example images to build (relative path from examples dir, image name)
+# Example images to build
+# Format: build_context:image_name[:dockerfile_dir]
+# If dockerfile_dir is provided, Dockerfile is taken from that directory
+# while build_context provides the files (useful for shared source code).
 EXAMPLES=(
     "mcp-server/calculator:mcp-server-calculator"
     "strands-agents/calculator-agent:strands-agents-calculator-agent"
     "agno/calculator-agent:agno-calculator-agent"
     "openclaw/shared:openclaw-bridge-server"
-    "openclaw/devops-agent:openclaw-devops-agent"
-    "openclaw/doc-writer:openclaw-doc-writer"
+    "openclaw/shared:openclaw-devops-agent:openclaw/devops-agent"
+    "openclaw/shared:openclaw-doc-writer:openclaw/doc-writer"
 )
 
 # Prompt for AWS configuration
@@ -48,19 +51,27 @@ build_and_push_image() {
     local example_info=$1
     local example_path=$(echo $example_info | cut -d':' -f1)
     local image_name=$(echo $example_info | cut -d':' -f2)
+    local dockerfile_dir=$(echo $example_info | cut -d':' -f3)
     local build_context="$SCRIPT_DIR/$example_path"
-    
+
+    # If dockerfile_dir is specified, use its Dockerfile with the build_context
+    local dockerfile_path="$build_context/Dockerfile"
+    if [ -n "$dockerfile_dir" ]; then
+        dockerfile_path="$SCRIPT_DIR/$dockerfile_dir/Dockerfile"
+    fi
+
     echo "=========================================="
     echo "Building: $image_name"
     echo "  Context: $build_context"
+    echo "  Dockerfile: $dockerfile_path"
     echo "=========================================="
-    
+
     # Check if Dockerfile exists
-    if [ ! -f "$build_context/Dockerfile" ]; then
-        echo "  ❌ Error: Dockerfile not found at $build_context/Dockerfile"
+    if [ ! -f "$dockerfile_path" ]; then
+        echo "  ❌ Error: Dockerfile not found at $dockerfile_path"
         return 1
     fi
-    
+
     # Check if ECR repository exists, create if not
     if ! aws ecr-public describe-repositories --repository-names $image_name --region us-east-1 2>/dev/null; then
         echo "  Creating ECR repository: $image_name"
@@ -68,17 +79,18 @@ build_and_push_image() {
     else
         echo "  ECR repository exists: $image_name"
     fi
-    
+
     # Build and push multi-arch image
     local ecr_image="public.ecr.aws/$ECR_REGISTRY_ALIAS/$image_name:latest"
     echo "  Building and pushing multi-arch image to: $ecr_image"
-    
+
     docker buildx build \
         --platform linux/amd64,linux/arm64 \
+        -f "$dockerfile_path" \
         --tag $ecr_image \
         --push \
         $build_context
-    
+
     echo "  ✓ Completed: $image_name"
     echo ""
 }

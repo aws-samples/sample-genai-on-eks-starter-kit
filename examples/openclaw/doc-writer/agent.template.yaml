@@ -17,10 +17,6 @@ spec:
     spec:
       serviceAccountName: doc-writer
       automountServiceAccountToken: false
-      {{#unless useBuildx}}
-      nodeSelector:
-        kubernetes.io/arch: {{{arch}}}
-      {{/unless}}
       containers:
         - name: agent
           image: {{{IMAGE}}}
