@@ -1,5 +1,7 @@
 import WebSocket from "ws";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash, generateKeyPairSync, sign } from "node:crypto";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import {
   CHAT_SEND_TIMEOUT_MS,
   CHAT_STREAM_TIMEOUT_MS,
@@ -21,6 +23,12 @@ type ReqHandler = {
   reject: (err: Error) => void;
 };
 
+interface DeviceIdentity {
+  deviceId: string;
+  publicKeyPem: string;
+  privateKeyPem: string;
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`Timeout: ${label} after ${ms}ms`)), ms);
@@ -29,6 +37,93 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
       (err) => { clearTimeout(timer); reject(err); },
     );
   });
+}
+
+/**
+ * Load or create an Ed25519 device identity for gateway authentication.
+ * Mirrors OpenClaw CLI's loadOrCreateDeviceIdentity().
+ */
+function loadOrCreateDeviceIdentity(): DeviceIdentity {
+  const openclawDir = join(process.env.HOME ?? "/home/node", ".openclaw");
+  const identityDir = join(openclawDir, "identity");
+  const identityPath = join(identityDir, "device.json");
+
+  if (existsSync(identityPath)) {
+    try {
+      const data = JSON.parse(readFileSync(identityPath, "utf8"));
+      if (data.deviceId && data.publicKeyPem && data.privateKeyPem) {
+        console.log("[device] Loaded existing device identity:", data.deviceId.slice(0, 16) + "...");
+        return data as DeviceIdentity;
+      }
+    } catch {
+      console.warn("[device] Failed to load existing identity, creating new one");
+    }
+  }
+
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const publicKeyPem = publicKey.export({ type: "spki", format: "pem" }) as string;
+  const privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" }) as string;
+
+  // Derive deviceId from raw 32-byte Ed25519 key (matches OpenClaw SDK)
+  const spkiDer = publicKey.export({ type: "spki", format: "der" }) as Buffer;
+  // Ed25519 SPKI DER = 12-byte header + 32-byte raw key
+  const rawKey = spkiDer.subarray(12);
+  const deviceId = createHash("sha256").update(rawKey).digest("hex");
+
+  const identity: DeviceIdentity = { deviceId, publicKeyPem, privateKeyPem };
+
+  mkdirSync(identityDir, { recursive: true });
+  writeFileSync(identityPath, JSON.stringify({ ...identity, version: 1, createdAtMs: Date.now() }), { mode: 0o600 });
+  console.log("[device] Created new device identity:", deviceId.slice(0, 16) + "...");
+  return identity;
+}
+
+/**
+ * Extract raw public key bytes and encode as base64url (no padding).
+ * Ed25519 SPKI DER = 12-byte header + 32-byte raw key.
+ */
+function publicKeyToBase64Url(publicKeyPem: string): string {
+  const { createPublicKey } = require("node:crypto");
+  const pubKey = createPublicKey(publicKeyPem);
+  const der = pubKey.export({ type: "spki", format: "der" }) as Buffer;
+  // Ed25519 SPKI DER: 12-byte prefix (30 2a 30 05 06 03 2b 65 70 03 21 00) + 32-byte key
+  const rawKey = der.subarray(12);
+  return rawKey.toString("base64url");
+}
+
+/**
+ * Build the auth payload string and sign it with Ed25519.
+ * Format: v2|deviceId|clientId|clientMode|role|scopes|signedAtMs|token|nonce
+ */
+function buildAndSignDeviceAuth(
+  identity: DeviceIdentity,
+  opts: {
+    clientId: string;
+    clientMode: string;
+    role: string;
+    scopes: string[];
+    token: string;
+    nonce: string;
+  },
+): { device: Record<string, unknown>; signedAtMs: number } {
+  const signedAtMs = Date.now();
+  const scopesStr = opts.scopes.join(",");
+  const payload = `v2|${identity.deviceId}|${opts.clientId}|${opts.clientMode}|${opts.role}|${scopesStr}|${signedAtMs}|${opts.token}|${opts.nonce}`;
+
+  const { createPrivateKey } = require("node:crypto");
+  const privKey = createPrivateKey(identity.privateKeyPem);
+  const signature = sign(null, Buffer.from(payload), privKey).toString("base64url");
+
+  return {
+    signedAtMs,
+    device: {
+      id: identity.deviceId,
+      publicKey: publicKeyToBase64Url(identity.publicKeyPem),
+      signature,
+      signedAt: signedAtMs,
+      nonce: opts.nonce,
+    },
+  };
 }
 
 export class OpenClawClient {
@@ -44,10 +139,12 @@ export class OpenClawClient {
   private readyPromise: Promise<void>;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 3;
+  private deviceIdentity: DeviceIdentity;
 
   constructor(baseUrl: string, token: string) {
     this.gatewayUrl = baseUrl;
     this.token = token;
+    this.deviceIdentity = loadOrCreateDeviceIdentity();
     this.readyPromise = new Promise<void>((resolve, reject) => {
       this.readyResolve = resolve;
       this.readyReject = reject;
@@ -83,9 +180,26 @@ export class OpenClawClient {
 
       console.log("[ws] Received:", msg.type, msg.event ?? msg.id ?? "", msg.ok ?? "");
 
-      // Gateway connect challenge — respond with connect request
+      // Gateway connect challenge — respond with signed connect request
       if (msg.type === "event" && msg.event === "connect.challenge") {
-        console.log("[ws] Received connect challenge, sending auth...");
+        const challengePayload = msg.payload as Record<string, unknown> | undefined;
+        const nonce = (challengePayload?.nonce as string) ?? "";
+        console.log("[ws] Received connect challenge, nonce:", nonce.slice(0, 16) + "...");
+
+        const scopes = ["operator.admin", "operator.read", "operator.write", "operator.approvals", "operator.pairing"];
+        const role = "operator";
+        const clientId = "gateway-client";
+        const clientMode = "backend";
+
+        const { device, signedAtMs } = buildAndSignDeviceAuth(this.deviceIdentity, {
+          clientId,
+          clientMode,
+          role,
+          scopes,
+          token: this.token,
+          nonce,
+        });
+
         const connectReq = {
           type: "req",
           id: "connect-1",
@@ -94,21 +208,19 @@ export class OpenClawClient {
             minProtocol: 3,
             maxProtocol: 3,
             client: {
-              id: "gateway-client",
+              id: clientId,
               version: "1.0.0",
               platform: "linux",
-              mode: "backend",
+              mode: clientMode,
             },
-            role: "operator",
-            scopes: ["operator.read", "operator.write"],
+            role,
+            scopes,
             caps: [],
-            commands: [],
-            permissions: {},
             auth: { token: this.token },
-            locale: "en-US",
-            userAgent: "openclaw-eks-bridge/1.0",
+            device,
           },
         };
+        console.log("[ws] Sending signed connect request with device:", this.deviceIdentity.deviceId.slice(0, 16) + "...");
         this.ws!.send(JSON.stringify(connectReq));
         return;
       }

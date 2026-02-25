@@ -7,11 +7,10 @@ export HOME="/home/node"
 # OpenClaw stores config at ~/.openclaw/openclaw.json (not ~/.config/openclaw/)
 OPENCLAW_DIR="${HOME}/.openclaw"
 CONFIG_PATH="${OPENCLAW_DIR}/openclaw.json"
-AUTH_DIR="${OPENCLAW_DIR}/agents/main/agent"
-AUTH_PATH="${AUTH_DIR}/auth-profiles.json"
+DEVICES_DIR="${OPENCLAW_DIR}/devices"
 
 # Ensure directories exist
-mkdir -p "${OPENCLAW_DIR}" "${AUTH_DIR}"
+mkdir -p "${OPENCLAW_DIR}" "${DEVICES_DIR}"
 
 # Create config with gateway settings + agent model override.
 # Use "openai" provider so the gateway reads OPENAI_API_KEY / OPENAI_BASE_URL env vars
@@ -30,6 +29,22 @@ cat > "${CONFIG_PATH}" <<CFGEOF
       "token": "${OPENCLAW_GATEWAY_TOKEN:-openclaw-gateway-token}"
     }
   },
+  "models": {
+    "providers": {
+      "openai": {
+        "api": "openai-completions",
+        "baseUrl": "${OPENAI_BASE_URL:-http://litellm.litellm:4000/v1}",
+        "models": [
+          {
+            "id": "${LITELLM_MODEL}",
+            "name": "${LITELLM_MODEL}",
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  },
   "agents": {
     "defaults": {
       "model": {
@@ -40,6 +55,24 @@ cat > "${CONFIG_PATH}" <<CFGEOF
 }
 CFGEOF
 echo "[start] Config written: $(cat "${CONFIG_PATH}")"
+
+# Create device pairing with operator.write scope for the bridge client
+DEVICE_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-openclaw-gateway-token}"
+echo "[start] Writing devices/paired.json..."
+cat > "${DEVICES_DIR}/paired.json" <<DEVEOF
+{
+  "devices": [
+    {
+      "deviceId": "gateway-client",
+      "deviceToken": "${DEVICE_TOKEN}",
+      "scopes": ["operator.read", "operator.write", "operator.admin"],
+      "paired": true,
+      "pairedAt": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}
+DEVEOF
+echo "[start] Device pairing written."
 
 echo "[start] Starting Bridge server (background)..."
 node /app/dist/index.js &

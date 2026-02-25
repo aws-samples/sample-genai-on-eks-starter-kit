@@ -47,11 +47,13 @@ export function createApp(deps: BridgeDeps): express.Express {
     deps.lifecycle.updateLastActivity();
 
     const sse = new SseSender(res);
-    let clientDisconnected = false;
 
-    req.on("close", () => {
-      clientDisconnected = true;
-      console.log("[bridge] Client disconnected");
+    // Use res.on("close") instead of req.on("close") — the response
+    // stream closing is the reliable signal that the client disconnected.
+    let clientGone = false;
+    res.on("close", () => {
+      clientGone = true;
+      console.log("[bridge] Response stream closed (client disconnected)");
     });
 
     try {
@@ -59,21 +61,21 @@ export function createApp(deps: BridgeDeps): express.Express {
       const generator = deps.openclawClient.sendMessage(body.message);
       let chunkCount = 0;
       for await (const chunk of generator) {
-        if (clientDisconnected) {
-          console.log("[bridge] Stopping iteration due to client disconnect");
+        if (clientGone || res.destroyed) {
+          console.log("[bridge] Stopping iteration — client gone");
           break;
         }
         chunkCount++;
         sse.sendChunk(chunk);
       }
       console.log(`[bridge] Stream finished, ${chunkCount} chunks delivered`);
-      if (!clientDisconnected) {
+      if (!clientGone && !res.destroyed) {
         sse.sendDone();
       }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : "Unknown error";
       console.error("[bridge] Error during message processing:", errMsg);
-      if (!clientDisconnected) {
+      if (!clientGone && !res.destroyed) {
         sse.sendError(errMsg);
         sse.sendDone();
       }
