@@ -362,6 +362,17 @@ parameters:
     console.log("CRDs already installed, skipping.");
   }
   
+  // Apply DynamoWorkerMetadata CRD (missing from dynamo-crds-0.9.0, required by operator 0.9.0+)
+  const workerMetadataCrdPath = path.join(DIR, "crds", "nvidia.com_dynamoworkermetadatas.yaml");
+  if (fs.existsSync(workerMetadataCrdPath)) {
+    try {
+      await $`kubectl apply -f ${workerMetadataCrdPath}`;
+      console.log("DynamoWorkerMetadata CRD applied.");
+    } catch {
+      console.log("DynamoWorkerMetadata CRD already exists.");
+    }
+  }
+  
   // Step 2: Render values template
   console.log("\n[2/4] Preparing values...");
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");

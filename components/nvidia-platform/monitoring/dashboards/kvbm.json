@@ -106,7 +106,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "vllm:kv_cache_usage_perc{namespace=~\"$namespace\"}",
+          "expr": "vllm:kv_cache_usage_perc{namespace=~\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "{{pod}} (engine {{engine}})",
           "range": true,
           "refId": "A"
@@ -191,7 +191,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(vllm:prefix_cache_hits_total{namespace=~\"$namespace\"}[5m]) / clamp_min(rate(vllm:prefix_cache_queries_total{namespace=~\"$namespace\"}[5m]), 1)",
+          "expr": "rate(vllm:prefix_cache_hits_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]) / clamp_min(rate(vllm:prefix_cache_queries_total{namespace=~\"$namespace\", pod=~\"$pod\"}[5m]), 1)",
           "legendFormat": "{{pod}}",
           "range": true,
           "refId": "A"
@@ -273,7 +273,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(vllm:prefix_cache_hits_total{namespace=~\"$namespace\"}[1m])",
+          "expr": "rate(vllm:prefix_cache_hits_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m])",
           "legendFormat": "{{pod}} hits",
           "range": true,
           "refId": "A"
@@ -284,7 +284,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(vllm:prefix_cache_queries_total{namespace=~\"$namespace\"}[1m])",
+          "expr": "rate(vllm:prefix_cache_queries_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m])",
           "legendFormat": "{{pod}} queries",
           "range": true,
           "refId": "B"
@@ -366,7 +366,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(vllm:external_prefix_cache_hits_total{namespace=~\"$namespace\"}[1m])",
+          "expr": "rate(vllm:external_prefix_cache_hits_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m])",
           "legendFormat": "{{pod}} external hits",
           "range": true,
           "refId": "A"
@@ -377,7 +377,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(vllm:external_prefix_cache_queries_total{namespace=~\"$namespace\"}[1m])",
+          "expr": "rate(vllm:external_prefix_cache_queries_total{namespace=~\"$namespace\", pod=~\"$pod\"}[1m])",
           "legendFormat": "{{pod}} external queries",
           "range": true,
           "refId": "B"
@@ -459,7 +459,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "vllm:cache_config_info{namespace=~\"$namespace\"}",
+          "expr": "vllm:cache_config_info{namespace=~\"$namespace\", pod=~\"$pod\"}",
           "legendFormat": "{{pod}} config",
           "range": true,
           "refId": "B"
@@ -515,6 +515,34 @@
         "query": "label_values(vllm:kv_cache_usage_perc, namespace)",
         "refresh": 2,
         "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(vllm:kv_cache_usage_perc{namespace=~\"$namespace\"}, pod)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Pod",
+        "multi": true,
+        "name": "pod",
+        "options": [],
+        "query": "label_values(vllm:kv_cache_usage_perc{namespace=~\"$namespace\"}, pod)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
         "sort": 1,
         "type": "query"
       }
