@@ -37,6 +37,7 @@ module "eks" {
   node_iam_role_additional_policies = {
     ECRPullThroughCache = aws_iam_policy.ecr_pull_through_cache.arn
   }
+
 }
 
 resource "null_resource" "update_kubeconfig" {
