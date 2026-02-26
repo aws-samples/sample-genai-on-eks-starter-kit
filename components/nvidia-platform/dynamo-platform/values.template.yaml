@@ -15,8 +15,9 @@ imagePullSecrets:
 # ==============================================================================
 dynamo-operator:
   enabled: true
-  # K8s-native service discovery (default in v0.9.0+, replaces etcd for discovery)
-  discoveryBackend: kubernetes
+  # etcd discovery: more stable for KVBM multi-replica deployments
+  # K8s-native discovery (kubernetes) has issues with KVBM handshake in 0.9.0-post1
+  discoveryBackend: etcd
   # Webhooks enabled (operator 0.9.0 in 0.9.0-post1 chart supports webhook natively)
   webhook:
     enabled: true

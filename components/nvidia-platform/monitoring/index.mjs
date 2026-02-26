@@ -167,6 +167,25 @@ export async function install() {
   
   console.log("\n✅ kube-prometheus-stack installed successfully!");
   
+  // Step 3.5: Install Pushgateway (for benchmark metrics)
+  console.log("\n[3.5/4] Installing Prometheus Pushgateway...");
+  try {
+    const pgwInstalled = await $`helm list -n ${MONITORING_NAMESPACE} -q`.quiet();
+    if (pgwInstalled.stdout.includes("pushgateway")) {
+      console.log("  Pushgateway already installed, upgrading...");
+    }
+    await $`helm upgrade --install pushgateway \
+      prometheus-community/prometheus-pushgateway \
+      --namespace ${MONITORING_NAMESPACE} \
+      --set serviceMonitor.enabled=true \
+      --set serviceMonitor.additionalLabels.release=prometheus \
+      --wait --timeout 3m`.quiet();
+    console.log("  ✅ Pushgateway installed");
+  } catch (e) {
+    console.log(`  ⚠️  Pushgateway install failed: ${e.message}`);
+    console.log("  Benchmark dashboard metrics push will not work.");
+  }
+  
   // Step 4: Apply Grafana dashboards (Dynamo, DCGM, KVBM)
   console.log("\n[4/4] Applying Grafana dashboards...");
   await applyGrafanaDashboards();
@@ -199,6 +218,7 @@ async function applyGrafanaDashboards() {
     { file: "dynamo-dashboard.json", name: "grafana-dynamo-dashboard", label: "Dynamo Dashboard" },
     { file: "dcgm-metrics.json", name: "grafana-dcgm-dashboard", label: "DCGM GPU Monitoring" },
     { file: "kvbm.json", name: "grafana-kvbm-dashboard", label: "KVBM KV Cache" },
+    { file: "benchmark-dashboard.json", name: "grafana-benchmark-dashboard", label: "Benchmark Pareto" },
   ];
   
   for (const dashboard of dashboards) {
@@ -279,7 +299,7 @@ export async function uninstall() {
   
   // Remove dashboard ConfigMaps
   try {
-    const dashboardCMs = ["grafana-dynamo-dashboard", "grafana-dcgm-dashboard", "grafana-kvbm-dashboard"];
+    const dashboardCMs = ["grafana-dynamo-dashboard", "grafana-dcgm-dashboard", "grafana-kvbm-dashboard", "grafana-benchmark-dashboard"];
     for (const cm of dashboardCMs) {
       await $`kubectl delete configmap ${cm} -n ${MONITORING_NAMESPACE} --ignore-not-found`.quiet();
     }

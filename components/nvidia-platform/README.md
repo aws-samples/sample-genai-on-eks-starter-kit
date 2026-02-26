@@ -27,6 +27,7 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 | Monitoring | Prometheus + Grafana + Dynamo Dashboard | `./cli nvidia-platform monitoring install` |
 | Dynamo Platform | CRDs, Operator, etcd, NATS, Grove, KAI Scheduler | `./cli nvidia-platform dynamo-platform install` |
 | Dynamo vLLM Serving | vLLM model deployment with advanced features | `./cli nvidia-platform dynamo-vllm install` |
+| AIPerf Benchmark | Performance benchmarking (concurrency sweep, TTFT/ITL) | `./cli nvidia-platform benchmark install` |
 
 ## Installation Order
 
@@ -310,13 +311,87 @@ kubectl get secret prometheus-grafana -n monitoring \
   -o jsonpath="{.data.admin-password}" | base64 --decode; echo
 ```
 
-### Dashboard Source
+### Dashboards
 
-The Dynamo Grafana dashboard JSON is stored in the repo at:
-- `monitoring/dashboards/dynamo-dashboard.json` (source JSON)
-- `monitoring/dashboards/grafana-dynamo-dashboard-configmap.template.yaml` (K8s ConfigMap template)
+| Dashboard | Description | Source |
+|-----------|-------------|--------|
+| **Dynamo Dashboard** | Frontend/Worker metrics, request rates, latencies | `monitoring/dashboards/dynamo-dashboard.json` |
+| **DCGM GPU Monitoring** | GPU utilization, memory, temperature, power | `monitoring/dashboards/dcgm-metrics.json` |
+| **KVBM KV Cache** | KV cache usage, offloading metrics | `monitoring/dashboards/kvbm.json` |
+| **Benchmark Pareto** | Benchmark comparison (TPS/GPU, TTFT, ITL vs concurrency) | `monitoring/dashboards/benchmark-dashboard.json` |
 
-Based on the official dashboard from [ai-dynamo/dynamo](https://github.com/ai-dynamo/dynamo/tree/main/deploy/observability/k8s).
+Dashboards are auto-loaded via Grafana sidecar (ConfigMaps with `grafana_dashboard: "1"` label).
+
+### Pushgateway (Benchmark Metrics)
+
+Prometheus Pushgateway is installed alongside the monitoring stack to receive benchmark results. After each benchmark run, metrics are automatically pushed via `kubectl port-forward` + HTTP POST.
+
+---
+
+## AIPerf Benchmark
+
+### Install and Run
+
+```bash
+./cli nvidia-platform benchmark install
+```
+
+Interactive prompts:
+1. Select deployed DynamoGraphDeployment
+2. Choose benchmark mode (Concurrency Sweep, Multi-Turn, Seq Distribution, Prefix Cache)
+3. Set parameters (ISL, OSL, concurrency levels, etc.)
+
+### Benchmark Modes
+
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| **Concurrency Sweep** | Throughput vs latency at different concurrency levels | Baseline performance |
+| **Multi-Turn** | Multi-turn conversations with session affinity | KV Router cache hit effect |
+| **Sequence Distribution** | Mixed ISL/OSL workloads (QA + summarization) | Real-world traffic simulation |
+| **Prefix Cache** | Synthetic shared-prefix workload (no trace file needed) | KV cache hit rate testing |
+
+### Results and Grafana Dashboard
+
+After benchmark completion:
+1. Results are saved to PVC (`benchmark-results` in `dynamo-system`)
+2. Metrics are automatically pushed to Pushgateway
+3. Open Grafana → **Benchmark Pareto** dashboard
+4. Select benchmarks to compare via the **Benchmark** dropdown
+
+Grafana charts show **X = concurrency, Y = metric** with each benchmark as a separate line:
+- TPS/GPU vs Concurrency
+- TPS/User vs Concurrency
+- TTFT P50 vs Concurrency
+- ITL P50 vs Concurrency
+- Request Latency P50 vs Concurrency
+- TTFT P99 vs Concurrency
+
+### Comparing Deployments
+
+Run the same benchmark mode on different deployment configs to generate Pareto comparison data:
+
+```bash
+# 1. Deploy agg baseline → run sweep → results as "qwen3-agg"
+# 2. Deploy agg + kvrouter → run sweep → results as "qwen3-kvrouter"
+# 3. Deploy disagg + kvbm → run sweep → results as "qwen3-disagg"
+```
+
+Then select all three in the Benchmark dropdown to see them on the same graph.
+
+### Managing Benchmark Data
+
+```bash
+# Delete all Pushgateway data (via port-forward)
+kubectl port-forward svc/pushgateway-prometheus-pushgateway 19091:9091 -n monitoring &
+sleep 2
+curl -s http://localhost:19091/metrics | grep -oP 'job="[^"]*"' | sort -u | sed 's/job="//;s/"//' | while read job; do
+  curl -X DELETE "http://localhost:19091/metrics/job/$job"
+done
+pkill -f "port-forward.*pushgateway"
+
+# Uninstall benchmark resources (Jobs, PVC)
+./cli nvidia-platform benchmark uninstall
+```
 
 ---
 
@@ -448,7 +523,8 @@ curl http://$ENDPOINT/v1/chat/completions \
 ### Not Yet Implemented
 
 - [ ] **DRA (Dynamic Resource Allocation)** - GPU allocation via DRA ResourceClaims (K8s 1.34+, separate `dra` + `dra-dynamo-vllm` components)
-- [ ] **AIPerf Benchmark** - Automated benchmarking with `aiperf profile` for TTFT/ITL measurement
+- [x] **AIPerf Benchmark** - K8s Job-based concurrency sweep, multi-turn, seq distribution, prefix cache, results extraction
+- [x] **Benchmark Pareto Dashboard** - Pushgateway + Grafana XY Chart, multi-benchmark comparison, auto-push after benchmark
 - [ ] **Log Aggregation (Loki + Alloy)** - Structured log collection with Grafana Loki for DynamoGraphDeployments
 - [ ] **Distributed Tracing** - OpenTelemetry integration with Tempo for request tracing across Frontend/Workers
 - [ ] **AIConfigurator** - Automated optimal TP/PP/batch size configuration finder

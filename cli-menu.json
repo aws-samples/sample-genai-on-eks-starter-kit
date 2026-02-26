@@ -7,7 +7,8 @@
         { "dir": "gpu-operator", "name": "GPU Operator" },
         { "dir": "monitoring", "name": "Monitoring (Prometheus + Grafana)" },
         { "dir": "dynamo-platform", "name": "Dynamo Platform" },
-        { "dir": "dynamo-vllm", "name": "Dynamo vLLM Serving" }
+        { "dir": "dynamo-vllm", "name": "Dynamo vLLM Serving" },
+        { "dir": "benchmark", "name": "AIPerf Benchmark" }
       ]
     },
     {
