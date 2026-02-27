@@ -170,9 +170,12 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
         const data = JSON.parse(catResult.stdout);
         const get = (p, stat) => { let node = data; for (const k of p.split(".")) { node = node?.[k]; } return node?.[stat] ?? null; };
         
+        const concNum = parseInt(concurrencyRaw, 10) || 1;
         const requestThroughput = get("request_throughput", "avg");
-        const tokenThroughput = requestThroughput ? requestThroughput * (get("output_token_count", "avg") || 200) : null;
-        const tpsPerGpu = tokenThroughput ? tokenThroughput / numGpus : null;
+        const outputTokens = get("output_token_count", "avg") || 200;
+        const totalTokS = requestThroughput ? requestThroughput * outputTokens : null;
+        const tpsPerGpu = totalTokS ? totalTokS / numGpus : null;
+        const tpsPerUser = totalTokS ? totalTokS / concNum : null;
         
         const lines = [];
         const add = (name, value) => {
@@ -182,13 +185,19 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
         };
         
         add("benchmark_tps_per_gpu", tpsPerGpu);
-        add("benchmark_tps_per_user", requestThroughput);
+        add("benchmark_tps_per_user", tpsPerUser);
         add("benchmark_ttft_p50", get("time_to_first_token", "p50"));
         add("benchmark_ttft_p99", get("time_to_first_token", "p99"));
         add("benchmark_itl_p50", get("inter_token_latency", "p50"));
         add("benchmark_itl_p99", get("inter_token_latency", "p99"));
         add("benchmark_request_latency_p50", get("request_latency", "p50"));
         add("benchmark_request_latency_p99", get("request_latency", "p99"));
+        
+        // Efficiency metric: Y=tps_per_gpu, X encoded as tps_per_user label
+        if (tpsPerGpu !== null && tpsPerUser !== null) {
+          const tpsUserRounded = tpsPerUser.toFixed(4);
+          lines.push(`benchmark_efficiency{benchmark="${benchmarkName}",concurrency="${concurrency}",tps_per_user="${tpsUserRounded}",mode="${mode}",model="${modelName}",num_gpus="${numGpus}"} ${tpsPerGpu}`);
+        }
         
         if (lines.length > 0) {
           const body = lines.join("\n") + "\n";

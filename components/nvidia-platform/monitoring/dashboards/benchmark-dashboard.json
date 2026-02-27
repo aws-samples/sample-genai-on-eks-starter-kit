@@ -112,6 +112,27 @@
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "unit": "ms", "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
+    },
+    {
+      "title": "GPU Efficiency: TPS/GPU vs TPS/User (Pareto)",
+      "description": "X=TPS/User (req/s), Y=TPS/GPU (tok/s/gpu). Top-right = optimal.",
+      "type": "xychart",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 38 },
+      "id": 7,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_efficiency{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": {
+          "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true, "concurrency": true }
+        }},
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user", "destinationType": "number" }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "tps_per_user", "valueField": "Value" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user\\benchmark", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "tps_per_user\\benchmark", "desc": false }] } },
+        { "id": "renameByRegex", "options": { "regex": "tps_per_user\\\\benchmark", "renamePattern": "tps_per_user" } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "tps_per_user" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 14 }, "show": "both", "lineWidth": 2 } } }
     }
   ],
   "refresh": "",
@@ -146,5 +167,5 @@
   "time": { "from": "now-1h", "to": "now" },
   "title": "Benchmark Pareto",
   "uid": "benchmark-pareto",
-  "version": 10
+  "version": 13
 }
