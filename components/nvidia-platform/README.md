@@ -481,6 +481,48 @@ GPU (G1) → CPU Pinned Memory (G2) → Local SSD/NVMe (G3)
 
 ---
 
+## AIConfigurator
+
+Automatically recommend optimal parallelization (TP/PP) and deployment configuration using NVIDIA AI Configurator simulation.
+
+### Install
+
+```bash
+./cli nvidia-platform aiconfigurator install
+```
+
+### Modes
+
+| Mode | Description | Duration | GPU Required | Deploys |
+|------|-------------|----------|:------------:|:-------:|
+| **Quick Estimate** | Simulate performance, recommend TP/PP | ~20-30s | No | No |
+| **SLA-Driven Deploy** | Auto-profile + SLA planner + deploy via DGDR | ~1-5min | No (AIC sim) | Yes |
+
+### Quick Estimate
+
+Runs AIConfigurator simulation and displays recommended TP sizes for prefill/decode. No actual deployment — use the recommendation when configuring `dynamo-vllm install`.
+
+### SLA-Driven Deploy (DGDR)
+
+Creates a `DynamoGraphDeploymentRequest` that the Dynamo Operator processes:
+1. AIConfigurator simulation (optimal TP for prefill/decode)
+2. SLA Planner generates DGD config (replicas, scaling params)
+3. Auto-deploys DGD if `autoApply: true`
+
+### Supported Configurations
+
+| GPU System | Backend | Example Models |
+|------------|---------|---------------|
+| H100 SXM | vLLM, TRT-LLM, SGLang | Qwen3-32B, Llama-3.1-405B |
+| H200 SXM | vLLM, TRT-LLM, SGLang | Qwen3-32B, Llama-3.1-405B |
+| A100 SXM | vLLM, TRT-LLM, SGLang | Qwen3-32B, Llama-3.1-405B |
+| B200 SXM | TRT-LLM (preview) | — |
+| GB200 SXM | TRT-LLM (preview) | — |
+
+Model list is dynamically retrieved from AIConfigurator. Enter any HuggingFace model ID to try.
+
+---
+
 ## Quick Test (via Ingress)
 
 ```bash
@@ -527,8 +569,8 @@ curl http://$ENDPOINT/v1/chat/completions \
 - [x] **Benchmark Pareto Dashboard** - Pushgateway + Grafana XY Chart, multi-benchmark comparison, auto-push after benchmark
 - [ ] **Log Aggregation (Loki + Alloy)** - Structured log collection with Grafana Loki for DynamoGraphDeployments
 - [ ] **Distributed Tracing** - OpenTelemetry integration with Tempo for request tracing across Frontend/Workers
-- [ ] **AIConfigurator** - Automated optimal TP/PP/batch size configuration finder
-- [ ] **SLO-based Planner** - SLA-driven auto-scaling with profiling (`disagg_planner.yaml`, load predictor: constant/arima/prophet)
+- [x] **AIConfigurator** - Quick Estimate (TP/PP recommendation) + SLA-Driven Deploy (DGDR auto-profile + plan + deploy)
+- [x] **SLO-based Planner** - Integrated into AIConfigurator SLA-Driven Deploy mode
 - [ ] **TRT-LLM Backend** - TensorRT-LLM serving support (`dynamo-trtllm` component)
 
 ---

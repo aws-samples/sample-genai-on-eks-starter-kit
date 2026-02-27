@@ -8,7 +8,8 @@
         { "dir": "monitoring", "name": "Monitoring (Prometheus + Grafana)" },
         { "dir": "dynamo-platform", "name": "Dynamo Platform" },
         { "dir": "dynamo-vllm", "name": "Dynamo vLLM Serving" },
-        { "dir": "benchmark", "name": "AIPerf Benchmark" }
+        { "dir": "benchmark", "name": "AIPerf Benchmark" },
+        { "dir": "aiconfigurator", "name": "AIConfigurator (Auto Config + SLA Deploy)" }
       ]
     },
     {

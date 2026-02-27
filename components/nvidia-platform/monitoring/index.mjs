@@ -308,12 +308,28 @@ export async function uninstall() {
     // ignore
   }
   
+  // Uninstall Pushgateway
+  try {
+    await $`helm uninstall pushgateway --namespace ${MONITORING_NAMESPACE}`.quiet();
+    console.log("Pushgateway uninstalled.");
+  } catch {
+    // not installed
+  }
+  
   // Uninstall kube-prometheus-stack
   try {
     await $`helm uninstall prometheus --namespace ${MONITORING_NAMESPACE}`;
     console.log("kube-prometheus-stack uninstalled.");
   } catch (e) {
     console.log("kube-prometheus-stack helm release not found or already removed.");
+  }
+  
+  // Delete PVCs
+  try {
+    await $`kubectl delete pvc --all -n ${MONITORING_NAMESPACE} --ignore-not-found`.quiet();
+    console.log("PVCs deleted.");
+  } catch {
+    // ignore
   }
   
   // Ask about CRDs
