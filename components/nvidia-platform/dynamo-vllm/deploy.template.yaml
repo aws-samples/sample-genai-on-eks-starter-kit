@@ -9,6 +9,8 @@ apiVersion: nvidia.com/v1alpha1
 kind: DynamoGraphDeployment
 metadata:
   name: {{{DEPLOYMENT_NAME}}}
+  annotations:
+    nvidia.com/dynamo-discovery-backend: "etcd"
 spec:
   envs:
     - name: DYN_LOG
