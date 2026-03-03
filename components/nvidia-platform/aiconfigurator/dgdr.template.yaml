@@ -14,10 +14,15 @@ spec:
 
     config:
       sweep:
-        useAiConfigurator: true
+        useAiConfigurator: {{{USE_AIC}}}
+{{#if USE_AIC}}
         aicSystem: {{{AIC_SYSTEM}}}
 {{#if AIC_BACKEND_VERSION}}
         aicBackendVersion: "{{{AIC_BACKEND_VERSION}}}"
+{{/if}}
+{{else}}
+        prefillInterpolationGranularity: {{{PREFILL_GRANULARITY}}}
+        decodeInterpolationGranularity: {{{DECODE_GRANULARITY}}}
 {{/if}}
       sla:
         isl: {{{ISL}}}

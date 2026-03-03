@@ -150,6 +150,12 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
     console.log("⚠️  No concurrency directories found in PVC");
     return;
   }
+  // Sort by numeric concurrency (c1, c8, c16, c32) so push order = numeric order
+  const dirs = dirsResult.stdout.trim().split("\n").sort((a, b) => {
+    const na = parseInt(a.replace(/.*\/c(\d+)$/, "$1") || "0", 10);
+    const nb = parseInt(b.replace(/.*\/c(\d+)$/, "$1") || "0", 10);
+    return na - nb;
+  });
   
   // Start port-forward to Pushgateway
   const pfProc = $`kubectl port-forward svc/pushgateway-prometheus-pushgateway 19091:9091 -n monitoring`.quiet().nothrow();
@@ -157,9 +163,8 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
   
   let pushed = 0;
   try {
-    for (const dir of dirsResult.stdout.trim().split("\n")) {
-      const concurrencyRaw = dir.split("/").pop().replace(/^c/, "");
-      const concurrency = concurrencyRaw.padStart(4, "0");
+    for (const dir of dirs) {
+      const concurrency = dir.split("/").pop().replace(/^c/, "");
       const jsonPath = `${dir}/profile_export_aiperf.json`;
       
       // Read JSON directly from PVC pod
@@ -170,7 +175,9 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
         const data = JSON.parse(catResult.stdout);
         const get = (p, stat) => { let node = data; for (const k of p.split(".")) { node = node?.[k]; } return node?.[stat] ?? null; };
         
-        const concNum = parseInt(concurrencyRaw, 10) || 1;
+        const concNum = parseInt(concurrency, 10) || 1;
+        // Pad concurrency label so string sort in Grafana = numeric order (001, 008, 016, 032, 064)
+        const concurrencyLabel = String(concNum).padStart(3, "0");
         const requestThroughput = get("request_throughput", "avg");
         const outputTokens = get("output_token_count", "avg") || 200;
         const totalTokS = requestThroughput ? requestThroughput * outputTokens : null;
@@ -180,7 +187,7 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
         const lines = [];
         const add = (name, value) => {
           if (value !== null && value !== undefined && !isNaN(value)) {
-            lines.push(`${name}{benchmark="${benchmarkName}",concurrency="${concurrency}",mode="${mode}",model="${modelName}",num_gpus="${numGpus}"} ${value}`);
+            lines.push(`${name}{benchmark="${benchmarkName}",concurrency="${concurrencyLabel}",mode="${mode}",model="${modelName}",num_gpus="${numGpus}"} ${value}`);
           }
         };
         
@@ -196,12 +203,12 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
         // Efficiency metric: Y=tps_per_gpu, X encoded as tps_per_user label
         if (tpsPerGpu !== null && tpsPerUser !== null) {
           const tpsUserRounded = tpsPerUser.toFixed(4);
-          lines.push(`benchmark_efficiency{benchmark="${benchmarkName}",concurrency="${concurrency}",tps_per_user="${tpsUserRounded}",mode="${mode}",model="${modelName}",num_gpus="${numGpus}"} ${tpsPerGpu}`);
+          lines.push(`benchmark_efficiency{benchmark="${benchmarkName}",concurrency="${concurrencyLabel}",tps_per_user="${tpsUserRounded}",mode="${mode}",model="${modelName}",num_gpus="${numGpus}"} ${tpsPerGpu}`);
         }
         
         if (lines.length > 0) {
           const body = lines.join("\n") + "\n";
-          const jobLabel = `benchmark_${benchmarkName}_c${concurrency}`;
+          const jobLabel = `benchmark_${benchmarkName}_c${concurrencyLabel}`;
           const res = await httpPost(`http://127.0.0.1:19091/metrics/job/${jobLabel}`, body);
           if (res.status < 300) {
             pushed++;
@@ -231,10 +238,15 @@ async function runConcurrencySweep(namespace, benchmarkName, concLevels, templat
   for (const conc of concLevels) {
     const jobSuffix = `c${conc}-${Date.now().toString(36)}`;
     const jobName = `benchmark-${benchmarkName}-${jobSuffix}`;
-    
+    const concNum = parseInt(conc, 10) || 1;
+    // request_count = concurrency × 4 per level (aiperf requires request_count >= concurrency)
+    const levelVars = { ...modeVars };
+    if (levelVars.REQUEST_COUNT != null) {
+      levelVars.REQUEST_COUNT = String(concNum * 4);
+    }
     const renderedYaml = template({
       ...baseVars,
-      ...modeVars,
+      ...levelVars,
       JOB_SUFFIX: jobSuffix,
       CONCURRENCY: conc,
     });
@@ -471,20 +483,19 @@ spec:
       { type: "input", name: "prefixPoolSize", message: "Prefix pool size (number of unique prefixes):", default: "10" },
       { type: "input", name: "isl", message: "Continuation length (tokens after prefix):", default: "128" },
       { type: "input", name: "osl", message: "Output sequence length:", default: "128" },
-      { type: "input", name: "requestCount", message: "Requests per concurrency level:", default: "200" },
       { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,2,5,10,50" },
     ]);
     
-    console.log(`\nPrefix cache: ${params.prefixPoolSize} prefixes × ${params.prefixLength} tokens, continuation=${params.isl}, ${params.requestCount} requests/level`);
-    
     const concLevels = params.concurrencies.split(",").map(c => c.trim());
+    console.log(`\nPrefix cache: ${params.prefixPoolSize} prefixes × ${params.prefixLength} tokens, continuation=${params.isl}; request_count = concurrency × 4 per level`);
+    
     await runConcurrencySweep(namespace, benchmarkName, concLevels, template, baseVars, {
       IS_PREFIX_CACHE: true,
       PREFIX_LENGTH: params.prefixLength,
       PREFIX_POOL_SIZE: params.prefixPoolSize,
       ISL: params.isl,
       OSL: params.osl,
-      REQUEST_COUNT: params.requestCount,
+      REQUEST_COUNT: "0", // overridden per level to concurrency × 4 in runConcurrencySweep
     }, { mode: benchmarkMode, modelName, dgdName: targetDgd });
   }
   

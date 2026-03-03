@@ -590,16 +590,16 @@ curl http://$ENDPOINT/v1/chat/completions \
 
 - [x] **Monitoring (Prometheus + Grafana + Dynamo Dashboard)** - kube-prometheus-stack, PodMonitor auto-detection, DCGM ServiceMonitor, Grafana Dynamo Dashboard, Ingress support
 - [x] **Ingress Support** - Auto-detect Ingress controller, expose Grafana/Prometheus/vLLM API via path routing (no port-forward needed)
+- [x] **AIPerf Benchmark** - K8s Job-based concurrency sweep, multi-turn, seq distribution, prefix cache, results extraction
+- [x] **Benchmark Pareto Dashboard** - Pushgateway + Grafana XY Chart, multi-benchmark comparison, auto-push after benchmark
+- [x] **AIConfigurator** - Quick Estimate (TP/PP recommendation) + SLA-Driven Deploy (DGDR auto-profile + plan + deploy)
 
 ### Not Yet Implemented
 
-- [ ] **DRA (Dynamic Resource Allocation)** - GPU allocation via DRA ResourceClaims (K8s 1.34+, separate `dra` + `dra-dynamo-vllm` components)
-- [x] **AIPerf Benchmark** - K8s Job-based concurrency sweep, multi-turn, seq distribution, prefix cache, results extraction
-- [x] **Benchmark Pareto Dashboard** - Pushgateway + Grafana XY Chart, multi-benchmark comparison, auto-push after benchmark
 - [ ] **Log Aggregation (Loki + Alloy)** - Structured log collection with Grafana Loki for DynamoGraphDeployments
 - [ ] **Distributed Tracing** - OpenTelemetry integration with Tempo for request tracing across Frontend/Workers
-- [x] **AIConfigurator** - Quick Estimate (TP/PP recommendation) + SLA-Driven Deploy (DGDR auto-profile + plan + deploy)
-- [x] **SLO-based Planner** - Integrated into AIConfigurator SLA-Driven Deploy mode
+- [ ] **SLO-based Planner** 
 - [ ] **TRT-LLM Backend** - TensorRT-LLM serving support (`dynamo-trtllm` component)
+- [ ] **Multi-modal Model Support**
 
 ---

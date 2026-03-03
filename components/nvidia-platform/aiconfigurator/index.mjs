@@ -266,10 +266,27 @@ export async function install() {
   // ========================================
   if (mode === "sla-deploy") {
     console.log("\nSLA-Driven Deploy creates a DynamoGraphDeploymentRequest (DGDR).");
-    console.log("The Dynamo Operator will:");
-    console.log("  1. Run AIConfigurator simulation (~30s)");
-    console.log("  2. Generate optimal DGD config with SLA Planner");
-    console.log("  3. Deploy the DGD automatically (if autoApply=true)\n");
+    console.log("The Dynamo Operator will profile → plan → deploy automatically.\n");
+
+    const { profilingMethod } = await inquirer.prompt([{
+      type: "list",
+      name: "profilingMethod",
+      message: "Profiling method:",
+      choices: [
+        { name: "AI Configurator Simulation (fast, ~25s, no GPU needed)", value: "aic" },
+        { name: "Real Engine Profiling (accurate, 2-4h, requires GPU)", value: "real" },
+      ],
+    }]);
+
+    let realProfilingOpts = {};
+    if (profilingMethod === "real") {
+      console.log("\nReal profiling deploys actual vLLM/TRT-LLM engines and measures with AIPerf.");
+      console.log("This takes 2-4 hours but gives accurate real-world performance data.\n");
+      realProfilingOpts = await inquirer.prompt([
+        { type: "input", name: "prefillGranularity", message: "Prefill interpolation samples:", default: "16" },
+        { type: "input", name: "decodeGranularity", message: "Decode interpolation samples:", default: "6" },
+      ]);
+    }
 
     const deployOpts = await inquirer.prompt([
       { type: "input", name: "dgdrName", message: "DGDR name:", default: `${model.split("/").pop().toLowerCase().replace(/[^a-z0-9-]/g, "-")}-sla` },
@@ -315,6 +332,7 @@ export async function install() {
     const templateString = fs.readFileSync(templatePath, "utf8");
     const template = handlebars.compile(templateString);
 
+    const useAic = profilingMethod === "aic";
     const renderedYaml = template({
       DGDR_NAME: deployOpts.dgdrName,
       NAMESPACE: namespace,
@@ -322,8 +340,11 @@ export async function install() {
       BACKEND: backend,
       IS_TRTLLM: backend === "trtllm",
       IMAGE_TAG: imageTag,
+      USE_AIC: useAic,
       AIC_SYSTEM: system,
       AIC_BACKEND_VERSION: "",
+      PREFILL_GRANULARITY: realProfilingOpts.prefillGranularity || "16",
+      DECODE_GRANULARITY: realProfilingOpts.decodeGranularity || "6",
       ISL: sla.isl,
       OSL: sla.osl,
       TTFT: sla.ttft,

@@ -20,10 +20,13 @@
       "targets": [{ "refId": "A", "expr": "benchmark_tps_per_gpu{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value" } },
-        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency\\benchmark", "destinationType": "number" }] } },
-        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency\\benchmark", "desc": false }] } },
-        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
@@ -37,10 +40,13 @@
       "targets": [{ "refId": "A", "expr": "benchmark_tps_per_user{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value" } },
-        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency\\benchmark", "destinationType": "number" }] } },
-        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency\\benchmark", "desc": false }] } },
-        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
@@ -54,10 +60,13 @@
       "targets": [{ "refId": "A", "expr": "benchmark_ttft_p50{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value" } },
-        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency\\benchmark", "destinationType": "number" }] } },
-        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency\\benchmark", "desc": false }] } },
-        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
@@ -71,10 +80,13 @@
       "targets": [{ "refId": "A", "expr": "benchmark_itl_p50{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value" } },
-        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency\\benchmark", "destinationType": "number" }] } },
-        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency\\benchmark", "desc": false }] } },
-        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
@@ -88,10 +100,13 @@
       "targets": [{ "refId": "A", "expr": "benchmark_request_latency_p50{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value" } },
-        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency\\benchmark", "destinationType": "number" }] } },
-        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency\\benchmark", "desc": false }] } },
-        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
@@ -105,10 +120,13 @@
       "targets": [{ "refId": "A", "expr": "benchmark_ttft_p99{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value" } },
-        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency\\benchmark", "destinationType": "number" }] } },
-        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency\\benchmark", "desc": false }] } },
-        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
@@ -126,10 +144,12 @@
           "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true, "concurrency": true }
         }},
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user", "destinationType": "number" }] } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "tps_per_user", "valueField": "Value" } },
-        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user\\benchmark", "destinationType": "number" }] } },
-        { "id": "sortBy", "options": { "fields": [{ "field": "tps_per_user\\benchmark", "desc": false }] } },
-        { "id": "renameByRegex", "options": { "regex": "tps_per_user\\\\benchmark", "renamePattern": "tps_per_user" } }
+        { "id": "sortBy", "options": { "fields": [{ "field": "tps_per_user", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "tps_per_user", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "tps_per_user \\(benchmark\\)", "renamePattern": "tps_per_user" } },
+        { "id": "renameByRegex", "options": { "regex": "tps_per_user\\\\benchmark", "renamePattern": "tps_per_user" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "tps_per_user", "desc": false }] } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "tps_per_user" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 14 }, "show": "both", "lineWidth": 2 } } }
@@ -164,8 +184,8 @@
       }
     ]
   },
-  "time": { "from": "now-1h", "to": "now" },
+  "time": { "from": "now-7d", "to": "now" },
   "title": "Benchmark Pareto",
   "uid": "benchmark-pareto",
-  "version": 13
+  "version": 15
 }
