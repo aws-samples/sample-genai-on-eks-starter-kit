@@ -26,7 +26,7 @@ OpenClaw provides AI-powered agents that can interact with your Kubernetes clust
           ▼                                           ▼
 ┌──────────────────────┐                  ┌──────────────────────┐
 │  DevOps Agent        │                  │   Doc Writer Agent   │
-│  Port: 8080          │                  │   (KEDA-scaled)      │
+│  Port: 8080          │                  │   Port: 8080         │
 └──────────┬───────────┘                  └──────────┬───────────┘
            │                                          │
            └──────────────────┬───────────────────────┘
@@ -365,7 +365,7 @@ The DevOps Agent has **read-only** access to cluster resources:
 OpenClaw follows a cost-first design:
 
 - **Stateless containers**: No persistent storage needed
-- **Scale-to-zero**: Doc Writer uses KEDA to scale to 0 when idle
+- **Scale-to-zero**: Agents can use KEDA to scale to 0 when idle (see [KEDA docs](https://keda.sh/docs/))
 - **Spot instances**: Karpenter provisions Spot ARM64 nodes (up to 90% savings)
 - **Efficient models**: Use smaller models for faster, cheaper responses
 

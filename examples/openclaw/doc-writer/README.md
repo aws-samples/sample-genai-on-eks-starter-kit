@@ -208,26 +208,6 @@ Include:
 - Coding standards
 ```
 
-## KEDA Scale-to-Zero
-
-The Document Writer Agent uses KEDA to scale to zero when idle, minimizing costs:
-
-```yaml
-apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
-metadata:
-  name: doc-writer-scaler
-spec:
-  scaleTargetRef:
-    name: doc-writer
-  minReplicaCount: 0
-  maxReplicaCount: 10
-```
-
-- **Idle**: Scales to 0 replicas after 5 minutes of inactivity
-- **Active**: Scales up when tasks are submitted
-- **Cost**: $0 when idle, ~$0.02-0.05 per task execution
-
 ## Git Workflow
 
 The agent follows this Git workflow:
@@ -245,62 +225,6 @@ The agent is pre-configured with:
 ```bash
 git config --system user.name "OpenClaw Doc Writer"
 git config --system user.email "openclaw-doc-writer@noreply"
-```
-
-## Troubleshooting
-
-### Agent Not Responding
-
-```bash
-# Check pod status
-kubectl get pods -n openclaw -l app=doc-writer
-
-# Check logs
-kubectl logs -n openclaw -l app=doc-writer
-
-# Restart pod
-kubectl delete pod -n openclaw -l app=doc-writer
-```
-
-### Git Authentication Failed
-
-```bash
-# Verify Git credentials in config
-kubectl get deployment -n openclaw doc-writer -o yaml | grep GIT
-
-# Test Git access manually
-kubectl exec -it -n openclaw deployment/doc-writer -- \
-  git ls-remote https://${GIT_USERNAME}:${GIT_TOKEN}@github.com/user/repo
-```
-
-### LLM API Errors
-
-```bash
-# Check LiteLLM is running
-kubectl get pods -n litellm
-
-# Test LiteLLM API
-kubectl port-forward -n litellm svc/litellm 4000:4000
-curl http://localhost:4000/health
-```
-
-### Slow Response Times
-
-- **Model selection**: Try a faster model (e.g., `bedrock/claude-4.5-haiku`)
-- **Repository size**: Large repos take longer to analyze
-- **Network latency**: Check Git clone speed
-
-### KEDA Not Scaling
-
-```bash
-# Check KEDA is installed
-kubectl get pods -n keda
-
-# Check ScaledObject
-kubectl get scaledobject -n openclaw
-
-# Check HPA
-kubectl get hpa -n openclaw
 ```
 
 ## Langfuse Observability
@@ -326,7 +250,6 @@ If Langfuse is installed, view agent traces:
 
 ## Cost Optimization
 
-- **KEDA scale-to-zero**: $0 when idle
 - **Spot instances**: Karpenter provisions Spot ARM64 nodes (up to 90% savings)
 - **Job-based execution**: Consider using Jobs instead of Deployment for one-off tasks
 - **Model selection**: Smaller models reduce LLM API costs
@@ -337,11 +260,10 @@ If Langfuse is installed, view agent traces:
 ./cli openclaw doc-writer uninstall
 ```
 
-This will delete Kubernetes resources (Deployment, Service, ServiceAccount, KEDA ScaledObject).
+This will delete Kubernetes resources (Deployment, Service, ServiceAccount).
 
 ## References
 
 - [OpenClaw Repository](https://github.com/openclaw/openclaw)
 - [Open WebUI Pipe Functions](https://docs.openwebui.com/features/pipe-functions)
-- [KEDA Documentation](https://keda.sh/docs/)
 - [GitHub Personal Access Tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)

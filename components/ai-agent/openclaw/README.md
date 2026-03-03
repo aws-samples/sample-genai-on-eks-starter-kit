@@ -123,53 +123,6 @@ The bridge server uses the following environment variables (configured via `conf
 }
 ```
 
-## API Endpoints
-
-### Health Check
-
-```bash
-GET /health
-```
-
-Returns:
-```json
-{"status":"ok"}
-```
-
-### Submit Task
-
-```bash
-POST /message
-Content-Type: application/json
-
-{
-  "message": "Your task description here"
-}
-```
-
-Returns: Server-Sent Events (SSE) stream
-
-```
-data: {"content":"Response chunk 1"}
-data: {"content":"Response chunk 2"}
-data: [DONE]
-```
-
-### Status
-
-```bash
-GET /status
-```
-
-Returns:
-```json
-{
-  "status": "running",
-  "uptime": 3600,
-  "lastActivity": "2025-02-14T09:42:00.000Z"
-}
-```
-
 ## Integration with LiteLLM
 
 OpenClaw routes all LLM API calls through LiteLLM, which provides:
@@ -213,46 +166,6 @@ View traces in Langfuse UI to:
 - Analyze token usage
 - Track latency
 
-## Troubleshooting
-
-### Bridge Server Not Starting
-
-```bash
-# Check pod status
-kubectl get pods -n openclaw
-
-# Check logs
-kubectl logs -n openclaw -l app=openclaw
-
-# Common issues:
-# 1. LiteLLM not available
-kubectl get pods -n litellm
-
-# 2. Invalid API key
-kubectl get secret -n openclaw
-```
-
-### Connection Refused
-
-```bash
-# Verify service exists
-kubectl get svc -n openclaw
-
-# Test from within cluster
-kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- \
-  curl http://openclaw.openclaw:8080/health
-```
-
-### Langfuse Integration Not Working
-
-```bash
-# Verify Langfuse is running
-kubectl get pods -n langfuse
-
-# Check environment variables
-kubectl get deployment -n openclaw openclaw -o yaml | grep LANGFUSE
-```
-
 ## Uninstallation
 
 ```bash
@@ -265,12 +178,11 @@ This will delete Kubernetes resources (Deployment, Service, ServiceAccount).
 
 See the following examples for complete agent implementations:
 
-- **Document Writer Agent**: `examples/openclaw/doc-writer/`
+- **[Document Writer Agent](../../../examples/openclaw/doc-writer/README.md)**: `examples/openclaw/doc-writer/`
   - Clones Git repos, writes documentation, commits and pushes
-  - Uses KEDA for scale-to-zero
   - Integrates with Open WebUI
 
-- **DevOps Agent**: `examples/openclaw/devops-agent/`
+- **[DevOps Agent](../../../examples/openclaw/devops-agent/README.md)**: `examples/openclaw/devops-agent/`
   - Interactive cluster management assistant
   - Has kubectl, helm, AWS CLI
   - Read-only RBAC permissions
@@ -280,7 +192,7 @@ See the following examples for complete agent implementations:
 OpenClaw follows a cost-first design:
 
 - **Stateless containers**: No persistent storage needed (Git is the durable store)
-- **Scale-to-zero**: Agent examples use KEDA to scale to 0 when idle
+- **Scale-to-zero**: Agent examples can use KEDA to scale to 0 when idle (see [KEDA docs](https://keda.sh/docs/))
 - **Spot instances**: Karpenter provisions Spot ARM64 nodes (up to 90% savings)
 - **Ephemeral execution**: Doc writer uses Jobs that terminate after completion
 
@@ -298,4 +210,3 @@ Estimated cost: ~$0 at rest, ~$0.02-0.05 per task execution (excluding LLM API c
 - [OpenClaw Repository](https://github.com/openclaw/openclaw)
 - [LiteLLM Documentation](https://docs.litellm.ai/)
 - [Langfuse Documentation](https://langfuse.com/docs)
-- [KEDA Documentation](https://keda.sh/docs/)

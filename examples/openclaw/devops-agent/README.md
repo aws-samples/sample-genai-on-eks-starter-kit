@@ -284,68 +284,6 @@ aws s3 ls
 aws iam list-roles
 ```
 
-## Troubleshooting
-
-### Agent Not Responding
-
-```bash
-# Check pod status
-kubectl get pods -n openclaw -l app=devops-agent
-
-# Check logs
-kubectl logs -n openclaw -l app=devops-agent
-
-# Restart pod
-kubectl delete pod -n openclaw -l app=devops-agent
-```
-
-### RBAC Permission Denied
-
-```bash
-# Verify ClusterRole exists
-kubectl get clusterrole devops-agent-reader
-
-# Verify ClusterRoleBinding
-kubectl get clusterrolebinding devops-agent-reader-binding
-
-# Check ServiceAccount
-kubectl get sa -n openclaw devops-agent
-
-# Test permissions
-kubectl auth can-i get pods --as=system:serviceaccount:openclaw:devops-agent
-```
-
-### kubectl Commands Failing
-
-```bash
-# Verify kubectl is installed
-kubectl exec -it -n openclaw deployment/devops-agent -- kubectl version --client
-
-# Test kubectl access
-kubectl exec -it -n openclaw deployment/devops-agent -- kubectl get pods -n default
-```
-
-### AWS CLI Not Working
-
-```bash
-# Verify AWS CLI is installed
-kubectl exec -it -n openclaw deployment/devops-agent -- aws --version
-
-# Check AWS credentials (if using IRSA)
-kubectl exec -it -n openclaw deployment/devops-agent -- aws sts get-caller-identity
-```
-
-### LLM API Errors
-
-```bash
-# Check LiteLLM is running
-kubectl get pods -n litellm
-
-# Test LiteLLM API
-kubectl port-forward -n litellm svc/litellm 4000:4000
-curl http://localhost:4000/health
-```
-
 ## Langfuse Observability
 
 If Langfuse is installed, view agent traces:
