@@ -19,11 +19,11 @@ spec:
         image: nvcr.io/nvidia/ai-dynamo/vllm-runtime:{{{IMAGE_TAG}}}
         resources:
           requests:
-            cpu: "4"
-            memory: "8Gi"
+            cpu: "1"
+            memory: "2Gi"
           limits:
-            cpu: "8"
-            memory: "16Gi"
+            cpu: "2"
+            memory: "4Gi"
         env:
           - name: HUGGING_FACE_HUB_TOKEN
             valueFrom:

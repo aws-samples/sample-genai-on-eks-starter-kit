@@ -483,7 +483,7 @@ GPU (G1) → CPU Pinned Memory (G2) → Local SSD/NVMe (G3)
 
 ## AIConfigurator
 
-Automatically recommend optimal parallelization (TP/PP) and deployment configuration using NVIDIA AI Configurator simulation.
+Automatically recommend optimal parallelization (TP/PP) and deployment configuration using NVIDIA AI Configurator simulation. Compares aggregated vs disaggregated serving and generates Pareto frontiers.
 
 ### Install
 
@@ -495,12 +495,32 @@ Automatically recommend optimal parallelization (TP/PP) and deployment configura
 
 | Mode | Description | Duration | GPU Required | Deploys |
 |------|-------------|----------|:------------:|:-------:|
-| **Quick Estimate** | Simulate performance, recommend TP/PP | ~20-30s | No | No |
+| **Quick Estimate** | `aiconfigurator cli default` — agg vs disagg Pareto comparison | ~25s | No | No |
 | **SLA-Driven Deploy** | Auto-profile + SLA planner + deploy via DGDR | ~1-5min | No (AIC sim) | Yes |
 
 ### Quick Estimate
 
-Runs AIConfigurator simulation and displays recommended TP sizes for prefill/decode. No actual deployment — use the recommendation when configuring `dynamo-vllm install`.
+Uses `aiconfigurator cli default` via a dedicated pod to:
+1. Load model architecture from `model_configs/` (pre-cached HuggingFace configs)
+2. Sweep TP=1,2,4,8 for both agg and disagg modes
+3. Display Pareto frontier (ASCII art) + top configurations table
+4. Recommend best agg and disagg configs under SLA constraints
+
+Example output:
+```
+Best Experiment Chosen: agg at 1604.74 tokens/s/gpu (disagg 0.72x better)
+
+agg Top Configurations:
+| Rank | tokens/s/gpu | TTFT   | parallel | replicas |
+|  1   |   1604.74    | 84.42  | tp4pp1   |    2     |
+|  2   |   1574.83    | 86.39  | tp2pp1   |    4     |
+
+disagg Top Configurations:
+| Rank | tokens/s/gpu | TTFT   | (p)parallel | (d)parallel | (p)workers | (d)workers |
+|  1   |   1149.49    | 45.10  | tp1pp1      | tp2pp1      |     2      |     3      |
+```
+
+Note: AIConfigurator uses FP8 GEMM + FP8 KV cache by default on H100/H200 (hardware-optimal). Quantization is determined by the system/backend combination, not the model name.
 
 ### SLA-Driven Deploy (DGDR)
 
@@ -509,17 +529,26 @@ Creates a `DynamoGraphDeploymentRequest` that the Dynamo Operator processes:
 2. SLA Planner generates DGD config (replicas, scaling params)
 3. Auto-deploys DGD if `autoApply: true`
 
+Options include:
+- Model cache PVC auto-detection
+- SLA Planner enable/disable (auto-scaling)
+- Min/Max GPUs per engine
+- Auto-apply toggle
+
 ### Supported Configurations
 
-| GPU System | Backend | Example Models |
-|------------|---------|---------------|
-| H100 SXM | vLLM, TRT-LLM, SGLang | Qwen3-32B, Llama-3.1-405B |
-| H200 SXM | vLLM, TRT-LLM, SGLang | Qwen3-32B, Llama-3.1-405B |
-| A100 SXM | vLLM, TRT-LLM, SGLang | Qwen3-32B, Llama-3.1-405B |
-| B200 SXM | TRT-LLM (preview) | — |
-| GB200 SXM | TRT-LLM (preview) | — |
+| GPU System | vLLM | TRT-LLM | SGLang |
+|------------|:----:|:-------:|:------:|
+| H100 SXM | 0.12.0 | 1.0.0rc3, 1.2.0rc5 | 0.5.6.post2 |
+| H200 SXM | 0.12.0 | 1.0.0rc3, 1.2.0rc5 | 0.5.6.post2 |
+| A100 SXM | 0.12.0 | 1.0.0 | — |
+| B200 SXM | — | 1.0.0rc3, 1.2.0rc5 | 0.5.6.post2 |
+| GB200 SXM | — | 1.0.0rc3, 1.2.0rc5 | — |
+| L40S | — | — | — |
 
-Model list is dynamically retrieved from AIConfigurator. Enter any HuggingFace model ID to try.
+Model list is **dynamically retrieved** from the `model_configs/` directory inside the aiconfigurator package. Supports 22+ models including Qwen, Llama, Mixtral, DeepSeek, Nemotron families. FP8 quantized variants are also available (e.g., `Qwen/Qwen3-32B-FP8`).
+
+Any HuggingFace model ID can be entered manually — AIConfigurator will download the model config and attempt simulation.
 
 ---
 

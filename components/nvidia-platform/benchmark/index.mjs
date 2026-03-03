@@ -406,10 +406,17 @@ spec:
       { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,2,5,10,50" },
     ]);
     
+    const maxConc = parseInt(params.numSessions, 10);
+    const concLevels = params.concurrencies.split(",").map(c => c.trim()).filter(c => {
+      if (parseInt(c, 10) > maxConc) {
+        console.log(`  Skipping c=${c} (exceeds num_sessions=${maxConc})`);
+        return false;
+      }
+      return true;
+    });
+    
     console.log(`\nMulti-turn: ${params.turnMean}±${params.turnStddev} turns, ${params.numSessions} sessions`);
     console.log("KV Router routes same-session requests to same worker → lower TTFT\n");
-    
-    const concLevels = params.concurrencies.split(",").map(c => c.trim());
     await runConcurrencySweep(namespace, benchmarkName, concLevels, template, baseVars, {
       IS_MULTI_TURN: true,
       TURN_MEAN: params.turnMean,

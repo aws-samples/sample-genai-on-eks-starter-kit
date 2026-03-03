@@ -43,7 +43,7 @@
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
-      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
     },
     {
       "title": "TTFT P50 vs Concurrency",
@@ -60,7 +60,7 @@
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
-      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
     },
     {
       "title": "ITL P50 vs Concurrency",
@@ -77,7 +77,7 @@
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
-      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
     },
     {
       "title": "Request Latency P50 vs Concurrency",
@@ -94,7 +94,7 @@
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
-      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
     },
     {
       "title": "TTFT P99 vs Concurrency",
@@ -111,7 +111,7 @@
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } }
       ],
       "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
-      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
     },
     {
       "title": "GPU Efficiency: TPS/GPU vs TPS/User (Pareto)",
