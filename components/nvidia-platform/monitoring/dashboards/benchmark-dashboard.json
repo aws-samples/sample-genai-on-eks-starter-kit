@@ -9,7 +9,7 @@
       "type": "text",
       "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "options": { "mode": "markdown", "content": "Select benchmarks via **Benchmark** dropdown. Each line = deployment config. X = concurrency." }
+      "options": { "mode": "markdown", "content": "Select benchmarks via **Benchmark** dropdown. Each line = deployment config. X = concurrency.\n\n**Tip:** 여러 벤치마크를 동시에 선택하면 데이터가 없는 구간이 0으로 보일 수 있습니다. 끊김 없이 곡선을 보려면 **한 번에 하나씩** 선택하세요." }
     },
     {
       "title": "TPS/GPU vs Concurrency",
@@ -17,7 +17,7 @@
       "gridPos": { "h": 12, "w": 12, "x": 0, "y": 2 },
       "id": 1,
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "refId": "A", "expr": "benchmark_tps_per_gpu{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "targets": [{ "refId": "A", "expr": "benchmark_tps_per_gpu{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
@@ -37,12 +37,12 @@
       "gridPos": { "h": 12, "w": 12, "x": 12, "y": 2 },
       "id": 2,
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "refId": "A", "expr": "benchmark_tps_per_user{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "targets": [{ "refId": "A", "expr": "benchmark_tps_per_user{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
         { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
@@ -57,12 +57,12 @@
       "gridPos": { "h": 12, "w": 12, "x": 0, "y": 14 },
       "id": 3,
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "refId": "A", "expr": "benchmark_ttft_p50{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "targets": [{ "refId": "A", "expr": "benchmark_ttft_p50{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
         { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
@@ -77,12 +77,12 @@
       "gridPos": { "h": 12, "w": 12, "x": 12, "y": 14 },
       "id": 4,
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "refId": "A", "expr": "benchmark_itl_p50{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "targets": [{ "refId": "A", "expr": "benchmark_itl_p50{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
         { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
@@ -97,12 +97,12 @@
       "gridPos": { "h": 12, "w": 12, "x": 0, "y": 26 },
       "id": 5,
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "refId": "A", "expr": "benchmark_request_latency_p50{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "targets": [{ "refId": "A", "expr": "benchmark_request_latency_p50{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
         { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
@@ -117,12 +117,12 @@
       "gridPos": { "h": 12, "w": 12, "x": 12, "y": 26 },
       "id": 6,
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "refId": "A", "expr": "benchmark_ttft_p99{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "targets": [{ "refId": "A", "expr": "benchmark_ttft_p99{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
         { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
         { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
@@ -138,14 +138,14 @@
       "gridPos": { "h": 14, "w": 24, "x": 0, "y": 38 },
       "id": 7,
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "targets": [{ "refId": "A", "expr": "benchmark_efficiency{benchmark=~\"$benchmark\"}", "instant": true, "format": "table" }],
+      "targets": [{ "refId": "A", "expr": "benchmark_efficiency{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
       "transformations": [
         { "id": "organize", "options": {
           "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true, "concurrency": true }
         }},
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user", "destinationType": "number" }] } },
         { "id": "sortBy", "options": { "fields": [{ "field": "tps_per_user", "desc": false }] } },
-        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "tps_per_user", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "tps_per_user", "valueField": "Value", "emptyValue": "NaN" } },
         { "id": "renameByRegex", "options": { "regex": "tps_per_user \\(benchmark\\)", "renamePattern": "tps_per_user" } },
         { "id": "renameByRegex", "options": { "regex": "tps_per_user\\\\benchmark", "renamePattern": "tps_per_user" } },
         { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user", "destinationType": "number" }] } },
@@ -187,5 +187,5 @@
   "time": { "from": "now-7d", "to": "now" },
   "title": "Benchmark Pareto",
   "uid": "benchmark-pareto",
-  "version": 15
+  "version": 17
 }

@@ -185,23 +185,26 @@ async function pushMetricsToPushgateway(namespace, benchmarkName, mode, modelNam
         const tpsPerUser = totalTokS ? totalTokS / concNum : null;
         
         const lines = [];
-        const add = (name, value) => {
-          if (value !== null && value !== undefined && !isNaN(value)) {
+        // skipZero: do not push 0 (unmeasured/failed runs show as 0 in Grafana otherwise)
+        const add = (name, value, skipZero = false) => {
+          if (value !== null && value !== undefined && !isNaN(value) && (!skipZero || value > 0)) {
             lines.push(`${name}{benchmark="${benchmarkName}",concurrency="${concurrencyLabel}",mode="${mode}",model="${modelName}",num_gpus="${numGpus}"} ${value}`);
           }
         };
         
-        add("benchmark_tps_per_gpu", tpsPerGpu);
-        add("benchmark_tps_per_user", tpsPerUser);
-        add("benchmark_ttft_p50", get("time_to_first_token", "p50"));
-        add("benchmark_ttft_p99", get("time_to_first_token", "p99"));
-        add("benchmark_itl_p50", get("inter_token_latency", "p50"));
-        add("benchmark_itl_p99", get("inter_token_latency", "p99"));
-        add("benchmark_request_latency_p50", get("request_latency", "p50"));
-        add("benchmark_request_latency_p99", get("request_latency", "p99"));
+        add("benchmark_tps_per_gpu", tpsPerGpu, true);
+        add("benchmark_tps_per_user", tpsPerUser, true);
+        add("benchmark_ttft_p50", get("time_to_first_token", "p50"), true);
+        add("benchmark_ttft_p99", get("time_to_first_token", "p99"), true);
+        add("benchmark_itl_p50", get("inter_token_latency", "p50"), true);
+        add("benchmark_itl_p99", get("inter_token_latency", "p99"), true);
+        add("benchmark_request_latency_p50", get("request_latency", "p50"), true);
+        add("benchmark_request_latency_p99", get("request_latency", "p99"), true);
         
-        // Efficiency metric: Y=tps_per_gpu, X encoded as tps_per_user label
-        if (tpsPerGpu !== null && tpsPerUser !== null) {
+        // Efficiency metric: Y=tps_per_gpu, X encoded as tps_per_user label (skip NaN/zero to avoid chart artifacts)
+        const validEfficiency = typeof tpsPerGpu === "number" && typeof tpsPerUser === "number" &&
+          !isNaN(tpsPerGpu) && !isNaN(tpsPerUser) && tpsPerGpu > 0 && tpsPerUser > 0;
+        if (validEfficiency) {
           const tpsUserRounded = tpsPerUser.toFixed(4);
           lines.push(`benchmark_efficiency{benchmark="${benchmarkName}",concurrency="${concurrencyLabel}",tps_per_user="${tpsUserRounded}",mode="${mode}",model="${modelName}",num_gpus="${numGpus}"} ${tpsPerGpu}`);
         }

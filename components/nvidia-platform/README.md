@@ -2,6 +2,8 @@
 
 Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and Amazon EKS.
 
+**Implemented**: GPU Operator, Monitoring (Prometheus + Grafana + Dynamo/DCGM/KVBM/Benchmark Pareto dashboards), Dynamo Platform (Operator, etcd, NATS), Dynamo vLLM (aggregated/disaggregated, KV Router, KVBM), AIPerf Benchmark (concurrency sweep, multi-turn, sequence distribution, prefix cache → Pushgateway + Pareto dashboard), AIConfigurator (Quick Estimate + SLA-driven deploy via DGDR).
+
 ## Architecture
 
 ```
@@ -10,13 +12,12 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
                     |  ./cli nvidia-platform |
                     +----------+------------+
                                |
-         +----------+----------+----------+----------+
-         |          |                     |          |
-    GPU Operator  Monitoring     Dynamo Platform  Dynamo vLLM
-    (K8s GPU      (Prometheus,   (CRDs, Operator, (Model deploy,
-     management)   Grafana,       etcd, NATS,      KV Router,
-                   Dashboards)    Grove, KAI)      KVBM, Agg/
-                                                   Disagg modes)
+    +--------+--------+--------+--------+--------+
+    |        |        |        |        |        |
+  GPU Op   Monitor   Dynamo   Dynamo   Benchmark  AIConfig
+  DCGM     Prom,     Platform  vLLM    AIPerf,    Quick Est,
+           Grafana   etcd,     agg/     Pushgateway SLA Deploy
+                    Operator   disagg   Pareto
 ```
 
 ## Components
@@ -24,10 +25,11 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 | Component | Description | CLI Command |
 |-----------|-------------|-------------|
 | GPU Operator | NVIDIA GPU resource management | `./cli nvidia-platform gpu-operator install` |
-| Monitoring | Prometheus + Grafana + Dynamo Dashboard | `./cli nvidia-platform monitoring install` |
+| Monitoring | Prometheus + Grafana + Dynamo/DCGM/KVBM/Benchmark dashboards | `./cli nvidia-platform monitoring install` |
 | Dynamo Platform | CRDs, Operator, etcd, NATS, Grove, KAI Scheduler | `./cli nvidia-platform dynamo-platform install` |
-| Dynamo vLLM Serving | vLLM model deployment with advanced features | `./cli nvidia-platform dynamo-vllm install` |
-| AIPerf Benchmark | Performance benchmarking (concurrency sweep, TTFT/ITL) | `./cli nvidia-platform benchmark install` |
+| Dynamo vLLM Serving | vLLM model deployment (agg/disagg, KV Router, KVBM) | `./cli nvidia-platform dynamo-vllm install` |
+| AIPerf Benchmark | Concurrency sweep, multi-turn, seq distribution, prefix cache → Pushgateway + Pareto dashboard | `./cli nvidia-platform benchmark install` |
+| AIConfigurator | TP/PP recommendation (Quick Estimate) + SLA-driven deploy (DGDR) | `./cli nvidia-platform aiconfigurator install` |
 
 ## Installation Order
 
@@ -320,11 +322,11 @@ kubectl get secret prometheus-grafana -n monitoring \
 | **KVBM KV Cache** | KV cache usage, offloading metrics | `monitoring/dashboards/kvbm.json` |
 | **Benchmark Pareto** | Benchmark comparison (TPS/GPU, TTFT, ITL vs concurrency) | `monitoring/dashboards/benchmark-dashboard.json` |
 
-Dashboards are auto-loaded via Grafana sidecar (ConfigMaps with `grafana_dashboard: "1"` label).
+Dashboards are auto-loaded via Grafana sidecar (ConfigMaps with `grafana_dashboard: "1"` label). To refresh dashboard JSON (e.g. after editing `benchmark-dashboard.json`), re-run `./cli nvidia-platform monitoring install` or update the ConfigMap and restart the Grafana deployment.
 
 ### Pushgateway (Benchmark Metrics)
 
-Prometheus Pushgateway is installed alongside the monitoring stack to receive benchmark results. After each benchmark run, metrics are automatically pushed via `kubectl port-forward` + HTTP POST.
+Prometheus Pushgateway is installed alongside the monitoring stack to receive benchmark results. After each benchmark run, metrics are automatically pushed via `kubectl port-forward` + HTTP POST. To reset benchmark data in Grafana, delete Pushgateway metrics (see *Managing Benchmark Data* under AIPerf Benchmark) or re-install monitoring (PVCs are optional to delete for a full reset).
 
 ---
 
@@ -350,21 +352,24 @@ Interactive prompts:
 | **Sequence Distribution** | Mixed ISL/OSL workloads (QA + summarization) | Real-world traffic simulation |
 | **Prefix Cache** | Synthetic shared-prefix workload (no trace file needed) | KV cache hit rate testing |
 
+**Prefix Cache**: `request_count` is set automatically to **concurrency × 4** per level (aiperf requires `request_count >= concurrency`). No prompt for request count.
+
 ### Results and Grafana Dashboard
 
 After benchmark completion:
-1. Results are saved to PVC (`benchmark-results` in `dynamo-system`)
-2. Metrics are automatically pushed to Pushgateway
-3. Open Grafana → **Benchmark Pareto** dashboard
-4. Select benchmarks to compare via the **Benchmark** dropdown
+1. **Results**: PVC `benchmark-results` in `dynamo-system` (per-benchmark dirs `c1`, `c8`, …) and local copy under `components/nvidia-platform/benchmark/results/<benchmark-name>/`.
+2. **Metrics**: Automatically pushed to Prometheus Pushgateway (scraped by Prometheus).
+3. **Grafana**: Open **Benchmark Pareto** dashboard, select benchmarks via the **Benchmark** dropdown.
 
-Grafana charts show **X = concurrency, Y = metric** with each benchmark as a separate line:
+Grafana charts show **X = concurrency (numeric order 1→8→16→32)**, **Y = metric**, each benchmark = one line:
 - TPS/GPU vs Concurrency
 - TPS/User vs Concurrency
-- TTFT P50 vs Concurrency
+- TTFT P50 / P99 vs Concurrency
 - ITL P50 vs Concurrency
 - Request Latency P50 vs Concurrency
-- TTFT P99 vs Concurrency
+- **GPU Efficiency: TPS/GPU vs TPS/User (Pareto)** — X = TPS/User, Y = TPS/GPU (top-right = optimal)
+
+Metrics are pushed with concurrency labels zero-padded (e.g. `001`, `008`, `016`) so Grafana sorts points in numeric order; directories are processed in concurrency order before push.
 
 ### Comparing Deployments
 
@@ -525,15 +530,16 @@ Note: AIConfigurator uses FP8 GEMM + FP8 KV cache by default on H100/H200 (hardw
 ### SLA-Driven Deploy (DGDR)
 
 Creates a `DynamoGraphDeploymentRequest` that the Dynamo Operator processes:
-1. AIConfigurator simulation (optimal TP for prefill/decode)
-2. SLA Planner generates DGD config (replicas, scaling params)
-3. Auto-deploys DGD if `autoApply: true`
+1. **Profiling**: choose **AI Configurator Simulation** (`useAiConfigurator: true`) or **Real Engine Profiling** (`useAiConfigurator: false` with prefill/decode interpolation granularity).
+2. SLA Planner generates DGD config (replicas, scaling params).
+3. Auto-deploys DGD if `autoApply: true`.
 
 Options include:
 - Model cache PVC auto-detection
 - SLA Planner enable/disable (auto-scaling)
 - Min/Max GPUs per engine
 - Auto-apply toggle
+- Real Engine Profiling: `prefillInterpolationGranularity`, `decodeInterpolationGranularity` (when not using AIConfigurator simulation)
 
 ### Supported Configurations
 
@@ -598,8 +604,9 @@ curl http://$ENDPOINT/v1/chat/completions \
 
 - [ ] **Log Aggregation (Loki + Alloy)** - Structured log collection with Grafana Loki for DynamoGraphDeployments
 - [ ] **Distributed Tracing** - OpenTelemetry integration with Tempo for request tracing across Frontend/Workers
-- [ ] **SLO-based Planner** 
 - [ ] **TRT-LLM Backend** - TensorRT-LLM serving support (`dynamo-trtllm` component)
 - [ ] **Multi-modal Model Support**
+
+SLA-driven planning is available via **AIConfigurator → SLA-Driven Deploy** (DGDR + SLA Planner).
 
 ---
