@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doc-writer
+  namespace: openclaw
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: doc-writer
+  template:
+    metadata:
+      labels:
+        app: doc-writer
+    spec:
+      serviceAccountName: doc-writer
+      automountServiceAccountToken: false
+      containers:
+        - name: agent
+          image: {{{IMAGE}}}
+          imagePullPolicy: Always
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+          env:
+            # Ensure HOME points to node user's home (uid 1000)
+            - name: HOME
+              value: "/home/node"
+            - name: OPENCLAW_CONFIG_PATH
+              value: "/home/node/.openclaw/openclaw.json"
+            - name: OPENCLAW_GATEWAY_TOKEN
+              value: "{{{OPENCLAW_GATEWAY_TOKEN}}}"
+            - name: LITELLM_BASE_URL
+              value: "{{{LITELLM_BASE_URL}}}"
+            - name: LITELLM_API_KEY
+              value: "{{{LITELLM_API_KEY}}}"
+            - name: LITELLM_MODEL_NAME
+              value: "{{{LITELLM_MODEL_NAME}}}"
+            # OpenAI SDK compatible env vars for OpenClaw Gateway LLM calls
+            - name: OPENAI_API_KEY
+              value: "{{{LITELLM_API_KEY}}}"
+            - name: OPENAI_BASE_URL
+              value: "{{{LITELLM_BASE_URL}}}/v1"
+            {{#if GIT_REPO_URL}}
+            - name: GIT_REPO_URL
+              value: "{{{GIT_REPO_URL}}}"
+            {{/if}}
+            {{#if LANGFUSE_HOST}}
+            - name: LANGFUSE_HOST
+              value: {{{LANGFUSE_HOST}}}
+            - name: LANGFUSE_PUBLIC_KEY
+              value: {{{LANGFUSE_PUBLIC_KEY}}}
+            - name: LANGFUSE_SECRET_KEY
+              value: {{{LANGFUSE_SECRET_KEY}}}
+            {{/if}}
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: openclaw-config
+              mountPath: /home/node/.openclaw
+      volumes:
+        - name: openclaw-config
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doc-writer
+  namespace: openclaw
+spec:
+  selector:
+    app: doc-writer
+  ports:
+    - name: http
+      port: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: doc-writer
+  namespace: openclaw
+automountServiceAccountToken: false
+---
+# KEDA 설치가 권장되지만, 이 가이드에서는 간략한 예제만 제공하므로 Scale 관련 설정은 비활성화합니다.
+# KEDA를 사용하려면 https://keda.sh/docs/ 참고
+# apiVersion: keda.sh/v1alpha1
+# kind: ScaledObject
+# metadata:
+#   name: doc-writer-scaler
+#   namespace: openclaw
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: doc-writer
+#   minReplicaCount: 0
+#   maxReplicaCount: 5
+#   cooldownPeriod: 300
+#   triggers:
+#   - type: cpu
+#     metricType: Utilization
+#     metadata:
+#       value: "50"
