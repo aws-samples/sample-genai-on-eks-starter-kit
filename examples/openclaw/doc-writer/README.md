@@ -161,52 +161,12 @@ The agent will:
 
 ## Example Tasks
 
-### Generate README
-
-```
-Write a README for https://github.com/user/repo
-
-Include:
-- Project description
-- Installation steps
-- Quick start guide
-- Configuration options
-```
-
-### Update API Documentation
-
-```
-Update the API documentation in https://github.com/user/api-server
-
-Focus on:
-- REST endpoints
-- Request/response formats
-- Authentication
-- Error codes
-```
-
-### Create Changelog
-
-```
-Generate a CHANGELOG.md for https://github.com/user/project
-
-Based on recent commits, create entries for:
-- New features
-- Bug fixes
-- Breaking changes
-```
-
-### Write Contributing Guide
-
-```
-Create a CONTRIBUTING.md for https://github.com/user/opensource-project
-
-Include:
-- Code of conduct
-- Development setup
-- Pull request process
-- Coding standards
-```
+| Task | Example Prompt |
+|------|---------------|
+| Generate README | Write a README for `https://github.com/user/repo` — include project description, installation steps, quick start guide, configuration options |
+| Update API Docs | Update the API documentation in `https://github.com/user/api-server` — REST endpoints, request/response formats, authentication, error codes |
+| Create Changelog | Generate a CHANGELOG.md for `https://github.com/user/project` — new features, bug fixes, breaking changes based on recent commits |
+| Contributing Guide | Create a CONTRIBUTING.md for `https://github.com/user/opensource-project` — code of conduct, development setup, PR process, coding standards |
 
 ## Git Workflow
 

@@ -105,24 +105,3 @@ metadata:
   name: doc-writer
   namespace: openclaw
 automountServiceAccountToken: false
----
-# KEDA 설치가 권장되지만, 이 가이드에서는 간략한 예제만 제공하므로 Scale 관련 설정은 비활성화합니다.
-# KEDA를 사용하려면 https://keda.sh/docs/ 참고
-# apiVersion: keda.sh/v1alpha1
-# kind: ScaledObject
-# metadata:
-#   name: doc-writer-scaler
-#   namespace: openclaw
-# spec:
-#   scaleTargetRef:
-#     apiVersion: apps/v1
-#     kind: Deployment
-#     name: doc-writer
-#   minReplicaCount: 0
-#   maxReplicaCount: 5
-#   cooldownPeriod: 300
-#   triggers:
-#   - type: cpu
-#     metricType: Utilization
-#     metadata:
-#       value: "50"
