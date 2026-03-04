@@ -396,7 +396,7 @@ spec:
     const params = await inquirer.prompt([
       { type: "input", name: "isl", message: "Input sequence length:", default: "2000" },
       { type: "input", name: "osl", message: "Output sequence length:", default: "256" },
-      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,2,5,10,50,100,250" },
+      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,8,16,32,64,128,256" },
     ]);
     
     const concLevels = params.concurrencies.split(",").map(c => c.trim());
@@ -415,10 +415,10 @@ spec:
     const params = await inquirer.prompt([
       { type: "input", name: "turnMean", message: "Average turns per conversation:", default: "5" },
       { type: "input", name: "turnStddev", message: "Turn count stddev:", default: "2" },
-      { type: "input", name: "numSessions", message: "Number of sessions:", default: "50" },
+      { type: "input", name: "numSessions", message: "Number of sessions:", default: "64" },
       { type: "input", name: "isl", message: "Input sequence length:", default: "500" },
       { type: "input", name: "osl", message: "Output sequence length:", default: "128" },
-      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,2,5,10,50" },
+      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,8,16,32,64" },
     ]);
     
     const maxConc = parseInt(params.numSessions, 10);
@@ -459,7 +459,7 @@ spec:
         message: "Sequence distribution:",
         default: "64|10,32|8:70;1024|100,256|50:30",
       },
-      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,2,5,10,50" },
+      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,8,16,32,64,128,256" },
     ]);
     
     console.log(`\nSequence distribution: ${params.seqDist}`);
@@ -486,7 +486,7 @@ spec:
       { type: "input", name: "prefixPoolSize", message: "Prefix pool size (number of unique prefixes):", default: "10" },
       { type: "input", name: "isl", message: "Continuation length (tokens after prefix):", default: "128" },
       { type: "input", name: "osl", message: "Output sequence length:", default: "128" },
-      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,2,5,10,50" },
+      { type: "input", name: "concurrencies", message: "Concurrency levels:", default: "1,8,16,32,64,128,256" },
     ]);
     
     const concLevels = params.concurrencies.split(",").map(c => c.trim());
