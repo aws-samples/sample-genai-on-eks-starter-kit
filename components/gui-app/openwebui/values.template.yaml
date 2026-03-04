@@ -16,6 +16,10 @@ openaiBaseApiUrl: http://litellm.litellm:4000/v1
 extraEnvVars:
   - name: OPENAI_API_KEY
     value: {{{LITELLM_API_KEY}}}
+  - name: WEBUI_ADMIN_EMAIL
+    value: {{{OPENWEBUI_ADMIN_EMAIL}}}
+  - name: WEBUI_ADMIN_PASSWORD
+    value: {{{OPENWEBUI_ADMIN_PASSWORD}}}
 
 ollama:
   enabled: false
