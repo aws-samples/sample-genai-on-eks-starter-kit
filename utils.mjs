@@ -274,11 +274,12 @@ const terraform = (function () {
 
 // Open WebUI API
 const openwebui = (function () {
-  const OPENWEBUI_BASE_URL = "http://openwebui-openwebui.openwebui:80";
+  const OPENWEBUI_BASE_URL = "http://openwebui.openwebui:80";
+  const OPENWEBUI_POD_SELECTOR = "app.kubernetes.io/name=openwebui,app.kubernetes.io/component=open-webui";
 
   const isAvailable = async () => {
     try {
-      const result = await $`kubectl get pod -n openwebui -l app.kubernetes.io/name=openwebui --no-headers --ignore-not-found`.quiet();
+      const result = await $`kubectl get pod -n openwebui -l ${OPENWEBUI_POD_SELECTOR} --no-headers --ignore-not-found`.quiet();
       return result.stdout.includes("Running");
     } catch {
       return false;
@@ -291,7 +292,7 @@ const openwebui = (function () {
     if (!email || !password) {
       throw new Error("OPENWEBUI_ADMIN_EMAIL or OPENWEBUI_ADMIN_PASSWORD not set");
     }
-    const result = await $`kubectl exec -n openwebui deploy/openwebui-open-webui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/auths/signin -H "Content-Type: application/json" -d ${JSON.stringify({ email, password })}`.quiet();
+    const result = await $`kubectl exec -n openwebui statefulset/openwebui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/auths/signin -H "Content-Type: application/json" -d ${JSON.stringify({ email, password })}`.quiet();
     const data = JSON.parse(result.stdout);
     if (!data.token) throw new Error("Failed to get Open WebUI auth token");
     return data.token;
@@ -301,23 +302,23 @@ const openwebui = (function () {
     // Try to create first, if it already exists, update it
     try {
       const createBody = JSON.stringify({ id, name, type: "pipe", content: code, meta: { description: `Auto-registered pipe function for ${name}` } });
-      await $`kubectl exec -n openwebui deploy/openwebui-open-webui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/functions/create -H "Content-Type: application/json" -H ${"Authorization: Bearer " + token} -d ${createBody}`.quiet();
+      await $`kubectl exec -n openwebui statefulset/openwebui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/functions/create -H "Content-Type: application/json" -H ${"Authorization: Bearer " + token} -d ${createBody}`.quiet();
       console.log(`  ✅ Created function: ${name}`);
     } catch {
       // Function may already exist, try update
       const updateBody = JSON.stringify({ name, type: "pipe", content: code, meta: { description: `Auto-registered pipe function for ${name}` } });
-      await $`kubectl exec -n openwebui deploy/openwebui-open-webui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/functions/id/${id}/update -H "Content-Type: application/json" -H ${"Authorization: Bearer " + token} -d ${updateBody}`.quiet();
+      await $`kubectl exec -n openwebui statefulset/openwebui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/functions/id/${id}/update -H "Content-Type: application/json" -H ${"Authorization: Bearer " + token} -d ${updateBody}`.quiet();
       console.log(`  ✅ Updated function: ${name}`);
     }
   };
 
   const enableFunction = async (token, id) => {
-    await $`kubectl exec -n openwebui deploy/openwebui-open-webui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/functions/id/${id}/toggle -H ${"Authorization: Bearer " + token}`.quiet();
+    await $`kubectl exec -n openwebui statefulset/openwebui -- curl -sf -X POST ${OPENWEBUI_BASE_URL}/api/v1/functions/id/${id}/toggle -H ${"Authorization: Bearer " + token}`.quiet();
     console.log(`  ✅ Enabled function: ${id}`);
   };
 
   const deleteFunction = async (token, id) => {
-    await $`kubectl exec -n openwebui deploy/openwebui-open-webui -- curl -sf -X DELETE ${OPENWEBUI_BASE_URL}/api/v1/functions/id/${id}/delete -H ${"Authorization: Bearer " + token}`.quiet();
+    await $`kubectl exec -n openwebui statefulset/openwebui -- curl -sf -X DELETE ${OPENWEBUI_BASE_URL}/api/v1/functions/id/${id}/delete -H ${"Authorization: Bearer " + token}`.quiet();
     console.log(`  ✅ Deleted function: ${id}`);
   };
 
