@@ -25,6 +25,9 @@ export async function init(_BASE_DIR, _config, _utils) {
   utils = _utils;
 }
 
+const PIPE_FUNCTION_ID = "agno_calculator_agent";
+const PIPE_FUNCTION_NAME = "Agno - Calculator Agent";
+
 export async function install() {
   await $`kubectl apply -f ${path.join(DIR, "..", "namespace.yaml")}`;
   const agentTemplatePath = path.join(DIR, "agent.template.yaml");
@@ -49,8 +52,13 @@ export async function install() {
   }
   fs.writeFileSync(agentRenderedPath, agentTemplate(agentVars));
   await $`kubectl apply -f ${DIR}/agent.rendered.yaml`;
+
+  // Register pipe function in Open WebUI
+  const pipeCode = fs.readFileSync(path.join(DIR, "openwebui_pipe_function.py"), "utf8");
+  await utils.openwebui.registerAndEnable({ id: PIPE_FUNCTION_ID, name: PIPE_FUNCTION_NAME, code: pipeCode });
 }
 
 export async function uninstall() {
   await $`kubectl delete -f ${DIR}/agent.rendered.yaml --ignore-not-found`;
+  await utils.openwebui.remove(PIPE_FUNCTION_ID);
 }
