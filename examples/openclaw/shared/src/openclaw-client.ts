@@ -1,5 +1,5 @@
 import WebSocket from "ws";
-import { randomUUID, createHash, generateKeyPairSync, sign } from "node:crypto";
+import { randomUUID, createHash, generateKeyPairSync, sign, createPublicKey, createPrivateKey } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -83,7 +83,6 @@ function loadOrCreateDeviceIdentity(): DeviceIdentity {
  * Ed25519 SPKI DER = 12-byte header + 32-byte raw key.
  */
 function publicKeyToBase64Url(publicKeyPem: string): string {
-  const { createPublicKey } = require("node:crypto");
   const pubKey = createPublicKey(publicKeyPem);
   const der = pubKey.export({ type: "spki", format: "der" }) as Buffer;
   // Ed25519 SPKI DER: 12-byte prefix (30 2a 30 05 06 03 2b 65 70 03 21 00) + 32-byte key
@@ -110,7 +109,6 @@ function buildAndSignDeviceAuth(
   const scopesStr = opts.scopes.join(",");
   const payload = `v2|${identity.deviceId}|${opts.clientId}|${opts.clientMode}|${opts.role}|${scopesStr}|${signedAtMs}|${opts.token}|${opts.nonce}`;
 
-  const { createPrivateKey } = require("node:crypto");
   const privKey = createPrivateKey(identity.privateKeyPem);
   const signature = sign(null, Buffer.from(payload), privKey).toString("base64url");
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # node:22-slim has uid 1000 = 'node' user; K8s runAsUser: 1000 maps here
-export HOME="/home/node"
+export HOME="${HOME:-/home/node}"
 
 # OpenClaw stores config at ~/.openclaw/openclaw.json (not ~/.config/openclaw/)
 OPENCLAW_DIR="${HOME}/.openclaw"
