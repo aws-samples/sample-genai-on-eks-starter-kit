@@ -164,125 +164,29 @@ In the function settings (Valves):
 
 ## Example Queries
 
-### Cluster Health Check
-
-```
-Check the overall health of my Kubernetes cluster.
-
-Include:
-- Node status
-- Pod failures
-- Resource usage
-- Recent events
-```
-
-### Pod Troubleshooting
-
-```
-Why is the pod "my-app-xyz" in default namespace failing?
-
-Analyze:
-- Pod status and events
-- Container logs
-- Resource limits
-- Image pull status
-```
-
-### Resource Inspection
-
-```
-List all deployments in the production namespace and their replica counts.
-```
-
-```
-Show me all services of type LoadBalancer across all namespaces.
-```
-
-```
-What pods are consuming the most CPU in the kube-system namespace?
-```
-
-### Helm Release Management
-
-```
-List all Helm releases in the cluster and their status.
-```
-
-```
-Show me the values used for the "litellm" Helm release in the litellm namespace.
-```
-
-### AWS Resource Queries
-
-```
-List all EKS clusters in us-west-2 region.
-```
-
-```
-Show me the security groups attached to my EKS cluster.
-```
-
-```
-What is the current status of my RDS instances?
-```
-
-### Log Analysis
-
-```
-Analyze the logs from the "api-server" deployment in the default namespace for errors.
-```
-
-```
-Show me the last 100 lines of logs from all pods with label app=frontend.
-```
-
-### Configuration Recommendations
-
-```
-Review the resource requests and limits for the "web-app" deployment.
-Suggest optimizations based on actual usage.
-```
-
-```
-Analyze the ingress configuration for "my-service" and recommend improvements.
-```
+| Category | Example Prompt |
+|----------|---------------|
+| Cluster Health | Check the overall health of my cluster — node status, pod failures, resource usage, recent events |
+| Pod Troubleshooting | Why is pod "my-app-xyz" in default namespace failing? Analyze status, events, logs, resource limits |
+| Resource Inspection | List all deployments in the production namespace and their replica counts |
+| Resource Inspection | Show all services of type LoadBalancer across all namespaces |
+| Resource Inspection | What pods are consuming the most CPU in kube-system? |
+| Helm Releases | List all Helm releases in the cluster and their status |
+| Helm Releases | Show the values used for the "litellm" Helm release in the litellm namespace |
+| AWS Resources | List all EKS clusters in us-west-2 region |
+| AWS Resources | Show security groups attached to my EKS cluster |
+| Log Analysis | Analyze logs from "api-server" deployment in default namespace for errors |
+| Log Analysis | Show last 100 lines of logs from all pods with label app=frontend |
+| Recommendations | Review resource requests/limits for "web-app" deployment and suggest optimizations |
+| Recommendations | Analyze ingress configuration for "my-service" and recommend improvements |
 
 ## Available Tools
 
-The DevOps Agent has access to:
-
-### kubectl
-
-```bash
-# Examples the agent can run
-kubectl get pods --all-namespaces
-kubectl describe deployment my-app
-kubectl logs -f deployment/my-app
-kubectl get events --sort-by='.lastTimestamp'
-kubectl top nodes
-kubectl top pods
-```
-
-### helm
-
-```bash
-# Examples the agent can run
-helm list --all-namespaces
-helm status my-release -n my-namespace
-helm get values my-release -n my-namespace
-helm history my-release -n my-namespace
-```
-
-### AWS CLI
-
-```bash
-# Examples the agent can run
-aws eks list-clusters --region us-west-2
-aws ec2 describe-security-groups
-aws rds describe-db-instances
-aws s3 ls
-aws iam list-roles
-```
+| Tool | Example Commands |
+|------|-----------------|
+| **kubectl** | `get pods --all-namespaces`, `describe deployment my-app`, `logs -f deployment/my-app`, `get events --sort-by='.lastTimestamp'`, `top nodes`, `top pods` |
+| **helm** | `list --all-namespaces`, `status my-release -n my-namespace`, `get values my-release -n my-namespace`, `history my-release -n my-namespace` |
+| **AWS CLI** | `eks list-clusters --region us-west-2`, `ec2 describe-security-groups`, `rds describe-db-instances`, `s3 ls`, `iam list-roles` |
 
 ## Langfuse Observability
 
@@ -300,6 +204,16 @@ If Langfuse is installed, view agent traces:
 
 ## Security Considerations
 
+> ⚠️ **Security Warning: Cluster-Wide Read Access**
+>
+> The DevOps Agent uses a **ClusterRole** that grants read access (`get`, `list`, `watch`) to pods, deployments, configmaps, nodes, events, and logs **across all namespaces**. Combined with `automountServiceAccountToken: true`, an LLM-driven agent with this level of access poses security risks:
+>
+> - **Prompt injection**: A malicious prompt could instruct the agent to read sensitive configmaps, pod specs, or environment variables from any namespace
+> - **Data exfiltration**: The agent could be tricked into including sensitive cluster data in its responses
+> - **Lateral discovery**: Full cluster visibility reveals infrastructure details that should be compartmentalized
+>
+> **For production use, replace the ClusterRole/ClusterRoleBinding with namespace-scoped Role/RoleBinding** to limit the blast radius. See "Recommended Security Enhancements" below.
+
 - **Read-only access**: Agent cannot modify cluster resources
 - **RBAC**: ClusterRole limits permissions to get, list, watch
 - **No exec**: Agent cannot execute commands in pods
@@ -309,13 +223,14 @@ If Langfuse is installed, view agent traces:
 
 ### Recommended Security Enhancements
 
-For production use, consider:
+For production use:
 
-1. **Namespace-scoped access**: Use Role instead of ClusterRole
-2. **Resource filtering**: Limit access to specific resource types
-3. **Audit logging**: Enable Kubernetes audit logging
-4. **Network policies**: Restrict agent network access
+1. **Namespace-scoped access** (strongly recommended): Replace `ClusterRole`/`ClusterRoleBinding` with `Role`/`RoleBinding` scoped to specific namespaces the agent needs to inspect
+2. **Resource filtering**: Limit access to specific resource types (e.g., remove `configmaps` if not needed)
+3. **Audit logging**: Enable Kubernetes audit logging to track all agent API calls
+4. **Network policies**: Restrict agent network access to only the Kubernetes API and LiteLLM
 5. **Pod security**: Use Pod Security Standards
+6. **Review agent output**: Periodically review agent responses for unintended data exposure
 
 ## Cost Optimization
 

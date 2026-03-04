@@ -70,6 +70,7 @@ class Pipe:
             return f"Error: {str(e)}"
 
     def stream_response(self, response):
+        chunk_count = 0
         for line in response.iter_lines(decode_unicode=True):
             if not line:
                 continue
@@ -77,16 +78,20 @@ class Pipe:
                 continue
             data = line[6:]
             if data == "[DONE]":
-                return
+                break
             try:
                 parsed = json.loads(data)
                 if "content" in parsed:
+                    chunk_count += 1
                     yield parsed["content"]
                 elif "error" in parsed:
-                    yield f"\n\nError: {parsed['error']}"
+                    yield f"\n\n⚠️ Error: {parsed['error']}"
+                    return
             except json.JSONDecodeError:
                 print(f"[openclaw-pipe] Warning: Failed to parse SSE data: {data[:200]}")
                 continue
+        if chunk_count == 0:
+            yield "⚠️ The agent did not produce a response. It may have been busy or timed out — please try again."
 
     def collect_response(self, response):
         parts = []
@@ -105,4 +110,6 @@ class Pipe:
             except json.JSONDecodeError:
                 print(f"[openclaw-pipe] Warning: Failed to parse SSE data: {data[:200]}")
                 continue
+        if not parts:
+            return "⚠️ The agent did not produce a response. It may have been busy or timed out — please try again."
         return "".join(parts)

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # node:22-slim has uid 1000 = 'node' user; K8s runAsUser: 1000 maps here
-export HOME="/home/node"
+export HOME="${HOME:-/home/node}"
 
 # OpenClaw stores config at ~/.openclaw/openclaw.json (not ~/.config/openclaw/)
 OPENCLAW_DIR="${HOME}/.openclaw"
@@ -73,6 +73,12 @@ cat > "${DEVICES_DIR}/paired.json" <<DEVEOF
 }
 DEVEOF
 echo "[start] Device pairing written."
+
+# Configure git credential helper if GIT_USERNAME and GIT_TOKEN are provided
+if [ -n "${GIT_USERNAME:-}" ] && [ -n "${GIT_TOKEN:-}" ]; then
+  echo "[start] Configuring git credential helper..."
+  git config --global credential.helper '!f() { echo "username=${GIT_USERNAME}"; echo "password=${GIT_TOKEN}"; }; f'
+fi
 
 echo "[start] Starting Bridge server (background)..."
 node /app/dist/index.js &
