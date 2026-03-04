@@ -74,6 +74,12 @@ cat > "${DEVICES_DIR}/paired.json" <<DEVEOF
 DEVEOF
 echo "[start] Device pairing written."
 
+# Configure git credential helper if GIT_USERNAME and GIT_TOKEN are provided
+if [ -n "${GIT_USERNAME:-}" ] && [ -n "${GIT_TOKEN:-}" ]; then
+  echo "[start] Configuring git credential helper..."
+  git config --global credential.helper '!f() { echo "username=${GIT_USERNAME}"; echo "password=${GIT_TOKEN}"; }; f'
+fi
+
 echo "[start] Starting Bridge server (background)..."
 node /app/dist/index.js &
 BRIDGE_PID=$!

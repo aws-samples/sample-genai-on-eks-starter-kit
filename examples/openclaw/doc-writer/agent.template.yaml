@@ -48,6 +48,14 @@ spec:
             - name: GIT_REPO_URL
               value: "{{{GIT_REPO_URL}}}"
             {{/if}}
+            {{#if GIT_USERNAME}}
+            - name: GIT_USERNAME
+              value: "{{{GIT_USERNAME}}}"
+            {{/if}}
+            {{#if GIT_TOKEN}}
+            - name: GIT_TOKEN
+              value: "{{{GIT_TOKEN}}}"
+            {{/if}}
             {{#if LANGFUSE_HOST}}
             - name: LANGFUSE_HOST
               value: {{{LANGFUSE_HOST}}}
