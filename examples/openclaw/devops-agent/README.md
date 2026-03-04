@@ -204,6 +204,16 @@ If Langfuse is installed, view agent traces:
 
 ## Security Considerations
 
+> ⚠️ **Security Warning: Cluster-Wide Read Access**
+>
+> The DevOps Agent uses a **ClusterRole** that grants read access (`get`, `list`, `watch`) to pods, deployments, configmaps, nodes, events, and logs **across all namespaces**. Combined with `automountServiceAccountToken: true`, an LLM-driven agent with this level of access poses security risks:
+>
+> - **Prompt injection**: A malicious prompt could instruct the agent to read sensitive configmaps, pod specs, or environment variables from any namespace
+> - **Data exfiltration**: The agent could be tricked into including sensitive cluster data in its responses
+> - **Lateral discovery**: Full cluster visibility reveals infrastructure details that should be compartmentalized
+>
+> **For production use, replace the ClusterRole/ClusterRoleBinding with namespace-scoped Role/RoleBinding** to limit the blast radius. See "Recommended Security Enhancements" below.
+
 - **Read-only access**: Agent cannot modify cluster resources
 - **RBAC**: ClusterRole limits permissions to get, list, watch
 - **No exec**: Agent cannot execute commands in pods
@@ -213,13 +223,14 @@ If Langfuse is installed, view agent traces:
 
 ### Recommended Security Enhancements
 
-For production use, consider:
+For production use:
 
-1. **Namespace-scoped access**: Use Role instead of ClusterRole
-2. **Resource filtering**: Limit access to specific resource types
-3. **Audit logging**: Enable Kubernetes audit logging
-4. **Network policies**: Restrict agent network access
+1. **Namespace-scoped access** (strongly recommended): Replace `ClusterRole`/`ClusterRoleBinding` with `Role`/`RoleBinding` scoped to specific namespaces the agent needs to inspect
+2. **Resource filtering**: Limit access to specific resource types (e.g., remove `configmaps` if not needed)
+3. **Audit logging**: Enable Kubernetes audit logging to track all agent API calls
+4. **Network policies**: Restrict agent network access to only the Kubernetes API and LiteLLM
 5. **Pod security**: Use Pod Security Standards
+6. **Review agent output**: Periodically review agent responses for unintended data exposure
 
 ## Cost Optimization
 

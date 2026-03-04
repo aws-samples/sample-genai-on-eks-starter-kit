@@ -18,7 +18,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install OpenClaw CLI
-RUN npm install -g openclaw@latest && \
+RUN npm install -g openclaw@2026.3.2 && \
     npm cache clean --force
 
 # Use existing 'node' user (uid 1000) from node:22-slim base image.

@@ -6,6 +6,7 @@ import {
   CHAT_SEND_TIMEOUT_MS,
   CHAT_STREAM_TIMEOUT_MS,
   CHAT_IDLE_TIMEOUT_MS,
+  CHAT_IDLE_HEARTBEAT_MS,
 } from "./constants.js";
 
 interface PendingChat {
@@ -16,6 +17,7 @@ interface PendingChat {
   chunkReject: ((reason: Error) => void) | null;
   lastTextLength: number;
   lastChunkTime: number;
+  lastHeartbeatCount: number;
 }
 
 type ReqHandler = {
@@ -155,6 +157,15 @@ export class OpenClawClient {
   }
 
   private connect(): void {
+    // M5: Reset readyPromise on reconnect so waitForReady() properly
+    // waits for the new connection's handshake to complete
+    if (this.reconnectAttempts > 0) {
+      this.readyPromise = new Promise<void>((resolve, reject) => {
+        this.readyResolve = resolve;
+        this.readyReject = reject;
+      });
+    }
+
     console.log(`[ws] Connecting to ${this.gatewayUrl}...`);
     this.ws = new WebSocket(this.gatewayUrl);
 
@@ -393,6 +404,7 @@ export class OpenClawClient {
       chunkReject: null,
       lastTextLength: 0,
       lastChunkTime: Date.now(),
+      lastHeartbeatCount: 0,
     };
 
     const completionPromise = new Promise<void>((resolve, reject) => {
@@ -433,11 +445,21 @@ export class OpenClawClient {
         throw new Error(`Stream timeout: no completion after ${CHAT_STREAM_TIMEOUT_MS}ms`);
       }
 
-      // Check idle timeout (no chunks for too long)
+      // Check idle duration — send heartbeat or hard-kill
       const idleDuration = Date.now() - chat.lastChunkTime;
       if (idleDuration > CHAT_IDLE_TIMEOUT_MS) {
         this.activeRuns.delete(runId);
         throw new Error(`Stream idle timeout: no data for ${CHAT_IDLE_TIMEOUT_MS}ms`);
+      }
+
+      // Send heartbeat message every CHAT_IDLE_HEARTBEAT_MS of silence
+      // so the user knows the agent is still working (executing tools)
+      const heartbeatCount = Math.floor(idleDuration / CHAT_IDLE_HEARTBEAT_MS);
+      if (heartbeatCount > 0 && heartbeatCount > chat.lastHeartbeatCount) {
+        chat.lastHeartbeatCount = heartbeatCount;
+        const elapsedSec = Math.round(idleDuration / 1000);
+        console.log(`[bridge] Sending heartbeat (idle ${elapsedSec}s, heartbeat #${heartbeatCount})`);
+        yield `\n\n⏳ *Agent is working (executing tools)... please wait. [${elapsedSec}s]*\n\n`;
       }
 
       const result = await Promise.race([
@@ -451,7 +473,7 @@ export class OpenClawClient {
             throw err;
           },
         ),
-        // Idle check timer — wake up to re-check timeouts
+        // Idle check timer — wake up to re-check timeouts and send heartbeats
         new Promise<IteratorResult<string>>((resolve) => {
           setTimeout(() => resolve({ value: "", done: false }), 5_000);
         }),
@@ -462,6 +484,7 @@ export class OpenClawClient {
       }
       // Skip empty wake-up ticks (from the idle check timer)
       if (result.value) {
+        chat.lastHeartbeatCount = 0; // Reset heartbeat counter on real data
         yield result.value;
       }
     }
