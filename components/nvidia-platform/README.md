@@ -34,12 +34,20 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 ## Installation Order
 
 ```bash
-# === Standard Path (Device Plugin) ===
-# 1. GPU Operator
-./cli nvidia-platform gpu-operator install
+# === Standard Path ===
+# 0. (K8s only) Install Ingress controller if not present
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace --set controller.service.type=NodePort --wait
+# EKS: AWS Load Balancer Controller should be pre-installed (EKS addon or Terraform)
 
-# 2. Monitoring (Prometheus + Grafana) - recommended before Dynamo Platform
+# 1. Monitoring (Prometheus + Grafana) — install first so GPU Operator
+#    auto-detects ServiceMonitor CRDs and enables DCGM metrics scraping.
+#    Also auto-detects Ingress controller to expose Grafana/Prometheus.
 ./cli nvidia-platform monitoring install
+
+# 2. GPU Operator (detects Prometheus → creates DCGM ServiceMonitor)
+./cli nvidia-platform gpu-operator install
 
 # 3. Dynamo Platform (auto-detects Prometheus and sets prometheusEndpoint)
 ./cli nvidia-platform dynamo-platform install
@@ -530,7 +538,7 @@ Note: AIConfigurator uses FP8 GEMM + FP8 KV cache by default on H100/H200 (hardw
 ### SLA-Driven Deploy (DGDR)
 
 Creates a `DynamoGraphDeploymentRequest` that the Dynamo Operator processes:
-1. **Profiling**: choose **AI Configurator Simulation** (`useAiConfigurator: true`) or **Real Engine Profiling** (`useAiConfigurator: false` with prefill/decode interpolation granularity).
+1. **Profiling**: choose **AI Configurator Simulation** (supported models only, fast, no GPU) or **Real Engine Profiling** (any model, real vLLM/TRT-LLM + AIPerf, 2–4h). Use Real when the model is not in the AIC support list.
 2. SLA Planner generates DGD config (replicas, scaling params).
 3. Auto-deploys DGD if `autoApply: true`.
 
@@ -606,7 +614,5 @@ curl http://$ENDPOINT/v1/chat/completions \
 - [ ] **Distributed Tracing** - OpenTelemetry integration with Tempo for request tracing across Frontend/Workers
 - [ ] **TRT-LLM Backend** - TensorRT-LLM serving support (`dynamo-trtllm` component)
 - [ ] **Multi-modal Model Support**
-
-SLA-driven planning is available via **AIConfigurator → SLA-Driven Deploy** (DGDR + SLA Planner).
 
 ---

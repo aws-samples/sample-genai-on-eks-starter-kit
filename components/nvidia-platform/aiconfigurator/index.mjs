@@ -151,24 +151,43 @@ export async function install() {
     message: "Mode:",
     choices: [
       { name: "Quick Estimate — get TP/PP recommendation without deploying (20-30s)", value: "estimate" },
-      { name: "SLA-Driven Deploy — auto-profile + plan + deploy via DGDR", value: "sla-deploy" },
+      { name: "SLA-Driven Deploy — profile (AIC or real engine) + plan + deploy via DGDR", value: "sla-deploy" },
     ],
   }]);
 
-  // System selection (dynamic from matrix)
-  const availableSystems = filterSystems(matrix);
-  const systemChoices = SUPPORTED_SYSTEMS.filter(s => availableSystems.includes(s.value));
-  if (systemChoices.length === 0) systemChoices.push(...SUPPORTED_SYSTEMS);
-  
-  const { system } = await inquirer.prompt([{
-    type: "list",
-    name: "system",
-    message: "GPU system:",
-    choices: systemChoices,
-  }]);
+  // For SLA-Deploy, ask profiling method first so model prompt can differ (AIC list vs any model)
+  let profilingMethod = null;
+  if (mode === "sla-deploy") {
+    const res = await inquirer.prompt([{
+      type: "list",
+      name: "profilingMethod",
+      message: "Profiling method:",
+      choices: [
+        { name: "AI Configurator Simulation (fast, ~25s, no GPU; AIC-supported models only)", value: "aic" },
+        { name: "Real Engine Profiling (2-4h, GPU; any model supported by backend)", value: "real" },
+      ],
+    }]);
+    profilingMethod = res.profilingMethod;
+  }
 
-  // Backend selection (dynamic from matrix + system)
-  const availableBackends = filterBackends(matrix, system);
+  // System selection only for Estimate or AIC (Real profiling uses cluster GPUs, no system choice)
+  const needSystem = mode === "estimate" || (mode === "sla-deploy" && profilingMethod === "aic");
+  let system = "";
+  if (needSystem) {
+    const availableSystems = filterSystems(matrix);
+    const systemChoices = SUPPORTED_SYSTEMS.filter(s => availableSystems.includes(s.value));
+    if (systemChoices.length === 0) systemChoices.push(...SUPPORTED_SYSTEMS);
+    const res = await inquirer.prompt([{
+      type: "list",
+      name: "system",
+      message: "GPU system:",
+      choices: systemChoices,
+    }]);
+    system = res.system;
+  }
+
+  // Backend selection (filtered by system when AIC/Estimate; full list when Real)
+  const availableBackends = needSystem ? filterBackends(matrix, system) : SUPPORTED_BACKENDS.map(b => b.value);
   const backendChoices = SUPPORTED_BACKENDS.filter(b => availableBackends.includes(b.value));
   if (backendChoices.length === 0) backendChoices.push(...SUPPORTED_BACKENDS);
   
@@ -179,28 +198,33 @@ export async function install() {
     choices: backendChoices,
   }]);
 
-  // Model selection (dynamic from matrix + system + backend)
-  const modelList = filterModels(matrix, system, backend);
-  
+  // Model selection: AIC list only for Estimate or SLA-Deploy with AIC; for Real profiling ask any model ID
+  const useAicModelList = mode === "estimate" || (mode === "sla-deploy" && profilingMethod === "aic");
+  const modelList = useAicModelList ? filterModels(matrix, system, backend) : null;
+
   let model;
-  if (modelList && modelList.length > 0) {
-    console.log(`\n${modelList.length} models supported for ${system} + ${backend}:`);
+  if (useAicModelList && modelList && modelList.length > 0) {
+    console.log(`\n${modelList.length} models supported for ${system} + ${backend} (AIC only; no custom):`);
     const { selectedModel } = await inquirer.prompt([{
       type: "list",
       name: "selectedModel",
       message: "Select model:",
-      choices: [...modelList.map(m => ({ name: m, value: m })), new inquirer.Separator(), { name: "— Enter custom HuggingFace model ID —", value: "__custom__" }],
+      choices: modelList.map(m => ({ name: m, value: m })),
       pageSize: 20,
     }]);
-    if (selectedModel === "__custom__") {
-      const { customModel } = await inquirer.prompt([{ type: "input", name: "customModel", message: "HuggingFace model ID:", default: "Qwen/Qwen3-32B" }]);
-      model = customModel;
-    } else {
-      model = selectedModel;
-    }
+    model = selectedModel;
   } else {
-    console.log("\nNo model list available. Enter manually.");
-    const { customModel } = await inquirer.prompt([{ type: "input", name: "customModel", message: "HuggingFace model ID:", default: "Qwen/Qwen3-32B" }]);
+    if (mode === "sla-deploy" && profilingMethod === "real") {
+      console.log("\nReal profiling: any model supported by the backend can be used.");
+    } else if (!modelList || modelList.length === 0) {
+      console.log("\nNo AIC model list available. Enter HuggingFace model ID manually.");
+    }
+    const { customModel } = await inquirer.prompt([{
+      type: "input",
+      name: "customModel",
+      message: "HuggingFace model ID:",
+      default: "Qwen/Qwen3-30B-A3B-Instruct-2507-FP8",
+    }]);
     model = customModel;
   }
 
@@ -268,65 +292,60 @@ export async function install() {
     console.log("\nSLA-Driven Deploy creates a DynamoGraphDeploymentRequest (DGDR).");
     console.log("The Dynamo Operator will profile → plan → deploy automatically.\n");
 
-    const { profilingMethod } = await inquirer.prompt([{
-      type: "list",
-      name: "profilingMethod",
-      message: "Profiling method:",
-      choices: [
-        { name: "AI Configurator Simulation (fast, ~25s, no GPU needed)", value: "aic" },
-        { name: "Real Engine Profiling (accurate, 2-4h, requires GPU)", value: "real" },
-      ],
-    }]);
-
     let realProfilingOpts = {};
     if (profilingMethod === "real") {
       console.log("\nReal profiling deploys actual vLLM/TRT-LLM engines and measures with AIPerf.");
       console.log("This takes 2-4 hours but gives accurate real-world performance data.\n");
       realProfilingOpts = await inquirer.prompt([
-        { type: "input", name: "prefillGranularity", message: "Prefill interpolation samples:", default: "16" },
-        { type: "input", name: "decodeGranularity", message: "Decode interpolation samples:", default: "6" },
+        { type: "input", name: "prefillGranularity", message: "Prefill interpolation samples (TTFT curve; more = accurate, slower):", default: "16" },
+        { type: "input", name: "decodeGranularity", message: "Decode interpolation samples (ITL curve; more = accurate, slower):", default: "6" },
       ]);
     }
 
     const deployOpts = await inquirer.prompt([
       { type: "input", name: "dgdrName", message: "DGDR name:", default: `${model.split("/").pop().toLowerCase().replace(/[^a-z0-9-]/g, "-")}-sla` },
-      { type: "confirm", name: "autoApply", message: "Auto-deploy after profiling?", default: true },
+      { type: "confirm", name: "autoDeployWithPlanner", message: "Auto-deploy after profiling with SLA-based planner?", default: true },
       { type: "input", name: "minGpus", message: "Min GPUs per engine (0 = auto):", default: "0" },
       { type: "input", name: "maxGpus", message: "Max GPUs per engine (0 = auto):", default: "0" },
-      { type: "confirm", name: "enablePlanner", message: "Enable SLA Planner (auto-scaling)?", default: false },
     ]);
 
-    let plannerOpts = {};
-    if (deployOpts.enablePlanner) {
-      plannerOpts = await inquirer.prompt([
-        { type: "input", name: "minEndpoint", message: "Planner min endpoints:", default: "2" },
-        { type: "input", name: "adjustInterval", message: "Planner adjustment interval (sec):", default: "60" },
-      ]);
-    }
+    const autoApply = deployOpts.autoDeployWithPlanner;
+    const enablePlanner = deployOpts.autoDeployWithPlanner;
 
-    // Check model cache PVC
-    let modelCachePvc = "";
-    let modelCachePath = "";
+    // Model cache: always use PVC (same as dynamo-vllm). Create if missing; runtime auto-downloads model if not on PVC.
+    const pvcName = "dynamo-model-cache";
+    const modelCachePath = "";
+    let modelCachePvc = pvcName;
     try {
-      const pvcs = await $`kubectl get pvc -n ${namespace} -o jsonpath='{.items[*].metadata.name}'`.quiet();
-      const pvcList = pvcs.stdout.trim().replace(/'/g, "").split(" ").filter(p => p);
-      const cachePvcs = pvcList.filter(p => p.includes("model") || p.includes("cache") || p.includes("nfs"));
-      if (cachePvcs.length > 0) {
-        const { usePvc } = await inquirer.prompt([{
-          type: "list",
-          name: "usePvc",
-          message: "Use existing model cache PVC?",
-          choices: [...cachePvcs.map(p => ({ name: p, value: p })), { name: "— No PVC (download from HuggingFace) —", value: "" }],
+      const exists = await $`kubectl get pvc ${pvcName} -n ${namespace}`.quiet().nothrow();
+      if (exists.exitCode !== 0) {
+        const storageClass = isK8s
+          ? (config?.platform?.k8s?.storageClass || "local-path")
+          : (config?.platform?.eks?.storageClass || "efs");
+        const { cacheSize } = await inquirer.prompt([{
+          type: "input", name: "cacheSize", message: "Model cache PVC size (creating new PVC):", default: "500Gi",
         }]);
-        modelCachePvc = usePvc;
-        if (modelCachePvc) {
-          const { cachePath } = await inquirer.prompt([{
-            type: "input", name: "cachePath", message: "Model path within PVC (empty = root):", default: "",
-          }]);
-          modelCachePath = cachePath;
-        }
+        const accessMode = storageClass === "local-path" ? "ReadWriteOnce" : "ReadWriteMany";
+        const pvcYaml = `
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${pvcName}
+  namespace: ${namespace}
+spec:
+  accessModes:
+    - ${accessMode}
+  storageClassName: ${storageClass}
+  resources:
+    requests:
+      storage: ${cacheSize}
+`;
+        await $`echo ${pvcYaml} | kubectl apply -f -`;
+        console.log(`  ✅ Model cache PVC '${pvcName}' created`);
       }
-    } catch { /* no PVCs */ }
+    } catch (e) {
+      console.log(`  ⚠️  Could not ensure PVC: ${e?.message}. DGDR will still reference ${pvcName}.`);
+    }
 
     const templatePath = path.join(DIR, "dgdr.template.yaml");
     const templateString = fs.readFileSync(templatePath, "utf8");
@@ -339,6 +358,7 @@ export async function install() {
       MODEL: model,
       BACKEND: backend,
       IS_TRTLLM: backend === "trtllm",
+      IS_EKS: !isK8s,
       IMAGE_TAG: imageTag,
       USE_AIC: useAic,
       AIC_SYSTEM: system,
@@ -351,12 +371,12 @@ export async function install() {
       ITL: sla.itl,
       MIN_GPUS: deployOpts.minGpus !== "0" ? deployOpts.minGpus : "",
       MAX_GPUS: deployOpts.maxGpus !== "0" ? deployOpts.maxGpus : "",
-      ENABLE_PLANNER: deployOpts.enablePlanner,
-      PLANNER_MIN_ENDPOINT: plannerOpts.minEndpoint || "2",
-      PLANNER_ADJUSTMENT_INTERVAL: plannerOpts.adjustInterval || "60",
+      ENABLE_PLANNER: enablePlanner,
+      PLANNER_MIN_ENDPOINT: "1",
+      PLANNER_ADJUSTMENT_INTERVAL: "60",
       MODEL_CACHE_PVC: modelCachePvc,
       MODEL_CACHE_PATH: modelCachePath,
-      AUTO_APPLY: deployOpts.autoApply,
+      AUTO_APPLY: autoApply,
     });
 
     const renderedPath = path.join(DIR, `${deployOpts.dgdrName}.generated.yaml`);
@@ -380,7 +400,7 @@ export async function install() {
       console.log("\nMonitor progress:");
       console.log(`  kubectl get dgdr ${deployOpts.dgdrName} -n ${namespace} -w`);
       console.log(`  kubectl describe dgdr ${deployOpts.dgdrName} -n ${namespace}`);
-      if (deployOpts.autoApply) {
+      if (autoApply) {
         console.log("\nOnce profiling completes, the DGD will be auto-deployed.");
         console.log(`  kubectl get dgd -n ${namespace} -w`);
       }

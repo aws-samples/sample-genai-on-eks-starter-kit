@@ -269,46 +269,6 @@ parameters:
     }
   }
   
-  // K8s mode: Install ingress-nginx if not present
-  if (isK8s) {
-    let hasIngressController = false;
-    try {
-      const icResult = await $`kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}'`.quiet();
-      hasIngressController = !!icResult.stdout.trim().replace(/'/g, "");
-    } catch {
-      // no IngressClass
-    }
-    
-    if (!hasIngressController) {
-      const { installIngress } = await inquirer.prompt([{
-        type: "confirm",
-        name: "installIngress",
-        message: "No Ingress controller found. Install ingress-nginx? (recommended for accessing Grafana/vLLM API)",
-        default: true,
-      }]);
-      
-      if (installIngress) {
-        console.log("\nInstalling ingress-nginx...");
-        await $`helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update`;
-        await $`helm repo update`;
-        await $`helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-          --namespace ingress-nginx \
-          --create-namespace \
-          --set controller.service.type=NodePort \
-          --wait --timeout 5m`;
-        
-        try {
-          const np = await $`kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}'`.quiet();
-          console.log(`✅ ingress-nginx installed (NodePort: ${np.stdout.trim().replace(/'/g, "")})`);
-        } catch {
-          console.log("✅ ingress-nginx installed.");
-        }
-      }
-    } else {
-      console.log("✅ Ingress controller found.");
-    }
-  }
-  
   // EKS mode: Check for EFA-enabled nodes (recommended for multi-node)
   if (!isK8s) {
     try {

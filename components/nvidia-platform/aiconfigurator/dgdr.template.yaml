@@ -11,6 +11,23 @@ spec:
 
   profilingConfig:
     profilerImage: "nvcr.io/nvidia/ai-dynamo/{{#if IS_TRTLLM}}tensorrtllm{{else}}{{{BACKEND}}}{{/if}}-runtime:{{{IMAGE_TAG}}}"
+    resources:
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+      limits:
+        cpu: "4"
+        memory: "16Gi"
+    tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+{{#if IS_EKS}}
+      - key: "eks.amazonaws.com/compute-type"
+        operator: "Equal"
+        value: "auto"
+        effect: "NoSchedule"
+{{/if}}
 
     config:
       sweep:
@@ -39,16 +56,17 @@ spec:
         planner_min_endpoint: {{{PLANNER_MIN_ENDPOINT}}}
         planner_adjustment_interval: {{{PLANNER_ADJUSTMENT_INTERVAL}}}
 {{/if}}
+{{#if MODEL_CACHE_PVC}}
+      deployment:
+        modelCache:
+          pvcName: "{{{MODEL_CACHE_PVC}}}"
+          mountPath: "/opt/models"
+          pvcPath: "{{{MODEL}}}"
+{{/if}}
 
   deploymentOverrides:
+    annotations:
+      nvidia.com/dynamo-discovery-backend: "etcd"
     workersImage: "nvcr.io/nvidia/ai-dynamo/{{#if IS_TRTLLM}}tensorrtllm{{else}}{{{BACKEND}}}{{/if}}-runtime:{{{IMAGE_TAG}}}"
-
-{{#if MODEL_CACHE_PVC}}
-    modelCache:
-      pvcName: "{{{MODEL_CACHE_PVC}}}"
-{{#if MODEL_CACHE_PATH}}
-      pvcPath: "{{{MODEL_CACHE_PATH}}}"
-{{/if}}
-{{/if}}
 
   autoApply: {{{AUTO_APPLY}}}
