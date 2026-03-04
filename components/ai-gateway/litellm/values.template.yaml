@@ -99,11 +99,12 @@ proxy_config:
     store_model_in_db: true
     store_prompts_in_spend_logs: true
   litellm_settings:
+    drop_params: true
     {{#with integration.o11y.config}}
-    {{#if callbacks}}    
+    {{#if callbacks}}
     callbacks: {{{callbacks}}}
     {{/if}}
-    {{#if success_callback}}    
+    {{#if success_callback}}
     success_callback: {{{success_callback}}}
     {{/if}}
     {{#if failure_callback}}

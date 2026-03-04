@@ -11,6 +11,7 @@ The starter kit includes the configurable components and examples from several c
 - GUI App - [Open WebUI](https://docs.openwebui.com)
 - Vector Database - [Qdrant](https://qdrant.tech), [Chroma](https://docs.trychroma.com), [Milvus](https://milvus.io)
 - Workflow Automation - [n8n](https://docs.n8n.io)
+- AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
 - AI Agent Framework - [Strands Agents ](https://strandsagents.com), [Agno](https://docs.agno.com)
 

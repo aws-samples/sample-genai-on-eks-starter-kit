@@ -117,6 +117,7 @@
       "models": [
         { "name": "amazon-nova-premier", "model": "us.amazon.nova-premier-v1:0" },
         { "name": "amazon-nova-2-lite", "model": "global.amazon.nova-2-lite-v1:0" },
+        { "name": "claude-opus-4.6", "model": "global.anthropic.claude-opus-4-6-20260214-v1:0" },
         { "name": "claude-4.5-opus", "model": "global.anthropic.claude-opus-4-5-20251101-v1:0" },
         { "name": "claude-4.5-sonnet", "model": "global.anthropic.claude-sonnet-4-5-20250929-v1:0" },
         { "name": "claude-4.5-haiku", "model": "global.anthropic.claude-haiku-4-5-20251001-v1:0" },
@@ -129,6 +130,14 @@
   "litellm": {
     "enableBedrockGuardrail": false,
     "enableGuardrailsAI": false
+  },
+  "ai-agent": {
+    "openclaw": {
+      "env": {
+        "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
+        "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+      }
+    }
   },
   "examples": {
     "agno": {
@@ -149,6 +158,20 @@
           "LITELLM_MODEL_NAME": "vllm/qwen3-30b-instruct-fp8",
           "USE_MCP_TOOLS": true,
           "USE_MCP_GATEWAY": true
+        }
+      }
+    },
+    "openclaw": {
+      "doc-writer": {
+        "env": {
+          "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
+          "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+        }
+      },
+      "devops-agent": {
+        "env": {
+          "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
+          "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
         }
       }
     }
