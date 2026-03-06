@@ -29,7 +29,7 @@ Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and A
 | Dynamo Platform | CRDs, Operator, etcd, NATS, Grove, KAI Scheduler | `./cli nvidia-platform dynamo-platform install` |
 | Dynamo vLLM Serving | vLLM model deployment (agg/disagg, KV Router, KVBM) | `./cli nvidia-platform dynamo-vllm install` |
 | AIPerf Benchmark | Concurrency sweep, multi-turn, seq distribution, prefix cache → Pushgateway + Pareto dashboard | `./cli nvidia-platform benchmark install` |
-| AIConfigurator | TP/PP recommendation (Quick Estimate) + SLA-driven deploy (DGDR) | `./cli nvidia-platform aiconfigurator install` |
+| AIConfigurator | TP/PP recommendation (Quick Estimate) + SLA-driven profile + plan + deploy (DGDR) | `./cli nvidia-platform aiconfigurator install` |
 
 ## Installation Order
 
@@ -369,13 +369,13 @@ After benchmark completion:
 2. **Metrics**: Automatically pushed to Prometheus Pushgateway (scraped by Prometheus).
 3. **Grafana**: Open **Benchmark Pareto** dashboard, select benchmarks via the **Benchmark** dropdown.
 
-Grafana charts show **X = concurrency (numeric order 1→8→16→32)**, **Y = metric**, each benchmark = one line:
+Grafana charts show **X = concurrency (numeric order 1→8→16→32)**, **Y = metric**, each benchmark = one line (points + line):
 - TPS/GPU vs Concurrency
 - TPS/User vs Concurrency
 - TTFT P50 / P99 vs Concurrency
 - ITL P50 vs Concurrency
 - Request Latency P50 vs Concurrency
-- **GPU Efficiency: TPS/GPU vs TPS/User (Pareto)** — X = TPS/User, Y = TPS/GPU (top-right = optimal)
+- **GPU Efficiency: TPS/GPU vs TPS/User (Pareto)** — X = TPS/User, Y = TPS/GPU, scatter plot (points only, no lines). Top-right = optimal.
 
 Metrics are pushed with concurrency labels zero-padded (e.g. `001`, `008`, `016`) so Grafana sorts points in numeric order; directories are processed in concurrency order before push.
 
@@ -509,7 +509,7 @@ Automatically recommend optimal parallelization (TP/PP) and deployment configura
 | Mode | Description | Duration | GPU Required | Deploys |
 |------|-------------|----------|:------------:|:-------:|
 | **Quick Estimate** | `aiconfigurator cli default` — agg vs disagg Pareto comparison | ~25s | No | No |
-| **SLA-Driven Deploy** | Auto-profile + SLA planner + deploy via DGDR | ~1-5min | No (AIC sim) | Yes |
+| **SLA-Driven Deploy** | profile (AIC or real engine) + plan + deploy via DGDR | AIC ~5min / Real 2-4h | No (AIC) / Yes (Real) | Yes |
 
 ### Quick Estimate
 
@@ -537,19 +537,79 @@ Note: AIConfigurator uses FP8 GEMM + FP8 KV cache by default on H100/H200 (hardw
 
 ### SLA-Driven Deploy (DGDR)
 
-Creates a `DynamoGraphDeploymentRequest` that the Dynamo Operator processes:
-1. **Profiling**: choose **AI Configurator Simulation** (supported models only, fast, no GPU) or **Real Engine Profiling** (any model, real vLLM/TRT-LLM + AIPerf, 2–4h). Use Real when the model is not in the AIC support list.
-2. SLA Planner generates DGD config (replicas, scaling params).
-3. Auto-deploys DGD if `autoApply: true`.
+Creates a `DynamoGraphDeploymentRequest` (DGDR) that the Dynamo Operator processes automatically.
 
-Options include:
-- Model cache PVC auto-detection
-- SLA Planner enable/disable (auto-scaling)
-- Min/Max GPUs per engine
-- Auto-apply toggle
-- Real Engine Profiling: `prefillInterpolationGranularity`, `decodeInterpolationGranularity` (when not using AIConfigurator simulation)
+#### Profiling Methods
 
-### Supported Configurations
+| Method | When to Use | Duration | GPU |
+|--------|-------------|----------|:---:|
+| **AIC Simulation** | Model in AIC support list | ~5 min | No |
+| **Real Engine Profiling** | Any HuggingFace model | 2-4 hours | Yes (via DGD) |
+
+- **AIC**: Select GPU system → backend → model from supported list. Fast simulation, no GPU required.
+- **Real**: Select backend → enter HuggingFace model ID (e.g., `Qwen/Qwen3-30B-A3B-Instruct-2507-FP8`). The profiler orchestrates temporary DGDs to benchmark with AIPerf.
+
+#### DGDR Flow
+
+```
+DGDR Created → Pending → Profiling → [complete] → Deploying → Ready
+                                         │
+                    AIC simulation or     │
+                    Real engine profiling  │
+                                          ▼
+                              DGD created (independent of DGDR)
+                              + planner-profile-data ConfigMap
+```
+
+#### Interactive Prompts
+
+```
+? Select mode: SLA-Driven Deploy
+? Profiling method: AIC Simulation / Real Engine Profiling
+? DGDR name: qwen3-30b-sla
+? Auto-deploy after profiling with SLA-based planner? Yes
+? Min GPUs per engine (0 = auto): 0
+? Max GPUs per engine (0 = auto): 0
+```
+
+#### Auto-configured (no prompts)
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| Model cache PVC | `dynamo-model-cache` (auto-create if missing) | Same PVC as dynamo-vllm |
+| PVC mount path | `/opt/models` | Matches dynamo-vllm mount path |
+| Model path in PVC | `<model_id>` (e.g., `Qwen/Qwen3-...`) | `mountPath/pvcPath` = `/opt/models/<model>` |
+| Discovery backend | `etcd` (via DGD annotation) | Required for KVBM handshake stability |
+| SLA Planner min endpoints | `1` | Minimum 1 prefill + 1 decode replica |
+| SLA Planner adjustment interval | `60s` | Scaling check frequency |
+| Profiling job resources | 2-4 CPU, 8-16Gi memory | Profiler is orchestrator only, no GPU needed |
+| Profiling job tolerations | `nvidia.com/gpu: NoSchedule` | Schedule on GPU-tainted nodes |
+
+#### DGDR Lifecycle
+
+- **Immutable**: once profiling starts, spec cannot be changed. Create a new DGDR to change config.
+- **DGD independence**: DGD is NOT owned by DGDR. Deleting DGDR does not delete the DGD (protects serving traffic).
+- **ConfigMap persistence**: `profiling-output-<dgdr>` and `planner-profile-data` ConfigMaps survive DGDR deletion.
+- **Re-deploy from ConfigMap**: extract DGD YAML from ConfigMap and `kubectl apply` without re-profiling:
+
+```bash
+kubectl get cm profiling-output-<dgdr-name> -n dynamo-system \
+  -o jsonpath='{.data.config_with_planner\.yaml}' > my-dgd.yaml
+kubectl apply -f my-dgd.yaml -n dynamo-system
+```
+
+#### DGDR States
+
+| State | Description |
+|-------|-------------|
+| Pending | Spec validated, preparing profiling job |
+| Profiling | Profiling job running |
+| Deploying | autoApply=true, creating DGD |
+| Ready | DGD deployed successfully (or spec generated if autoApply=false) |
+| DeploymentDeleted | DGD was manually deleted; create new DGDR to redeploy |
+| Failed | Error at any stage |
+
+### Supported Configurations (AIC)
 
 | GPU System | vLLM | TRT-LLM | SGLang |
 |------------|:----:|:-------:|:------:|
@@ -562,7 +622,7 @@ Options include:
 
 Model list is **dynamically retrieved** from the `model_configs/` directory inside the aiconfigurator package. Supports 22+ models including Qwen, Llama, Mixtral, DeepSeek, Nemotron families. FP8 quantized variants are also available (e.g., `Qwen/Qwen3-32B-FP8`).
 
-Any HuggingFace model ID can be entered manually — AIConfigurator will download the model config and attempt simulation.
+For **Real Engine Profiling**, any HuggingFace model ID can be used regardless of the AIC support list.
 
 ---
 
@@ -586,6 +646,25 @@ curl http://$ENDPOINT/v1/chat/completions \
   }"
 ```
 
+
+## Known Issues and Workarounds
+
+### Dynamo Platform v0.9.0
+
+| Issue | Details | Workaround |
+|-------|---------|------------|
+| **CRD chart vs Platform chart version mismatch** | CRD chart is `v0.9.0`, Platform chart is `v0.9.0-post1`. `-postN` suffix only applies to the platform chart. | CLI strips `-postN` suffix when fetching CRD chart. |
+| **DynamoWorkerMetadata CRD missing** | `dynamo-crds-0.9.0.tgz` does not include `DynamoWorkerMetadata` CRD, which the `0.9.0-post1` operator requires. | CLI applies bundled CRD from `crds/nvidia.com_dynamoworkermetadatas.yaml` after Helm install. |
+| **K8s-native discovery + KVBM handshake** | `discoveryBackend: kubernetes` causes KVBM handshake failures in multi-replica disagg deployments. | Platform defaults to `discoveryBackend: etcd`. DGDR template includes `nvidia.com/dynamo-discovery-backend: etcd` annotation. |
+
+### Vagrant / k3s Environment
+
+| Issue | Details | Workaround |
+|-------|---------|------------|
+| **Too many open files (os error 24)** | Container soft ulimit is 1024 (hard: 524288) despite k3s LimitNOFILE=1048576. Frontend fails under high concurrency. | Not an issue on EKS (Amazon Linux default nofile is 65536+). For Vagrant, configure containerd default ulimits. |
+| **Long vLLM warmup** | DeepGEMM warmup can take 7+ minutes for large models (e.g., Qwen3-30B). Frontend shows KVBM handshake retries during this time. | Normal behavior. Frontend will complete handshake once all workers finish warmup. |
+
+---
 
 ## TODO
 
