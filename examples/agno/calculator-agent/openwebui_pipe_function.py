@@ -10,7 +10,7 @@ class Pipe:
         self.valves = self.Valves()
 
     def pipes(self):
-        return [{"id": "agno-calculator-agent", "name": "Agno - Calculator Agent"}]
+        return [{"id": "agno_calculator_agent", "name": "Agno - Calculator Agent"}]
 
     def pipe(self, body: dict, __user__: dict):
         messages = body.get("messages", [])

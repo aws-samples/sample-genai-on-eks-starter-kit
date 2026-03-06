@@ -25,6 +25,9 @@ export async function init(_BASE_DIR, _config, _utils) {
   utils = _utils;
 }
 
+const PIPE_FUNCTION_ID = "openclaw_devops_agent";
+const PIPE_FUNCTION_NAME = "OpenClaw - DevOps Agent";
+
 export async function install() {
   // Check required environment variables
   const requiredEnvVars = ["LITELLM_API_KEY"];
@@ -64,10 +67,15 @@ export async function install() {
 
   console.log("DevOps Agent installed successfully!");
   console.log(`Agent will be available at: http://devops-agent.openclaw:8080`);
+
+  // Register pipe function in Open WebUI
+  const pipeCode = fs.readFileSync(path.join(DIR, "openwebui_pipe_function.py"), "utf8");
+  await utils.openwebui.registerAndEnable({ id: PIPE_FUNCTION_ID, name: PIPE_FUNCTION_NAME, code: pipeCode });
 }
 
 export async function uninstall() {
   console.log("Uninstalling DevOps Agent...");
   await $`kubectl delete -f ${DIR}/agent.rendered.yaml --ignore-not-found`;
+  await utils.openwebui.remove(PIPE_FUNCTION_ID);
   console.log("DevOps Agent uninstalled successfully!");
 }
