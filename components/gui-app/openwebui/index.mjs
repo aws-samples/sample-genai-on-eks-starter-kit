@@ -21,7 +21,8 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["LITELLM_API_KEY"];
+  const OPENWEBUI_CHART_VERSION = "12.8.1";
+  const requiredEnvVars = ["LITELLM_API_KEY", "OPENWEBUI_ADMIN_EMAIL", "OPENWEBUI_ADMIN_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await $`helm repo add open-webui https://open-webui.github.io/helm-charts`;
@@ -34,9 +35,11 @@ export async function install() {
   const valuesVars = {
     DOMAIN: process.env.DOMAIN,
     LITELLM_API_KEY: process.env.LITELLM_API_KEY,
+    OPENWEBUI_ADMIN_EMAIL: process.env.OPENWEBUI_ADMIN_EMAIL,
+    OPENWEBUI_ADMIN_PASSWORD: process.env.OPENWEBUI_ADMIN_PASSWORD,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
-  await $`helm upgrade --install openwebui open-webui/open-webui --namespace openwebui --create-namespace -f ${valuesRenderedPath}`;
+  await $`helm upgrade --install openwebui open-webui/open-webui --version ${OPENWEBUI_CHART_VERSION} --namespace openwebui --create-namespace -f ${valuesRenderedPath}`;
 }
 
 export async function uninstall() {

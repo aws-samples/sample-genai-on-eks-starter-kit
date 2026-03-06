@@ -116,26 +116,11 @@ curl http://localhost:8080/health
 
 ## Open WebUI Integration
 
-### 1. Install Pipe Function
+The pipe function is **automatically registered** in Open WebUI when the agent is installed via `./cli openclaw doc-writer install`. No manual setup is needed.
 
-1. Open Open WebUI in your browser
-2. Navigate to **Admin Panel** → **Functions**
-3. Click **+ Add Function**
-4. Copy the contents of `openwebui_pipe_function.py`
-5. Paste into the function editor
-6. Click **Save**
+> **Note:** If Open WebUI was not running during install, re-run `./cli openclaw doc-writer install` to register the function.
 
-### 2. Configure Pipe Function
-
-In the function settings (Valves):
-
-| Setting | Value |
-|---|---|
-| `AGENT_ENDPOINT` | `http://doc-writer.openclaw:8080/message` |
-| `AGENT_AUTH_TOKEN` | Leave empty (or set if using auth) |
-| `REQUEST_TIMEOUT` | `300` (5 minutes) |
-
-### 3. Use the Agent
+### Use the Agent
 
 1. Start a new chat in Open WebUI
 2. Select **OpenClaw - Document Writer** from the model dropdown

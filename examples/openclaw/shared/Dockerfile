@@ -18,6 +18,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install OpenClaw CLI
+# Skip node-llama-cpp native binary download to avoid QEMU segfaults on ARM64
+# Safe because this bridge uses external LLM APIs (via LiteLLM), not local inference
+ENV NODE_LLAMA_CPP_SKIP_DOWNLOAD=true
 RUN npm install -g openclaw@2026.3.2 && \
     npm cache clean --force
 

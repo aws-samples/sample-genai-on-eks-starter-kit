@@ -12,7 +12,7 @@ class Pipe:
     def pipes(self):
         return [
             {
-                "id": "strands-agents-calculator-agent",
+                "id": "strands_agents_calculator_agent",
                 "name": "Strands Agents - Calculator Agent",
             }
         ]

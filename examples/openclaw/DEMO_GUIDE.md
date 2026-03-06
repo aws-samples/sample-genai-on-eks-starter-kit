@@ -51,9 +51,11 @@ Verify:
 kubectl get pods -n openclaw -l app=doc-writer
 ```
 
-## Step 4: Configure Open WebUI Pipe Functions
+## Step 4: Open WebUI Pipe Functions (Automated)
 
-### Access Open WebUI
+Pipe functions are **automatically registered** in Open WebUI when agents are installed in Steps 2 and 3. No manual setup is needed.
+
+To verify, access Open WebUI and check that the agent functions appear in the model dropdown:
 
 ```bash
 # Get the Open WebUI URL from the Ingress
@@ -62,31 +64,7 @@ kubectl get ingress -n openwebui
 # URL format: https://openwebui.<DOMAIN> (with domain) or http://<ALB-DNS> (without domain)
 ```
 
-### Add DevOps Agent Function
-
-1. Log in as admin → **Admin Panel** → **Functions** → **New Function**
-2. **Function Name**: `OpenClaw DevOps Agent`
-3. **Description**: `Interactive Kubernetes cluster management assistant with read-only access`
-4. Paste contents of `examples/openclaw/devops-agent/openwebui_pipe_function.py`
-5. **Save** → configure Valves:
-
-| Setting | Value |
-|---------|-------|
-| `AGENT_ENDPOINT` | `http://devops-agent.openclaw:8080/message` |
-| `AGENT_AUTH_TOKEN` | (leave empty) |
-| `REQUEST_TIMEOUT` | `300` |
-
-6. Toggle the function to **Enabled**
-
-### Add Doc Writer Function
-
-Same process using `examples/openclaw/doc-writer/openwebui_pipe_function.py`:
-
-| Setting | Value |
-|---------|-------|
-| `AGENT_ENDPOINT` | `http://doc-writer.openclaw:8080/message` |
-| `AGENT_AUTH_TOKEN` | (leave empty) |
-| `REQUEST_TIMEOUT` | `600` |
+> **Note:** If Open WebUI was not running when the agents were installed, you can re-run the install command to register the functions (e.g., `./cli openclaw devops-agent install`).
 
 ## Step 5: Use the Agents
 
