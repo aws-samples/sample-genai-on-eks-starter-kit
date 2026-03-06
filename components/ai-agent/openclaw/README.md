@@ -192,7 +192,6 @@ See the following examples for complete agent implementations:
 OpenClaw follows a cost-first design:
 
 - **Stateless containers**: No persistent storage needed (Git is the durable store)
-- **Scale-to-zero**: Agent examples can use KEDA to scale to 0 when idle (see [KEDA docs](https://keda.sh/docs/))
 - **Spot instances**: Karpenter provisions Spot ARM64 nodes (up to 90% savings)
 - **Ephemeral execution**: Doc writer uses Jobs that terminate after completion
 

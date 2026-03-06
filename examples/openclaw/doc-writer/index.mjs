@@ -38,13 +38,21 @@ export async function install() {
   const agentRenderedPath = path.join(DIR, "agent.rendered.yaml");
   const agentTemplateString = fs.readFileSync(agentTemplatePath, "utf8");
   const agentTemplate = handlebars.compile(agentTemplateString);
-  const { LITELLM_API_KEY } = process.env;
+  const { LITELLM_API_KEY, OPENCLAW_DOC_WRITER_GIT_USERNAME, OPENCLAW_DOC_WRITER_GIT_TOKEN } = process.env;
   const agentVars = {
     IMAGE: IMAGE_URL,
     ...config["examples"]["openclaw"]["doc-writer"].env,
     LITELLM_BASE_URL: "http://litellm.litellm:4000",
     LITELLM_API_KEY: LITELLM_API_KEY,
   };
+
+  // Wire git credentials if provided
+  if (OPENCLAW_DOC_WRITER_GIT_USERNAME) {
+    agentVars.GIT_USERNAME = OPENCLAW_DOC_WRITER_GIT_USERNAME;
+  }
+  if (OPENCLAW_DOC_WRITER_GIT_TOKEN) {
+    agentVars.GIT_TOKEN = OPENCLAW_DOC_WRITER_GIT_TOKEN;
+  }
 
   // Check if Langfuse is available
   const result = await $`kubectl get pod -n langfuse -l app=web --ignore-not-found`;

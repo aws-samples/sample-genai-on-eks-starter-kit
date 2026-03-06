@@ -34,8 +34,8 @@ Doc Writer Agent (K8s Job)
 - OpenClaw bridge server installed (`./cli ai-agent openclaw install`)
 - LiteLLM component installed (`./cli ai-gateway litellm install`)
 - Open WebUI component installed (`./cli gui-app openwebui install`)
-- Git credentials configured in `.env`
 - kubectl configured to access the cluster
+- (Optional) Git credentials for push access — see [Git Credentials](#git-credentials-optional) below
 
 ## Installation
 
@@ -47,7 +47,7 @@ Add to `.env`:
 # Required
 LITELLM_API_KEY=sk-1234567890abcdef
 
-# Git credentials for doc-writer
+# Optional: Git credentials for doc-writer (see "Git Credentials" section below)
 OPENCLAW_DOC_WRITER_GIT_USERNAME=your-github-username
 OPENCLAW_DOC_WRITER_GIT_TOKEN=ghp_your_github_token
 
@@ -161,52 +161,12 @@ The agent will:
 
 ## Example Tasks
 
-### Generate README
-
-```
-Write a README for https://github.com/user/repo
-
-Include:
-- Project description
-- Installation steps
-- Quick start guide
-- Configuration options
-```
-
-### Update API Documentation
-
-```
-Update the API documentation in https://github.com/user/api-server
-
-Focus on:
-- REST endpoints
-- Request/response formats
-- Authentication
-- Error codes
-```
-
-### Create Changelog
-
-```
-Generate a CHANGELOG.md for https://github.com/user/project
-
-Based on recent commits, create entries for:
-- New features
-- Bug fixes
-- Breaking changes
-```
-
-### Write Contributing Guide
-
-```
-Create a CONTRIBUTING.md for https://github.com/user/opensource-project
-
-Include:
-- Code of conduct
-- Development setup
-- Pull request process
-- Coding standards
-```
+| Task | Example Prompt |
+|------|---------------|
+| Generate README | Write a README for `https://github.com/user/repo` — include project description, installation steps, quick start guide, configuration options |
+| Update API Docs | Update the API documentation in `https://github.com/user/api-server` — REST endpoints, request/response formats, authentication, error codes |
+| Create Changelog | Generate a CHANGELOG.md for `https://github.com/user/project` — new features, bug fixes, breaking changes based on recent commits |
+| Contributing Guide | Create a CONTRIBUTING.md for `https://github.com/user/opensource-project` — code of conduct, development setup, PR process, coding standards |
 
 ## Git Workflow
 
@@ -241,12 +201,39 @@ If Langfuse is installed, view agent traces:
    - Response latency
    - Error events
 
-## Security Considerations
+## Git Credentials (Optional)
 
-- **Git credentials**: Stored as environment variables (consider using Kubernetes Secrets)
-- **Repository access**: Agent has write access to repos (use fine-grained tokens)
-- **Code execution**: Agent does not execute code, only reads and writes files
-- **Network**: Agent can access external Git repositories
+The doc-writer agent can optionally push changes back to Git repositories. To enable this, add your credentials to `.env.local` (via `./cli configure`):
+
+```bash
+OPENCLAW_DOC_WRITER_GIT_USERNAME=your-github-username
+OPENCLAW_DOC_WRITER_GIT_TOKEN=ghp_your_github_token
+```
+
+Without credentials, the agent can still clone public repos and generate documentation — it just won't be able to commit and push.
+
+> ⚠️ **Security Warning**: Git credentials are injected as **plain-text environment variables** into the agent container. The LLM-driven agent has access to these credentials at runtime. A prompt injection attack could potentially cause the agent to leak or misuse the token. **Do not use tokens with broad access.**
+
+### Creating a Scoped GitHub Token
+
+Use a [fine-grained personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token) with minimal permissions:
+
+1. Go to **GitHub Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens**
+2. Click **Generate new token**
+3. Configure:
+   - **Token name**: `openclaw-doc-writer`
+   - **Expiration**: 30 days (or shorter)
+   - **Repository access**: Select **Only select repositories** — pick only the repos the agent should write to
+   - **Permissions**: Set **Contents** to **Read and write** — leave everything else at **No access**
+4. Click **Generate token** and copy it to `OPENCLAW_DOC_WRITER_GIT_TOKEN`
+
+### Recommendations
+
+- **Never use classic tokens** — they grant access to all repos
+- **Set short expiration** — rotate tokens frequently
+- **Limit to specific repos** — never grant org-wide access
+- **Review agent output** — check commits before merging to main branches
+- For production use, consider storing credentials in AWS KMS
 
 ## Cost Optimization
 
