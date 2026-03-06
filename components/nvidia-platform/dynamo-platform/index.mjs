@@ -69,8 +69,15 @@ export async function install() {
     ? config?.platform?.k8s?.dynamoPlatform || {}
     : config?.platform?.eks?.dynamoPlatform || {};
   
-  const releaseVersion = platformConfig.releaseVersion || "0.9.0-post1";
+  const defaultVersion = platformConfig.releaseVersion || "0.9.1";
   const namespace = platformConfig.namespace || "dynamo-system";
+
+  const { releaseVersion } = await inquirer.prompt([{
+    type: "input",
+    name: "releaseVersion",
+    message: "Dynamo Platform version:",
+    default: defaultVersion,
+  }]);
   
   console.log("\n========================================");
   console.log("Installing Dynamo Kubernetes Platform");

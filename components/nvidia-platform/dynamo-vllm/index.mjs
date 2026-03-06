@@ -537,22 +537,6 @@ export async function install() {
     // no monitoring
   }
   
-  // Ingress: auto-detect, no prompts
-  let enableIngress = false;
-  let ingressClass = "";
-  let ingressPath = "/v1";
-  
-  try {
-    const icResult = await $`kubectl get ingressclass -o jsonpath='{.items[0].metadata.name}'`.quiet();
-    const detectedClass = icResult.stdout.trim().replace(/'/g, "");
-    if (detectedClass) {
-      enableIngress = true;
-      ingressClass = detectedClass;
-      console.log(`✅ Ingress detected: ${detectedClass} → Frontend Ingress enabled (path: /v1)`);
-    }
-  } catch {
-    // no ingress controller
-  }
   
   // ============================================
   // Step 4: Render deployment template
@@ -648,10 +632,6 @@ export async function install() {
     // Monitoring
     ENABLE_STRUCTURED_LOGGING: enableStructuredLogging,
     
-    // Ingress
-    ENABLE_INGRESS: enableIngress,
-    INGRESS_CLASS: ingressClass,
-    INGRESS_PATH: ingressPath,
     NAMESPACE: namespace,
     
     // Platform
@@ -801,11 +781,10 @@ spec:
     }
   }
   
-  // Clean up any leftover resources from previous failed deployments
-  await $`kubectl delete ingress ${deploymentName}-frontend -n ${namespace} --ignore-not-found`.quiet().nothrow();
+  // Clean up any leftover DGD from previous failed deployments
   await $`kubectl delete dynamographdeployment ${deploymentName} -n ${namespace} --ignore-not-found`.quiet().nothrow();
   
-  // Deploy
+  // Deploy DGD
   console.log("\nDeploying...");
   await $`kubectl apply -f ${renderedPath} -n ${namespace}`;
   
@@ -821,42 +800,21 @@ spec:
   console.log("========================================");
   console.log("\n0. Watch pods until ready:");
   console.log(`   kubectl get pods -n ${namespace} | grep ${deploymentName}`);
-  
-  if (isK8s) {
-    if (enableIngress) {
-      console.log("\n1. Access via Ingress (find NodePort first):");
-      console.log(`   kubectl get svc -n ingress-nginx`);
-      console.log(`   # Look for PORT(S): 80:<NODE_PORT>/TCP`);
-      console.log(`\n2. Test the API:`);
-      console.log(`   curl http://<node-ip>:<node-port>${ingressPath}/chat/completions \\`);
-      console.log(`     -H "Content-Type: application/json" \\`);
-      console.log(`     -d '{"model": "${modelName}", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50}'`);
-    } else {
-      console.log("\n1. Port-forward the frontend service (after pods are ready):");
-      console.log(`   kubectl port-forward svc/${frontendSvc} 8000:8000 -n ${namespace} --address 0.0.0.0 &`);
-      console.log("\n2. Test the API:");
-      console.log(`   curl localhost:8000/v1/chat/completions \\`);
-      console.log(`     -H "Content-Type: application/json" \\`);
-      console.log(`     -d '{"model": "${modelName}", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50}'`);
-      console.log("\n3. Stop port-forward:");
-      console.log(`   kill %1    # or: kill $(lsof -ti:8000)`);
-    }
-  } else {
-    // EKS mode: internal URL for LiteLLM + optional external access
-    console.log("\n  Internal service URL (for LiteLLM / other in-cluster services):");
-    console.log(`   ${internalUrl}`);
-    console.log("\n1. Add to LiteLLM (if installed):");
+  console.log(`\n   In-cluster service URL:`);
+  console.log(`   ${internalUrl}`);
+  console.log("\n1. Quick test (port-forward):");
+  console.log(`   kubectl port-forward svc/${frontendSvc} 8000:8000 -n ${namespace} --address 0.0.0.0 &`);
+  console.log(`   curl localhost:8000/v1/chat/completions \\`);
+  console.log(`     -H "Content-Type: application/json" \\`);
+  console.log(`     -d '{"model": "${modelName}", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50, "stream": false}'`);
+
+  if (!isK8s) {
+    console.log("\n2. Production (LiteLLM proxy):");
     console.log(`   Model name: dynamo/${deploymentName}`);
     console.log(`   API base:   ${internalUrl}`);
-    console.log("\n2. (Optional) Expose externally via LoadBalancer:");
-    console.log(`   kubectl patch svc ${frontendSvc} -n ${namespace} \\`);
-    console.log(`     -p '{"spec": {"type": "LoadBalancer"}}'`);
-    console.log(`   # Then: kubectl get svc ${frontendSvc} -n ${namespace} -w`);
-    console.log("\n3. (Optional) Port-forward for local testing:");
-    console.log(`   kubectl port-forward svc/${frontendSvc} 8000:8000 -n ${namespace} &`);
   }
-  
-  console.log("\n4. Uninstall:");
+
+  console.log(`\n${isK8s ? "2" : "3"}. Uninstall:`);
   console.log(`   ./cli nvidia-platform dynamo-vllm uninstall`);
 }
 

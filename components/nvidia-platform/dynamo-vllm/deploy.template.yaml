@@ -348,31 +348,3 @@ spec:
             effect: NoSchedule
 {{/if}}
 {{/if}}
-{{#if ENABLE_INGRESS}}
----
-# ==============================================================================
-# Ingress: Expose Frontend API via Ingress controller
-# ==============================================================================
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{{DEPLOYMENT_NAME}}}-frontend
-{{#if IS_EKS}}
-  annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/group.name: dynamo-serving
-{{/if}}
-spec:
-  ingressClassName: "{{{INGRESS_CLASS}}}"
-  rules:
-    - http:
-        paths:
-          - path: {{{INGRESS_PATH}}}
-            pathType: Prefix
-            backend:
-              service:
-                name: {{{DEPLOYMENT_NAME}}}-frontend
-                port:
-                  number: 8000
-{{/if}}

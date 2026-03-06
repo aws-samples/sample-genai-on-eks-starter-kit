@@ -99,34 +99,33 @@ The CLI uses **two different StorageClasses** depending on purpose:
 
 #### Access
 
-**With Ingress (recommended)** — if an Ingress controller is installed, monitoring and vLLM API are accessible via path routing:
+**Monitoring (Ingress)** — Grafana and Prometheus are exposed via Ingress if an Ingress controller is installed:
 
 ```bash
-# Find Ingress controller's external port
-kubectl get svc -n ingress-nginx
-# PORT(S): 80:<NODE_PORT>/TCP
-
-# All services via single endpoint
-http://<node-ip>:<node-port>/v1/models          # vLLM API
+kubectl get svc -n ingress-nginx     # Find NodePort
 http://<node-ip>:<node-port>/grafana             # Grafana
 http://<node-ip>:<node-port>/prometheus          # Prometheus
 ```
 
-**Remote access (SSH tunnel)** — if the cluster is behind a remote server:
+**vLLM API (port-forward)** — each model is accessed via its ClusterIP service:
 
 ```bash
-ssh -N -L <local-port>:<node-ip>:<node-port> <user>@<remote-host>
-# Then: http://localhost:<local-port>/v1/models
-# Then: http://localhost:<local-port>/grafana
-```
+# In-cluster URL (for other services / LiteLLM):
+http://<deployment>-frontend.dynamo-system:8000/v1
 
-**Without Ingress (port-forward fallback)**:
-
-```bash
+# Quick test via port-forward:
 kubectl port-forward svc/<deployment>-frontend 8000:8000 -n dynamo-system --address 0.0.0.0 &
 curl localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model": "<served-model-name>", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50}'
+  -d '{"model": "<served-model-name>", "messages": [{"role": "user", "content": "Hello!"}], "max_tokens": 50, "stream": false}'
+```
+
+**Remote access (SSH tunnel)**:
+
+```bash
+ssh -N -L <local-port>:<node-ip>:<node-port> <user>@<remote-host>
+# Grafana:    http://localhost:<local-port>/grafana
+# Prometheus: http://localhost:<local-port>/prometheus
 ```
 
 ---
@@ -172,30 +171,26 @@ aws eks create-addon --cluster-name $EKS_CLUSTER_NAME --addon-name aws-efs-csi-d
 
 #### Access
 
-**With ALB Ingress (recommended for production)** — if AWS Load Balancer Controller is installed, monitoring and vLLM API are accessible via ALB:
+**Monitoring (ALB Ingress)** — Grafana and Prometheus are exposed via ALB if AWS Load Balancer Controller is installed:
 
 ```bash
-# Check ALB URL
-kubectl get ingress -A
+kubectl get ingress -n monitoring
 # ADDRESS: k8s-dynamomo-xxxx.us-east-1.elb.amazonaws.com
-
-# All services via ALB
-http://<alb-url>/v1/models          # vLLM API
 http://<alb-url>/grafana             # Grafana
 http://<alb-url>/prometheus          # Prometheus
 ```
 
-**Internal URL (for LiteLLM / in-cluster services)**:
-
-```
-http://<deployment>-frontend.dynamo-system:8000/v1
-```
-
-**Port-forward (development)**:
+**vLLM API (in-cluster service)** — each model is accessed via ClusterIP:
 
 ```bash
-kubectl port-forward svc/<deployment>-frontend 8000:8000 -n dynamo-system
+# In-cluster URL (for LiteLLM / other services):
+http://<deployment>-frontend.dynamo-system:8000/v1
+
+# Port-forward for development:
+kubectl port-forward svc/<deployment>-frontend 8000:8000 -n dynamo-system &
 ```
+
+**Production multi-model routing** — use LiteLLM proxy to expose multiple models via a single endpoint with API key management and rate limiting.
 
 ---
 
@@ -486,7 +481,6 @@ GPU (G1) → CPU Pinned Memory (G2) → Local SSD/NVMe (G3)
 |---------|--------|
 | vLLM image tag | `config.json` → `dynamoPlatform.releaseVersion` |
 | Structured logging | Auto-enable if monitoring installed |
-| Ingress | Auto-detect controller + auto-create (ALB annotations on EKS) |
 | KV Router temperature | `0.5` (Dynamo default) |
 | KV overlap score weight | `1.0` (Dynamo default) |
 | KVBM disk directory | `/tmp` (K8s) / `/mnt/nvme/kvbm_cache` (EKS) |
@@ -626,23 +620,24 @@ For **Real Engine Profiling**, any HuggingFace model ID can be used regardless o
 
 ---
 
-## Quick Test (via Ingress)
+## Quick Test
 
 ```bash
-# Set your endpoint (NodePort example)
-export ENDPOINT="<node-ip>:<node-port>"
+# Port-forward the frontend service
+kubectl port-forward svc/<deployment>-frontend 8000:8000 -n dynamo-system --address 0.0.0.0 &
 
 # Auto-detect model name
-export MODEL=$(curl -s http://$ENDPOINT/v1/models | python3 -c "import sys,json; d=json.load(sys.stdin)['data']; print(d[0]['id'] if d else 'NONE')")
+export MODEL=$(curl -s localhost:8000/v1/models | python3 -c "import sys,json; d=json.load(sys.stdin)['data']; print(d[0]['id'] if d else 'NONE')")
 echo "Model: $MODEL"
 
 # Chat completion
-curl http://$ENDPOINT/v1/chat/completions \
+curl localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
     \"model\": \"$MODEL\",
     \"messages\": [{\"role\": \"user\", \"content\": \"Hello! Who are you?\"}],
-    \"max_tokens\": 100
+    \"max_tokens\": 100,
+    \"stream\": false
   }"
 ```
 
