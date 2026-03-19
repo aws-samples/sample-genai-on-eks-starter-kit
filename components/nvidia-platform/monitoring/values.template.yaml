@@ -1,0 +1,110 @@
+# ==============================================================================
+# kube-prometheus-stack Helm Values
+# Platform: {{#if IS_K8S}}Kubernetes{{else}}EKS{{/if}}
+# ==============================================================================
+
+# ==============================================================================
+# Prometheus
+# - Collect metrics from Dynamo PodMonitors across all namespaces
+# ==============================================================================
+prometheus:
+  prometheusSpec:
+    # Allow PodMonitors from any namespace (required for Dynamo Operator auto-created PodMonitors)
+    podMonitorSelectorNilUsesHelmValues: false
+    podMonitorNamespaceSelector: {}
+    # Allow ServiceMonitors from any namespace (required for DCGM Exporter)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorNamespaceSelector: {}
+    # Allow Probes from any namespace
+    probeNamespaceSelector: {}
+    # Retention
+    retention: {{{RETENTION}}}
+    # Storage
+{{#if ENABLE_PERSISTENT_STORAGE}}
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: "{{{STORAGE_CLASS}}}"
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: {{{PROMETHEUS_STORAGE_SIZE}}}
+{{/if}}
+{{#if ENABLE_INGRESS}}
+    routePrefix: /prometheus
+    externalUrl: "http://{{{INGRESS_HOST}}}/prometheus"
+  ingress:
+    enabled: true
+    ingressClassName: "{{{INGRESS_CLASS}}}"
+{{#if IS_EKS}}
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/group.name: dynamo-monitoring
+{{/if}}
+    paths:
+      - /prometheus
+    hosts:
+      - "{{{INGRESS_HOST}}}"
+{{/if}}
+
+# ==============================================================================
+# Grafana
+# - Visualization dashboards for Dynamo metrics
+# - Sidecar auto-discovers ConfigMaps with label grafana_dashboard: "1"
+# ==============================================================================
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: "{{{GRAFANA_ADMIN_PASSWORD}}}"
+
+{{#if ENABLE_INGRESS}}
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s/grafana"
+      serve_from_sub_path: true
+  ingress:
+    enabled: true
+    ingressClassName: "{{{INGRESS_CLASS}}}"
+{{#if IS_EKS}}
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/group.name: dynamo-monitoring
+{{/if}}
+    path: /grafana
+    hosts:
+      - "{{{INGRESS_HOST}}}"
+{{/if}}
+
+  # Sidecar to auto-load dashboards from ConfigMaps
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: false
+
+# ==============================================================================
+# Node Exporter
+# - Required for CPU/Memory metrics in Dynamo dashboard
+# ==============================================================================
+nodeExporter:
+  enabled: true
+
+# ==============================================================================
+# kube-state-metrics
+# - Kubernetes object state metrics
+# ==============================================================================
+kubeStateMetrics:
+  enabled: true
+
+# ==============================================================================
+# Alertmanager
+# - Disabled by default (can be enabled for production alerting)
+# ==============================================================================
+alertmanager:
+  enabled: {{{ALERTMANAGER_ENABLED}}}

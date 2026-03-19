@@ -1,4 +1,48 @@
 {
+  "platform": {
+    "monitoring": {
+      "grafanaAdminPassword": "admin",
+      "retention": "7d",
+      "enablePersistentStorage": false,
+      "prometheusStorageSize": "50Gi",
+      "alertmanagerEnabled": false
+    },
+    "type": "eks",
+    "eks": {
+      "storageClass": "efs",
+      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
+      "gpuNodeSelectorValue": "true",
+      "gpuOperator": {
+        "driverEnabled": false,
+        "toolkitEnabled": false,
+        "devicePluginEnabled": false,
+        "gfdEnabled": true,
+        "dcgmExporterEnabled": true,
+        "gdsEnabled": true,
+        "nfdEnabled": false,
+        "migManagerEnabled": false,
+        "useAMP": false,
+        "ampWorkspaceId": ""
+      },
+      "dynamoPlatform": {
+        "releaseVersion": "0.9.1",
+        "namespace": "dynamo-system",
+        "groveEnabled": true,
+        "kaiSchedulerEnabled": true
+      }
+    },
+    "k8s": {
+      "storageClass": "nfs",
+      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
+      "gpuNodeSelectorValue": "true",
+      "dynamoPlatform": {
+        "releaseVersion": "0.9.0-post1",
+        "namespace": "dynamo-system",
+        "groveEnabled": true,
+        "kaiSchedulerEnabled": true
+      }
+    }
+  },
   "demo": {
     "components": [
       { "category": "llm-model", "component": "vllm" },

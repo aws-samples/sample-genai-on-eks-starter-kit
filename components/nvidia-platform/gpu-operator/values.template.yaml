@@ -1,0 +1,127 @@
+# NVIDIA GPU Operator Helm Values for EKS
+
+# =============================================================================
+# Operator Settings
+# =============================================================================
+operator:
+  defaultRuntime: containerd
+
+# =============================================================================
+# Driver
+# - EKS: Disabled (pre-installed by EKS AMI/Auto Mode)
+# =============================================================================
+driver:
+  enabled: {{{DRIVER_ENABLED}}}
+
+# =============================================================================
+# Container Toolkit
+# - EKS Auto: Disabled (pre-installed)
+# =============================================================================
+toolkit:
+  enabled: {{{TOOLKIT_ENABLED}}}
+
+# =============================================================================
+# Device Plugin
+# - EKS Auto: Disabled (pre-installed)
+# =============================================================================
+devicePlugin:
+  enabled: {{{DEVICE_PLUGIN_ENABLED}}}
+
+# =============================================================================
+# GPU Feature Discovery (GFD)
+# - Always enabled for detailed GPU node labeling
+# - Adds labels like: nvidia.com/gpu.product, nvidia.com/gpu.memory, etc.
+# =============================================================================
+gfd:
+  enabled: {{{GFD_ENABLED}}}
+
+# =============================================================================
+# DCGM Exporter
+# - Enabled for GPU metrics (Prometheus compatible)
+# - Exposes metrics like GPU utilization, memory, temperature
+# =============================================================================
+dcgmExporter:
+  enabled: {{{DCGM_EXPORTER_ENABLED}}}
+  serviceMonitor:
+    enabled: {{{SERVICE_MONITOR_ENABLED}}}
+    {{#if SERVICE_MONITOR_ENABLED}}
+    interval: 15s
+    {{/if}}
+
+# =============================================================================
+# GPUDirect Storage (GDS)
+# - Required for Dynamo NIXL (KV cache transfer)
+# - Enables direct GPU memory <-> Storage transfers
+# =============================================================================
+gds:
+  enabled: {{{GDS_ENABLED}}}
+
+# =============================================================================
+# Node Feature Discovery (NFD)
+# - EKS: Disabled (use existing EKS/Karpenter labels)
+# =============================================================================
+nfd:
+  enabled: {{{NFD_ENABLED}}}
+
+# =============================================================================
+# MIG Manager
+# - Disabled by default
+# - Enable for Multi-Instance GPU support (A100, H100)
+# =============================================================================
+migManager:
+  enabled: {{{MIG_MANAGER_ENABLED}}}
+
+# =============================================================================
+# Node Status Exporter
+# - Disabled (not critical for basic operations)
+# =============================================================================
+nodeStatusExporter:
+  enabled: false
+
+# =============================================================================
+# Sandbox Workloads (vGPU, etc.)
+# - Disabled by default
+# =============================================================================
+sandboxWorkloads:
+  enabled: false
+
+# =============================================================================
+# VFIO Manager
+# - Disabled (for GPU passthrough scenarios)
+# =============================================================================
+vfioManager:
+  enabled: false
+
+# =============================================================================
+# vGPU Manager
+# - Disabled (requires NVIDIA vGPU license)
+# =============================================================================
+vgpuManager:
+  enabled: false
+
+# =============================================================================
+# vGPU Device Manager  
+# - Disabled (requires NVIDIA vGPU license)
+# =============================================================================
+vgpuDeviceManager:
+  enabled: false
+
+# =============================================================================
+# GDRCopy
+# - Disabled by default (for specific RDMA use cases)
+# =============================================================================
+gdrcopy:
+  enabled: false
+
+# =============================================================================
+# Tolerations for EKS GPU nodes
+# =============================================================================
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  # EKS Auto Mode GPU node taint
+  - key: eks.amazonaws.com/compute-type
+    operator: Equal
+    value: auto
+    effect: NoSchedule

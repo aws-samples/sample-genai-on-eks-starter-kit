@@ -1,6 +1,18 @@
 {
   "componentCategories": [
     {
+      "dir": "nvidia-platform",
+      "name": "NVIDIA Platform",
+      "components": [
+        { "dir": "gpu-operator", "name": "GPU Operator" },
+        { "dir": "monitoring", "name": "Monitoring (Prometheus + Grafana)" },
+        { "dir": "dynamo-platform", "name": "Dynamo Platform" },
+        { "dir": "dynamo-vllm", "name": "Dynamo vLLM Serving" },
+        { "dir": "benchmark", "name": "AIPerf Benchmark" },
+        { "dir": "aiconfigurator", "name": "AIConfigurator (Auto Config + SLA Deploy)" }
+      ]
+    },
+    {
       "dir": "ai-gateway",
       "name": "AI Gateway",
       "components": [

@@ -1,0 +1,108 @@
+# ==============================================================================
+# Dynamo Platform Helm Values
+# Platform: {{#if IS_K8S}}Kubernetes{{else}}EKS{{/if}}
+# ==============================================================================
+
+{{#if NGC_SECRET_ENABLED}}
+# NGC imagePullSecrets (for private images in future versions)
+imagePullSecrets:
+  - name: ngc-secret
+{{/if}}
+
+# ==============================================================================
+# Dynamo Operator
+# - Manages DynamoGraphDeployment CRDs
+# ==============================================================================
+dynamo-operator:
+  enabled: true
+  # etcd discovery: more stable for KVBM multi-replica deployments
+  # K8s-native discovery (kubernetes) has issues with KVBM handshake in 0.9.0-post1
+  discoveryBackend: etcd
+  # Webhooks enabled (operator 0.9.0 in 0.9.0-post1 chart supports webhook natively)
+  webhook:
+    enabled: true
+{{#if NGC_SECRET_ENABLED}}
+  imagePullSecrets:
+    - name: ngc-secret
+{{/if}}
+
+# ==============================================================================
+# etcd - Distributed key-value store
+# - Optional in v0.9.0+ (K8s-native service discovery can replace etcd)
+# - Still enabled for backward compatibility and non-K8s discovery backends
+# ==============================================================================
+etcd:
+  enabled: true
+  replicaCount: 1
+  # Workaround for bitnami secure image validation
+  # See: https://github.com/bitnami/charts/tree/main/bitnami/etcd
+  image:
+    repository: bitnamilegacy/etcd
+  global:
+    security:
+      allowInsecureImages: true
+  
+  # Persistence for etcd data
+  persistence:
+    enabled: true
+    storageClass: "{{{STORAGE_CLASS}}}"
+    size: 10Gi
+
+# ==============================================================================
+# NATS - High-performance messaging
+# - Optional in v0.9.0+ (Event Plane uses ZMQ by default, NATS for backward compat)
+# - Still enabled for legacy KV router and event transport
+# ==============================================================================
+nats:
+  enabled: true
+  
+  # Use single-node config for simplicity
+  config:
+    cluster:
+      enabled: false
+    jetstream:
+      enabled: true
+      memoryStore:
+        enabled: true
+        maxSize: 1Gi
+      fileStore:
+        enabled: true
+        dir: /data
+        pvc:
+          enabled: true
+          storageClassName: "{{{STORAGE_CLASS}}}"
+          size: 10Gi
+
+# ==============================================================================
+# Grove - Multi-node inference orchestrator
+# - Handles GPU-aware scheduling and request routing
+# - Required for disaggregated serving across multiple nodes
+# - Downloaded from ghcr.io/nvidia/grove (public)
+# ==============================================================================
+grove:
+  enabled: {{{GROVE_ENABLED}}}
+
+# ==============================================================================
+# KAI Scheduler - AI workload scheduler
+# - Optimized for GPU/AI workload placement
+# - Integrates with Kubernetes scheduler
+# ==============================================================================
+kai-scheduler:
+  enabled: {{{KAI_SCHEDULER_ENABLED}}}
+
+# ==============================================================================
+# Common Configuration
+# ==============================================================================
+
+# Tolerations for GPU nodes (allows components to run on GPU tainted nodes)
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+{{#if IS_EKS}}
+  # EKS Auto Mode GPU node taint
+  - key: eks.amazonaws.com/compute-type
+    operator: Equal
+    value: auto
+    effect: NoSchedule
+{{/if}}

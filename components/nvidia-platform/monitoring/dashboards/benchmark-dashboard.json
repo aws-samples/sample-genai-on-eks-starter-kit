@@ -1,0 +1,191 @@
+{
+  "annotations": { "list": [] },
+  "description": "Benchmark comparison: X=concurrency, Y=metric, line=benchmark",
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "title": "Benchmark Comparison",
+      "type": "text",
+      "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "options": { "mode": "markdown", "content": "Select benchmarks via **Benchmark** dropdown. Each line = one deployment config. X = concurrency.\n\n**Note:** When multiple benchmarks are selected, line charts may show 0 for missing data points. The Pareto chart (bottom) uses scatter plot to avoid this." }
+    },
+    {
+      "title": "TPS/GPU vs Concurrency",
+      "type": "xychart",
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 2 },
+      "id": 1,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_tps_per_gpu{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "null" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } } }
+    },
+    {
+      "title": "TPS/User vs Concurrency",
+      "type": "xychart",
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 2 },
+      "id": 2,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_tps_per_user{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
+    },
+    {
+      "title": "TTFT P50 vs Concurrency",
+      "type": "xychart",
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 14 },
+      "id": 3,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_ttft_p50{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
+    },
+    {
+      "title": "ITL P50 vs Concurrency",
+      "type": "xychart",
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 14 },
+      "id": 4,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_itl_p50{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
+    },
+    {
+      "title": "Request Latency P50 vs Concurrency",
+      "type": "xychart",
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 26 },
+      "id": 5,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_request_latency_p50{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
+    },
+    {
+      "title": "TTFT P99 vs Concurrency",
+      "type": "xychart",
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 26 },
+      "id": 6,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_ttft_p99{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true } } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "concurrency", "valueField": "Value", "emptyValue": "NaN" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency \\(benchmark\\)", "renamePattern": "concurrency" } },
+        { "id": "renameByRegex", "options": { "regex": "concurrency\\\\benchmark", "renamePattern": "concurrency" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "concurrency", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "concurrency", "desc": false }] } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "concurrency" }, "show": "both", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 10 }, "show": "both", "lineWidth": 2 } }, "overrides": [{ "matcher": { "id": "byName", "options": "concurrency" }, "properties": [{ "id": "unit", "value": "none" }] }] }
+    },
+    {
+      "title": "GPU Efficiency: TPS/GPU vs TPS/User (Pareto)",
+      "description": "X=TPS/User (req/s), Y=TPS/GPU (tok/s/gpu). Top-right = optimal.",
+      "type": "xychart",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 38 },
+      "id": 7,
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "refId": "A", "expr": "benchmark_efficiency{benchmark=~\"$benchmark\"} > 0", "instant": true, "format": "table" }],
+      "transformations": [
+        { "id": "organize", "options": {
+          "excludeByName": { "Time": true, "__name__": true, "container": true, "endpoint": true, "instance": true, "job": true, "namespace": true, "pod": true, "service": true, "mode": true, "model": true, "num_gpus": true, "concurrency": true }
+        }},
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "tps_per_user", "desc": false }] } },
+        { "id": "groupingToMatrix", "options": { "columnField": "benchmark", "rowField": "tps_per_user", "valueField": "Value", "emptyValue": "NaN" } },
+        { "id": "renameByRegex", "options": { "regex": "tps_per_user \\(benchmark\\)", "renamePattern": "tps_per_user" } },
+        { "id": "renameByRegex", "options": { "regex": "tps_per_user\\\\benchmark", "renamePattern": "tps_per_user" } },
+        { "id": "convertFieldType", "options": { "conversions": [{ "targetField": "tps_per_user", "destinationType": "number" }] } },
+        { "id": "sortBy", "options": { "fields": [{ "field": "tps_per_user", "desc": false }] } }
+      ],
+      "options": { "seriesMapping": "auto", "dims": { "x": "tps_per_user" }, "show": "points", "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "custom": { "pointSize": { "fixed": 14 }, "show": "points" } } }
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["benchmark", "pareto", "dynamo"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": { "type": "prometheus", "uid": "${datasource}" },
+        "definition": "label_values(benchmark_tps_per_gpu, benchmark)",
+        "allValue": ".*",
+        "includeAll": true,
+        "multi": true,
+        "name": "benchmark",
+        "query": { "qryType": 1, "query": "label_values(benchmark_tps_per_gpu, benchmark)" },
+        "refresh": 2,
+        "type": "query",
+        "label": "Benchmark"
+      },
+      {
+        "current": { "selected": true, "text": "Prometheus", "value": "prometheus" },
+        "hide": 0,
+        "name": "datasource",
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource",
+        "label": "Datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-7d", "to": "now" },
+  "title": "Benchmark Pareto",
+  "uid": "benchmark-pareto",
+  "version": 17
+}
