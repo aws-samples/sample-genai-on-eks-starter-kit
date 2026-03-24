@@ -1,48 +1,4 @@
 {
-  "platform": {
-    "monitoring": {
-      "grafanaAdminPassword": "admin",
-      "retention": "7d",
-      "enablePersistentStorage": false,
-      "prometheusStorageSize": "50Gi",
-      "alertmanagerEnabled": false
-    },
-    "type": "eks",
-    "eks": {
-      "storageClass": "efs",
-      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
-      "gpuNodeSelectorValue": "true",
-      "gpuOperator": {
-        "driverEnabled": false,
-        "toolkitEnabled": false,
-        "devicePluginEnabled": false,
-        "gfdEnabled": true,
-        "dcgmExporterEnabled": true,
-        "gdsEnabled": true,
-        "nfdEnabled": false,
-        "migManagerEnabled": false,
-        "useAMP": false,
-        "ampWorkspaceId": ""
-      },
-      "dynamoPlatform": {
-        "releaseVersion": "0.9.1",
-        "namespace": "dynamo-system",
-        "groveEnabled": true,
-        "kaiSchedulerEnabled": true
-      }
-    },
-    "k8s": {
-      "storageClass": "nfs",
-      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
-      "gpuNodeSelectorValue": "true",
-      "dynamoPlatform": {
-        "releaseVersion": "0.9.0-post1",
-        "namespace": "dynamo-system",
-        "groveEnabled": true,
-        "kaiSchedulerEnabled": true
-      }
-    }
-  },
   "demo": {
     "components": [
       { "category": "llm-model", "component": "vllm" },
@@ -99,7 +55,15 @@
         { "name": "qwen3-8b-fp8", "deploy": false }
       ]
     },
-    "ollama": { "models": ["qwen3:32b", "qwen3:30b", "gemma3:27b", "deepseek-r1:8b", "nomic-embed-text:v1.5"] }
+    "ollama": {
+      "models": [
+        "qwen3:32b",
+        "qwen3:30b",
+        "gemma3:27b",
+        "deepseek-r1:8b",
+        "nomic-embed-text:v1.5"
+      ]
+    }
   },
   "embedding-model": {
     "tei": {
@@ -188,6 +152,50 @@
       "dockerhub_access_token": "",
       "github_username": "",
       "github_token": ""
+    }
+  },
+  "platform": {
+    "monitoring": {
+      "grafanaAdminPassword": "admin",
+      "retention": "7d",
+      "enablePersistentStorage": false,
+      "prometheusStorageSize": "50Gi",
+      "alertmanagerEnabled": false
+    },
+    "type": "eks",
+    "eks": {
+      "storageClass": "efs",
+      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
+      "gpuNodeSelectorValue": "true",
+      "gpuOperator": {
+        "driverEnabled": false,
+        "toolkitEnabled": false,
+        "devicePluginEnabled": false,
+        "gfdEnabled": true,
+        "dcgmExporterEnabled": true,
+        "gdsEnabled": true,
+        "nfdEnabled": false,
+        "migManagerEnabled": false,
+        "useAMP": false,
+        "ampWorkspaceId": ""
+      },
+      "dynamoPlatform": {
+        "releaseVersion": "0.9.1",
+        "namespace": "dynamo-system",
+        "groveEnabled": true,
+        "kaiSchedulerEnabled": true
+      }
+    },
+    "k8s": {
+      "storageClass": "nfs",
+      "gpuNodeSelectorKey": "nvidia.com/gpu.present",
+      "gpuNodeSelectorValue": "true",
+      "dynamoPlatform": {
+        "releaseVersion": "0.9.0-post1",
+        "namespace": "dynamo-system",
+        "groveEnabled": true,
+        "kaiSchedulerEnabled": true
+      }
     }
   }
 }
