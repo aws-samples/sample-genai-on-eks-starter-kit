@@ -93,6 +93,30 @@ This command will:
 
 Note. Unlike the quick demo setup, the selected components and examples may not be deployed in the required order. Some components/examples might need to be refreshed by running the CLI install command again.
 
+## NVIDIA Dynamo Platform Setup
+
+This starter kit supports deploying [NVIDIA Dynamo](https://developer.nvidia.com/dynamo) for optimized LLM inference on Amazon EKS.
+
+### Quick Start
+
+1. Install components in order:
+
+```bash
+./cli nvidia-platform monitoring install      # Prometheus + Grafana
+./cli nvidia-platform gpu-operator install     # NVIDIA GPU Operator
+./cli nvidia-platform dynamo-platform install  # Dynamo CRDs, Operator, etcd, NATS
+./cli nvidia-platform dynamo-vllm install      # Deploy a model with vLLM
+```
+
+2. Optionally run benchmarks and auto-configuration:
+
+```bash
+./cli nvidia-platform benchmark install       # AIPerf concurrency sweep
+./cli nvidia-platform aiconfigurator install   # TP/PP recommendation + SLA deploy
+```
+
+For full details on platform prerequisites, deployment modes (aggregated vs disaggregated), KV cache routing, monitoring dashboards, benchmarking, and AIConfigurator, see the [NVIDIA Platform README](components/nvidia-platform/README.md).
+
 ## Components & Examples Management
 
 You can install or uninstall individual components/examples using the CLI:
