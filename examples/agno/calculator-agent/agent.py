@@ -6,9 +6,8 @@ from agno.agent import Agent
 from agno.models.aws import AwsBedrock
 from agno.models.openai.like import OpenAILike
 from agno.tools.mcp import MCPTools
-from agno.memory.v2.db.sqlite import SqliteMemoryDb
-from agno.memory.v2.memory import Memory
-from agno.storage.sqlite import SqliteStorage
+from agno.memory import MemoryManager
+from agno.db.sqlite import SqliteDb
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -73,20 +72,19 @@ async def startup_event():
     )
     await mcp_tools.__aenter__()
     db_file = "tmp/agent.db"
-    memory = Memory(
+    memory_manager = MemoryManager(
         model=model,
-        db=SqliteMemoryDb(table_name="user_memories", db_file=db_file),
+        db=SqliteDb(db_file=db_file, memory_table="user_memories"),
     )
-    storage = SqliteStorage(table_name="agent_sessions", db_file=db_file)
+    db = SqliteDb(db_file=db_file, session_table="agent_sessions")
     agent = Agent(
         model=model,
         system_message=system_prompt,
         tools=[mcp_tools],
-        memory=memory,
+        memory_manager=memory_manager,
         enable_agentic_memory=True,
-        enable_user_memories=True,
-        storage=storage,
-        add_history_to_messages=True,
+        db=db,
+        add_history_to_context=True,
         num_history_runs=3,
     )
 
