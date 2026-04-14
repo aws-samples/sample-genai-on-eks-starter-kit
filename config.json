@@ -49,6 +49,7 @@
       { "category": "o11y", "component": "langfuse" },
       { "category": "gui-app", "component": "openwebui" },
       { "category": "vector-database", "component": "qdrant" },
+      { "category": "vector-database", "component": "milvus" },
       { "category": "embedding-model", "component": "tei" },
       { "category": "ai-gateway", "component": "litellm" }
     ],
