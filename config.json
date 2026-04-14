@@ -8,7 +8,8 @@
       { "category": "vector-database", "component": "milvus" },
       { "category": "embedding-model", "component": "tei" },
       { "category": "ai-gateway", "component": "litellm" },
-      { "category": "o11y", "component": "amp-amg" }
+      { "category": "o11y", "component": "amp-amg" },
+      { "category": "security", "component": "external-secrets" }
     ],
     "examples": [
       { "category": "mcp-server", "example": "calculator" },
