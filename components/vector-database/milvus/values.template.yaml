@@ -30,16 +30,19 @@ etcd:
 
 minio:
   enabled: false
-  externalS3:
-    enabled: true
-    host: "s3.{{AWS_REGION}}.amazonaws.com"
-    port: "443"
-    useSSL: true
-    bucketName: "{{MILVUS_BUCKET_NAME}}"
-    rootPath: "milvus"
-    useIAM: true
-    cloudProvider: "aws"
-    region: "{{AWS_REGION}}"
+  tls:
+    enabled: false
+
+externalS3:
+  enabled: true
+  host: "s3.{{AWS_REGION}}.amazonaws.com"
+  port: "443"
+  useSSL: true
+  bucketName: "{{MILVUS_BUCKET_NAME}}"
+  rootPath: "milvus"
+  useIAM: true
+  cloudProvider: "aws"
+  region: "{{AWS_REGION}}"
 
 pulsarv3:
   components:
