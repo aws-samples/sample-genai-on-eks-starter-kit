@@ -42,7 +42,8 @@
       "components": [
         { "dir": "langfuse", "name": "Langfuse" },
         { "dir": "mlflow", "name": "MLflow" },
-        { "dir": "phoenix", "name": "Phoenix" }
+        { "dir": "phoenix", "name": "Phoenix" },
+        { "dir": "amp-amg", "name": "Amazon Managed Prometheus & Grafana (AMP/AMG)" }
       ]
     },
     { "dir": "gui-app", "name": "GUI App", "components": [{ "dir": "openwebui", "name": "Open WebUI" }] },
@@ -56,7 +57,8 @@
       ]
     },
     { "dir": "workflow-automation", "name": "Workflow Automation", "components": [{ "dir": "n8n", "name": "n8n" }] },
-    { "dir": "ai-agent", "name": "AI Agent", "components": [{ "dir": "openclaw", "name": "OpenClaw" }] }
+    { "dir": "ai-agent", "name": "AI Agent", "components": [{ "dir": "openclaw", "name": "OpenClaw" }] },
+    { "dir": "security", "name": "Security", "components": [{ "dir": "external-secrets", "name": "External Secrets Operator" }] }
   ],
   "exampleCategories": [
     { "dir": "mcp-server", "name": "MCP Server", "examples": [{ "dir": "calculator", "name": "Calculator" }] },
