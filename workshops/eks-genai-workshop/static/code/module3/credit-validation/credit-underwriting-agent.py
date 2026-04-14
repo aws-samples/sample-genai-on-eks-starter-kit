@@ -68,7 +68,10 @@ if LANGFUSE_AVAILABLE:
         os.environ["LANGFUSE_PUBLIC_KEY"] = local_public_key
         
         try:
-            langfuse_handler = CallbackHandler()
+            langfuse_handler = CallbackHandler(
+                session_id="loan-buddy",
+                tags=["loan-processing", "agent", "langgraph"],
+            )
             logger.info("Langfuse tracing enabled")
         except Exception as e:
             logger.info(f"Warning: Could not initialize Langfuse: {e}")
