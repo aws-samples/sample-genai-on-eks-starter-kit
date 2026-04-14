@@ -22,31 +22,18 @@ config:
                 namespaces:
                   names: ["vllm"]
             relabel_configs:
-              - source_labels: [__meta_kubernetes_pod_container_port_number]
+              - source_labels: [__meta_kubernetes_pod_phase]
                 action: keep
-                regex: "8000"
-              - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_container_port_number]
-                separator: ":"
+                regex: Running
+              - source_labels: [__meta_kubernetes_pod_ip]
+                action: replace
+                regex: (.+)
+                replacement: "$$1:8000"
                 target_label: __address__
               - source_labels: [__meta_kubernetes_pod_name]
                 target_label: pod
               - source_labels: [__meta_kubernetes_namespace]
                 target_label: namespace
-          # LiteLLM metrics
-          - job_name: "litellm"
-            kubernetes_sd_configs:
-              - role: pod
-                namespaces:
-                  names: ["litellm"]
-            relabel_configs:
-              - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
-                action: keep
-                regex: litellm
-              - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_container_port_number]
-                separator: ":"
-                target_label: __address__
-              - source_labels: [__meta_kubernetes_pod_name]
-                target_label: pod
           # Kubernetes node metrics
           - job_name: "kubernetes-nodes"
             scheme: https

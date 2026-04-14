@@ -46,7 +46,7 @@ export async function install() {
   // Step 2: Add ADOT Helm repo and deploy collector
   console.log("\n[2/3] Deploying ADOT Collector...");
   await $`helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update`;
-  await $`helm repo update`;
+  await $`helm repo update open-telemetry`;
 
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
