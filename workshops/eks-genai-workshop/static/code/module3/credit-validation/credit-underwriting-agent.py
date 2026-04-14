@@ -68,10 +68,7 @@ if LANGFUSE_AVAILABLE:
         os.environ["LANGFUSE_PUBLIC_KEY"] = local_public_key
         
         try:
-            langfuse_handler = CallbackHandler(
-                session_id="loan-buddy",
-                tags=["loan-processing", "agent", "langgraph"],
-            )
+            langfuse_handler = CallbackHandler()
             logger.info("Langfuse tracing enabled")
         except Exception as e:
             logger.info(f"Warning: Could not initialize Langfuse: {e}")
@@ -195,6 +192,8 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
         graph = graph.with_config({
             "run_name": "credit_underwriting_agent_with_image_id",
             "callbacks": callbacks,
+            "tags": ["loan-processing", "agent", "langgraph"],
+            "metadata": {"langfuse_session_id": "loan-buddy"},
             "recursion_limit": 20,
         })
         
