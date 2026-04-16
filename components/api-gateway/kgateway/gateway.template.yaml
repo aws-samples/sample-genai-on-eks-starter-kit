@@ -3,23 +3,21 @@ kind: Gateway
 metadata:
   name: main-gateway
   namespace: kgateway-system
+  annotations:
+    networking.istio.io/service-type: LoadBalancer
 spec:
   gatewayClassName: kgateway
+  infrastructure:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+      service.beta.kubernetes.io/aws-load-balancer-type: external
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+      service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "{{{ACM_CERT_ARN}}}"
+      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
   listeners:
   - name: https
-    protocol: HTTPS
-    port: 443
-    hostname: "*.{{{DOMAIN}}}"
-    allowedRoutes:
-      namespaces:
-        from: All
-    tls:
-      mode: Terminate
-      certificateRefs:
-      - name: wildcard-tls
-  - name: http
     protocol: HTTP
-    port: 80
+    port: 443
     hostname: "*.{{{DOMAIN}}}"
     allowedRoutes:
       namespaces:
