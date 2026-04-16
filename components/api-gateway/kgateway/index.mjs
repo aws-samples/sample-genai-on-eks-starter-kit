@@ -57,8 +57,61 @@ export async function install() {
 
   console.log("  kGateway installed");
 
-  // Step 3: Apply Gateway resource
-  console.log("\n[3/5] Creating Gateway resource...");
+  // Step 3: Provision TLS certificate (cert-manager + Let's Encrypt)
+  console.log("\n[3/6] Provisioning TLS certificate...");
+  try {
+    await $`kubectl get namespace cert-manager`.quiet();
+    console.log("  cert-manager already installed");
+  } catch {
+    console.log("  Installing cert-manager...");
+    await $`kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml`;
+    await $`kubectl wait --for=condition=Ready pods --all -n cert-manager --timeout=120s`;
+  }
+
+  // Create ClusterIssuer + Certificate if not exists
+  try {
+    await $`kubectl get certificate wildcard-tls -n ${NAMESPACE}`.quiet();
+    console.log("  Wildcard TLS certificate already exists");
+  } catch {
+    console.log("  Creating Let's Encrypt ClusterIssuer + wildcard certificate...");
+    const certYaml = `
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@${process.env.DOMAIN}
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+    - dns01:
+        route53:
+          region: ${process.env.REGION}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-tls
+  namespace: ${NAMESPACE}
+spec:
+  secretName: wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+  - "*.${process.env.DOMAIN}"
+  - "${process.env.DOMAIN}"
+`;
+    await $`echo ${certYaml} | kubectl apply -f -`;
+    console.log("  Waiting for certificate issuance (DNS-01 challenge)...");
+    await $`kubectl wait --for=condition=Ready certificate/wildcard-tls -n ${NAMESPACE} --timeout=300s`;
+    console.log("  TLS certificate issued");
+  }
+
+  // Step 4: Apply Gateway resource
+  console.log("\n[4/6] Creating Gateway resource...");
   const gatewayTemplatePath = path.join(DIR, "gateway.template.yaml");
   const gatewayRenderedPath = path.join(DIR, "gateway.rendered.yaml");
   utils.renderTemplate(gatewayTemplatePath, gatewayRenderedPath, {
@@ -66,8 +119,8 @@ export async function install() {
   });
   await $`kubectl apply -f ${gatewayRenderedPath}`;
 
-  // Step 4: Apply HTTPRoutes + ReferenceGrants
-  console.log("\n[4/5] Creating HTTPRoutes...");
+  // Step 5: Apply HTTPRoutes + ReferenceGrants
+  console.log("\n[5/6] Creating HTTPRoutes...");
   const routesTemplatePath = path.join(DIR, "httproutes.template.yaml");
   const routesRenderedPath = path.join(DIR, "httproutes.rendered.yaml");
   utils.renderTemplate(routesTemplatePath, routesRenderedPath, {
@@ -94,9 +147,9 @@ spec:
 `;
   await $`echo ${wsPolicy} | kubectl apply -f -`;
 
-  // Step 5: Apply OIDC auth (if configured)
+  // Step 6: Apply OIDC auth (if configured)
   if (process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET) {
-    console.log("\n[5/5] Configuring OIDC authentication...");
+    console.log("\n[6/6] Configuring OIDC authentication...");
     const secretTemplatePath = path.join(DIR, "secret.template.yaml");
     const secretRenderedPath = path.join(DIR, "secret.rendered.yaml");
     utils.renderTemplate(secretTemplatePath, secretRenderedPath, {
@@ -110,7 +163,7 @@ spec:
     await $`kubectl apply -f ${policyRenderedPath}`;
     console.log("  OIDC ext_authz TrafficPolicy applied");
   } else {
-    console.log("\n[5/5] OIDC not configured — skipping auth policy");
+    console.log("\n[6/6] OIDC not configured — skipping auth policy");
     console.log("  Set OIDC_CLIENT_ID, OIDC_CLIENT_SECRET in .env.local to enable");
   }
 
@@ -145,6 +198,8 @@ export async function uninstall() {
   console.log("\nUninstalling kGateway...");
 
   // Remove K8s resources
+  await $`kubectl delete httplistenerpolicy enable-websocket -n ${NAMESPACE} --ignore-not-found`;
+  await $`kubectl delete trafficpolicy increase-timeout -n ${NAMESPACE} --ignore-not-found`;
   const renderedFiles = ["traffic-policy", "secret", "httproutes", "gateway"];
   for (const f of renderedFiles) {
     const renderedPath = path.join(DIR, `${f}.rendered.yaml`);

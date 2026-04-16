@@ -53,7 +53,7 @@ provider "aws" {
 # Look up the NLB created by kGateway Service
 data "aws_lb" "kgateway_nlb" {
   tags = {
-    "service.k8s.aws/stack" = "gloo-system/main-gateway"
+    "service.k8s.aws/stack" = "kgateway-system/main-gateway"
   }
 }
 

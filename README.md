@@ -14,7 +14,8 @@ The starter kit includes the configurable components and examples from several c
 - Session Store - [Redis](https://redis.io) (OAuth2 + OpenWebUI session management)
 - Workflow Automation - [n8n](https://docs.n8n.io)
 - AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
-- Security - [External Secrets Operator](https://external-secrets.io), [IAM Identity Center](https://aws.amazon.com/iam/identity-center/) (OIDC SSO)
+- Auth - [Keycloak](https://www.keycloak.org/) (OIDC Provider)
+- Security - [External Secrets Operator](https://external-secrets.io)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
 - AI Agent Framework - [Strands Agents](https://strandsagents.com), [Agno](https://docs.agno.com)
 
@@ -77,39 +78,37 @@ This command uses a **2-pass install** to automatically handle OIDC configuratio
   4.  tei                   (Text embedding - Qwen3 Embedding)
   5.  litellm               (AI Gateway - model routing)
   6.  redis                 (Session store)
-  7.  external-secrets      (K8s secret management)
-  8.  iam-identity-center   (OIDC app + groups → auto-saved to config.local.json)
+  7.  keycloak              (OIDC provider → auto-generates client credentials)
+  8.  external-secrets      (K8s secret management)
   9.  openwebui             (Chat UI)
   10. amp-amg               (Monitoring - Prometheus + Grafana)
 
-  ↓ config.local.json reloaded (OIDC_CLIENT_ID, OIDC_ISSUER_URL auto-populated)
+  ↓ .env.local reloaded (OIDC_CLIENT_ID, OIDC_ISSUER_URL auto-populated by Keycloak)
   ↓ OIDC_COOKIE_SECRET auto-generated
 
 === Pass 2: API Gateway + Auth (OIDC-dependent) ===
   11. oauth2-proxy          (OIDC authentication + Redis sessions)
-  12. kgateway              (Unified routing + CloudFront/WAF/Shield)
+  12. kgateway              (TLS termination + unified routing)
 
 === Examples ===
   13. calculator MCP Server
   14. calculator-agent      (Strands Agents)
-  15. code-review-agent     (RAG: TEI → Qdrant → LLM review)
+  15. code-review MCP Server (RAG: TEI → Qdrant → LLM review)
 
 === Post-install ===
   16. LiteLLM Team RBAC     (auto-configured)
 ```
 
-All OIDC credentials (`OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_ISSUER_URL`) are **auto-generated** by IAM Identity Center install and saved to `.env.local`. No manual setup required.
-
-After demo-setup, the only manual step is **assigning users to groups** (`senior-dev`, `junior-dev`) in the IAM Identity Center console.
+All OIDC credentials (`OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_ISSUER_URL`) are **auto-generated** by Keycloak install and saved to `.env.local`. No manual setup required.
 
 #### Demo Architecture
 
 ```
-CloudFront (WAF) → Shield → NLB → kGateway (unified routing)
-  → OAuth2-Proxy (OIDC + Redis session) → IAM Identity Center
+NLB → kGateway (TLS termination + unified routing)
+  → OAuth2-Proxy (OIDC + Redis session) → Keycloak
   → x-user-email, x-user-groups headers injected
   → OpenWebUI, LiteLLM (team RBAC), Langfuse, Qdrant
-  → Code Review Agent (RAG: TEI embedding → Qdrant → LLM review)
+  → Code Review MCP Server (RAG: TEI embedding → Qdrant → LLM review)
 ```
 
 #### Code Review Agent (RAG Example)
@@ -122,7 +121,7 @@ The demo includes a Code Review Agent that demonstrates the full RAG lifecycle:
 
 #### RBAC (Role-Based Access Control)
 
-Users authenticate via IAM Identity Center SSO. User groups map to LiteLLM teams with different model access:
+Users authenticate via Keycloak OIDC. User groups map to LiteLLM teams with different model access:
 - `senior-dev` group → access to all models
 - `junior-dev` group → access to limited models
 
@@ -223,15 +222,6 @@ You can install or uninstall individual components/examples using the CLI:
 ```
 
 Creates teams with model access groups and generates team API keys. Teams are configured in `config.json` under `litellm.rbac.teams`.
-
-#### Setup IAM Identity Center (OIDC SSO)
-
-```bash
-./cli security iam-identity-center install
-./cli security iam-identity-center uninstall
-```
-
-Provisions OIDC application and user groups (senior-dev, junior-dev) via Terraform. OIDC config is automatically saved to `config.local.json`.
 
 ## LLM/Embedding Model Management
 
@@ -350,8 +340,8 @@ kGateway uses OAuth2-Proxy for OIDC authentication with Redis-backed sessions an
 
 LiteLLM Team RBAC restricts which models each user group can access:
 
-1. IAM Identity Center defines user groups (`senior-dev`, `junior-dev`)
-2. Users authenticate via OIDC SSO through kGateway + OAuth2-Proxy
+1. Keycloak defines user groups (`senior-dev`, `junior-dev`)
+2. Users authenticate via Keycloak OIDC through kGateway + OAuth2-Proxy
 3. `x-user-groups` header is forwarded to LiteLLM
 4. LiteLLM maps groups to teams with allowed model lists
 5. Requests to unauthorized models return 400 error
