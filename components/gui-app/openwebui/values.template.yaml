@@ -23,7 +23,7 @@ extraEnvVars:
   - name: ENABLE_OPENAI_API
     value: "true"
   - name: ENABLE_STREAMING_CHAT_COMPLETION
-    value: "false"
+    value: "true"
   - name: WEBUI_ADMIN_EMAIL
     value: {{{OPENWEBUI_ADMIN_EMAIL}}}
   - name: WEBUI_ADMIN_PASSWORD

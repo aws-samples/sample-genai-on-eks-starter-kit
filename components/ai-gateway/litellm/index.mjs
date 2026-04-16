@@ -35,8 +35,8 @@ export async function install() {
   const integration = { "llm-model": {}, "embedding-model": {}, "mcp-servers": [], o11y: {}, guardrail: {} };
   integration["bedrock"] = {
     region: config["bedrock"]["region"],
-    llm: config["bedrock"]["llm"]["models"],
-    embedding: config["bedrock"]["embedding"]["models"],
+    llm: config["bedrock"]["llm"]["models"].filter((m) => m.deploy !== false),
+    embedding: config["bedrock"]["embedding"]["models"].filter((m) => m.deploy !== false),
   };
   for (const [key, value] of Object.entries(config["llm-model"])) {
     integration["llm-model"][key] = {};
@@ -86,7 +86,8 @@ export async function install() {
         .split("\n")
         .filter((name) => name.trim());
       for (const serviceName of serviceNames) {
-        integration["mcp-servers"].push(serviceName.trim());
+        const name = serviceName.trim();
+        integration["mcp-servers"].push({ name, alias: name.replace(/-/g, "_") });
       }
     }
   } catch {

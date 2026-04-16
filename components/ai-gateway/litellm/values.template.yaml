@@ -124,8 +124,12 @@ proxy_config:
     - model_name: bedrock/{{{name}}}
       litellm_params:
         model: bedrock/{{{model}}}
+        {{#if region}}
+        aws_region_name: {{{region}}}
+        {{else}}
         {{#if @root.integration.bedrock.region}}
         aws_region_name: {{{@root.integration.bedrock.region}}}
+        {{/if}}
         {{/if}}
       model_info:
         access_groups: ["all-models"]
@@ -191,8 +195,8 @@ proxy_config:
   {{#if integration.mcp-servers.length}}
   mcp_servers:
     {{#each integration.mcp-servers}}
-    {{this}}:
-      url: "http://{{this}}.mcp-server:8000/mcp"
+    {{this.alias}}:
+      url: "http://{{this.name}}.mcp-server:8000/mcp"
       transport: "http"
       auth_type: "api_key"
       spec_version: "2025-03-26"
