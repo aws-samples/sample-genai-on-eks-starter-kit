@@ -41,6 +41,7 @@ export async function install() {
   await $`helm repo update bitnami`;
   await $`helm upgrade --install keycloak-postgresql bitnami/postgresql \
     --namespace ${NAMESPACE} \
+    --set global.security.allowInsecureImages=true \
     --set image.registry=public.ecr.aws \
     --set image.repository=agentic-ai-platforms-on-k8s/postgresql \
     --set image.tag=17.5.0-debian-12-r8 \
