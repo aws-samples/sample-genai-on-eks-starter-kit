@@ -1,0 +1,29 @@
+auth:
+  adminUser: {{{KEYCLOAK_ADMIN_USER}}}
+  adminPassword: {{{KEYCLOAK_ADMIN_PASSWORD}}}
+
+production: false
+proxy: edge
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    memory: 1Gi
+
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: keycloak-pg-pass
+    database: keycloak
+  primary:
+    resources:
+      requests:
+        cpu: 125m
+        memory: 256Mi
+      limits:
+        memory: 256Mi
+
+ingress:
+  enabled: false

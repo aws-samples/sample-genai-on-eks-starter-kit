@@ -67,6 +67,7 @@
     { "dir": "workflow-automation", "name": "Workflow Automation", "components": [{ "dir": "n8n", "name": "n8n" }] },
     { "dir": "ai-agent", "name": "AI Agent", "components": [{ "dir": "openclaw", "name": "OpenClaw" }] },
     { "dir": "session-store", "name": "Session Store", "components": [{ "dir": "redis", "name": "Redis" }] },
+    { "dir": "auth", "name": "Auth", "components": [{ "dir": "keycloak", "name": "Keycloak" }] },
     {
       "dir": "security",
       "name": "Security",

@@ -1,3 +1,34 @@
+# Keycloak (OIDC Provider)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak
+  namespace: kgateway-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "keycloak.{{{DOMAIN}}}"
+  rules:
+  - backendRefs:
+    - name: keycloak
+      namespace: keycloak
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: keycloak
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service
+---
 # OAuth2-Proxy routes (must be accessible without auth)
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
