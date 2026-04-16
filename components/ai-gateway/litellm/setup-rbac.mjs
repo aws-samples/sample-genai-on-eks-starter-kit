@@ -14,22 +14,21 @@
 import { $ } from "zx";
 $.verbose = true;
 
-const LITELLM_BASE_URL = "http://litellm.litellm:4000";
-const LITELLM_POD_SELECTOR = "app.kubernetes.io/name=litellm";
+const LOCAL_PORT = 14000;
 
 async function litellmAPI(method, path, body) {
   const apiKey = process.env.LITELLM_API_KEY;
   const curlArgs = [
     "-sf",
     "-X", method,
-    `${LITELLM_BASE_URL}${path}`,
+    `http://localhost:${LOCAL_PORT}${path}`,
     "-H", "Content-Type: application/json",
     "-H", `Authorization: Bearer ${apiKey}`,
   ];
   if (body) {
     curlArgs.push("-d", JSON.stringify(body));
   }
-  const result = await $`kubectl exec -n litellm deploy/litellm -- curl ${curlArgs}`.quiet();
+  const result = await $`curl ${curlArgs}`.quiet();
   return JSON.parse(result.stdout);
 }
 
@@ -37,6 +36,10 @@ export async function setupRBAC(config) {
   console.log("\n========================================");
   console.log("Setting up LiteLLM Team RBAC");
   console.log("========================================\n");
+
+  // Start port-forward in background
+  const pf = $`kubectl port-forward -n litellm svc/litellm ${LOCAL_PORT}:4000`.quiet().nothrow();
+  await new Promise((r) => setTimeout(r, 3000));
 
   const rbacConfig = config?.litellm?.rbac;
   if (!rbacConfig || !rbacConfig.teams) {
@@ -56,30 +59,34 @@ export async function setupRBAC(config) {
     },
   ];
 
-  for (const team of teams) {
-    console.log(`\nCreating team: ${team.alias}`);
-    console.log(`  Models: ${team.models.join(", ")}`);
+  try {
+    for (const team of teams) {
+      console.log(`\nCreating team: ${team.alias}`);
+      console.log(`  Models: ${team.models.join(", ")}`);
 
-    try {
-      const teamResult = await litellmAPI("POST", "/team/new", {
-        team_alias: team.alias,
-        models: team.models,
-        metadata: { description: team.description || "" },
-      });
-      console.log(`  Team ID: ${teamResult.team_id}`);
+      try {
+        const teamResult = await litellmAPI("POST", "/team/new", {
+          team_alias: team.alias,
+          models: team.models,
+          metadata: { description: team.description || "" },
+        });
+        console.log(`  Team ID: ${teamResult.team_id}`);
 
-      // Generate API key for the team
-      const keyResult = await litellmAPI("POST", "/key/generate", {
-        team_id: teamResult.team_id,
-        key_alias: `${team.alias}-key`,
-        duration: "365d",
-      });
-      console.log(`  API Key: ${keyResult.key}`);
-      console.log(`  Expires: ${keyResult.expires}`);
-    } catch (error) {
-      console.warn(`  Warning: Could not create team '${team.alias}': ${error.message}`);
-      console.warn("  Team may already exist. Use LiteLLM UI to manage existing teams.");
+        // Generate API key for the team
+        const keyResult = await litellmAPI("POST", "/key/generate", {
+          team_id: teamResult.team_id,
+          key_alias: `${team.alias}-key`,
+          duration: "365d",
+        });
+        console.log(`  API Key: ${keyResult.key}`);
+        console.log(`  Expires: ${keyResult.expires}`);
+      } catch (error) {
+        console.warn(`  Warning: Could not create team '${team.alias}': ${error.message}`);
+        console.warn("  Team may already exist. Use LiteLLM UI to manage existing teams.");
+      }
     }
+  } finally {
+    pf.kill();
   }
 
   console.log("\n========================================");
@@ -87,7 +94,7 @@ export async function setupRBAC(config) {
   console.log("========================================");
   console.log("\nTo test model access control:");
   console.log("  curl -H 'Authorization: Bearer <team-key>' \\");
-  console.log(`    ${LITELLM_BASE_URL}/v1/chat/completions \\`);
+  console.log("    http://litellm.litellm:4000/v1/chat/completions \\");
   console.log('    -d \'{"model": "vllm/qwen3-30b-instruct-fp8", "messages": [{"role": "user", "content": "hello"}]}\'');
   console.log("\nNote: junior-dev team key will be rejected for models not in their allowed list.");
 }

@@ -66,6 +66,16 @@ export async function install() {
     console.log("  Installing cert-manager...");
     await $`kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml`;
     await $`kubectl wait --for=condition=Ready pods --all -n cert-manager --timeout=120s`;
+    // Wait for webhook to be fully ready (self-signed CA needs time to propagate)
+    console.log("  Waiting for cert-manager webhook to be ready...");
+    for (let i = 0; i < 12; i++) {
+      try {
+        await $`kubectl get clusterissuers 2>/dev/null`.quiet();
+        break;
+      } catch {
+        await new Promise((r) => setTimeout(r, 10000));
+      }
+    }
     console.log("  cert-manager installed (Pod Identity configured via Terraform)");
   }
 
