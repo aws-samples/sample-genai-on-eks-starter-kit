@@ -1,3 +1,8 @@
+image:
+  registry: quay.io
+  repository: keycloak/keycloak
+  tag: 26.3
+
 auth:
   adminUser: {{{KEYCLOAK_ADMIN_USER}}}
   adminPassword: {{{KEYCLOAK_ADMIN_PASSWORD}}}
@@ -14,6 +19,10 @@ resources:
 
 postgresql:
   enabled: true
+  image:
+    registry: public.ecr.aws
+    repository: bitnami/postgresql
+    tag: 17.5.0-debian-12-r8
   auth:
     postgresPassword: keycloak-pg-pass
     database: keycloak
