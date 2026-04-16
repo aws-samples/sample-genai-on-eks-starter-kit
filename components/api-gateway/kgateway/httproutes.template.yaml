@@ -1,0 +1,155 @@
+# OAuth2-Proxy routes (must be accessible without auth)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: oauth2-proxy
+  namespace: gloo-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "auth.{{{DOMAIN}}}"
+  rules:
+  - backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+---
+# OpenWebUI
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: openwebui
+  namespace: gloo-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "openwebui.{{{DOMAIN}}}"
+  rules:
+  - backendRefs:
+    - name: openwebui
+      namespace: openwebui
+      port: 80
+---
+# LiteLLM
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: litellm
+  namespace: gloo-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "litellm.{{{DOMAIN}}}"
+  rules:
+  - backendRefs:
+    - name: litellm
+      namespace: litellm
+      port: 4000
+---
+# Langfuse
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: langfuse
+  namespace: gloo-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "langfuse.{{{DOMAIN}}}"
+  rules:
+  - backendRefs:
+    - name: langfuse-web
+      namespace: langfuse
+      port: 3000
+---
+# Qdrant
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qdrant
+  namespace: gloo-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "qdrant.{{{DOMAIN}}}"
+  rules:
+  - backendRefs:
+    - name: qdrant
+      namespace: qdrant
+      port: 6333
+---
+# ReferenceGrants (allow gloo-system HTTPRoutes to reference services in other namespaces)
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: oauth2-proxy
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: gloo-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: openwebui
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: gloo-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: litellm
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: gloo-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: langfuse
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: gloo-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: qdrant
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: gloo-system
+  to:
+  - group: ""
+    kind: Service

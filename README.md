@@ -4,16 +4,19 @@ A starter kit for deploying and managing GenAI components and examples on Amazon
 
 The starter kit includes the configurable components and examples from several categories:
 
-- AI Gateway - [LiteLLM](https://www.litellm.ai), [Kong AI Gateway OSS](https://github.com/Kong/kong)
+- API Gateway - [kGateway](https://kgateway.dev) (Kubernetes Gateway API + OIDC), [OAuth2 Proxy](https://oauth2-proxy.github.io/oauth2-proxy/)
+- AI Gateway - [LiteLLM](https://www.litellm.ai) (Team RBAC + Model Access Control), [Kong AI Gateway OSS](https://github.com/Kong/kong)
 - LLM Model - [vLLM](https://docs.vllm.ai), [SGLang](https://docs.sglang.ai), [Ollama](https://ollama.com)
 - Embedding Model - [Text Embedding Inference (TEI)](https://huggingface.co/docs/text-embeddings-inference)
-- Observability (o11y) - [Langfuse](https://langfuse.com), [Phoenix](https://phoenix.arize.com)
+- Observability (o11y) - [Langfuse](https://langfuse.com), [Phoenix](https://phoenix.arize.com), AMP/AMG
 - GUI App - [Open WebUI](https://docs.openwebui.com)
 - Vector Database - [Qdrant](https://qdrant.tech), [Chroma](https://docs.trychroma.com), [Milvus](https://milvus.io)
+- Session Store - [Redis](https://redis.io) (OAuth2 + OpenWebUI session management)
 - Workflow Automation - [n8n](https://docs.n8n.io)
 - AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
+- Security - [External Secrets Operator](https://external-secrets.io), [IAM Identity Center](https://aws.amazon.com/iam/identity-center/) (OIDC SSO)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
-- AI Agent Framework - [Strands Agents ](https://strandsagents.com), [Agno](https://docs.agno.com)
+- AI Agent Framework - [Strands Agents](https://strandsagents.com), [Agno](https://docs.agno.com)
 
 ## Prerequisites
 
@@ -64,10 +67,66 @@ To quickly set up a demo environment with infrastructure and essential component
 ./cli demo-setup
 ```
 
-This command will:
+This command uses a **2-pass install** to automatically handle OIDC configuration:
 
-1. Set up the required infrastructure using Terraform (check [Infrastructure Setup](docs/INFRA_SETUP.md) for more information)
-2. Deploy the demo components and examples specified in the config.json file in the right order
+```
+=== Pass 1: Base components ===
+  1.  vllm                  (LLM inference - Qwen3 models)
+  2.  langfuse              (Observability - tracing)
+  3.  qdrant                (Vector database)
+  4.  tei                   (Text embedding - Qwen3 Embedding)
+  5.  litellm               (AI Gateway - model routing)
+  6.  redis                 (Session store)
+  7.  external-secrets      (K8s secret management)
+  8.  iam-identity-center   (OIDC app + groups → auto-saved to config.local.json)
+  9.  openwebui             (Chat UI)
+  10. amp-amg               (Monitoring - Prometheus + Grafana)
+
+  ↓ config.local.json reloaded (OIDC_CLIENT_ID, OIDC_ISSUER_URL auto-populated)
+  ↓ OIDC_COOKIE_SECRET auto-generated
+
+=== Pass 2: API Gateway + Auth (OIDC-dependent) ===
+  11. oauth2-proxy          (OIDC authentication + Redis sessions)
+  12. kgateway              (Unified routing + CloudFront/WAF/Shield)
+
+=== Examples ===
+  13. calculator MCP Server
+  14. calculator-agent      (Strands Agents)
+  15. code-review-agent     (RAG: TEI → Qdrant → LLM review)
+
+=== Post-install ===
+  16. LiteLLM Team RBAC     (auto-configured)
+```
+
+All OIDC credentials (`OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_ISSUER_URL`) are **auto-generated** by IAM Identity Center install and saved to `.env.local`. No manual setup required.
+
+After demo-setup, the only manual step is **assigning users to groups** (`senior-dev`, `junior-dev`) in the IAM Identity Center console.
+
+#### Demo Architecture
+
+```
+CloudFront (WAF) → Shield → NLB → kGateway (unified routing)
+  → OAuth2-Proxy (OIDC + Redis session) → IAM Identity Center
+  → x-user-email, x-user-groups headers injected
+  → OpenWebUI, LiteLLM (team RBAC), Langfuse, Qdrant
+  → Code Review Agent (RAG: TEI embedding → Qdrant → LLM review)
+```
+
+#### Code Review Agent (RAG Example)
+
+The demo includes a Code Review Agent that demonstrates the full RAG lifecycle:
+- Indexes sample Python code into Qdrant using TEI embeddings on startup
+- Users ask code review questions via OpenWebUI
+- Agent retrieves relevant code via vector search and provides reviews using LLM
+- All interactions traced in Langfuse
+
+#### RBAC (Role-Based Access Control)
+
+Users authenticate via IAM Identity Center SSO. User groups map to LiteLLM teams with different model access:
+- `senior-dev` group → access to all models
+- `junior-dev` group → access to limited models
+
+Teams are configured in `config.json` under `litellm.rbac.teams` and automatically provisioned during demo-setup.
 
 Check [Demo Walkthrough](docs/DEMO_WALKTHROUGH.md) on how to setup and use the demo
 
@@ -140,6 +199,39 @@ You can install or uninstall individual components/examples using the CLI:
 # ./cli ai-gateway litellm uninstall
 # ./cli strands-agents calculator-agent uninstall
 ```
+
+### API Gateway & Authentication Management
+
+#### Setup kGateway (unified ingress + CloudFront/WAF)
+
+```bash
+./cli api-gateway kgateway install
+./cli api-gateway kgateway uninstall
+```
+
+#### Setup OAuth2-Proxy (OIDC + Redis sessions)
+
+```bash
+./cli api-gateway oauth2-proxy install
+./cli api-gateway oauth2-proxy uninstall
+```
+
+#### Setup LiteLLM Team RBAC
+
+```bash
+./cli ai-gateway litellm setup-rbac
+```
+
+Creates teams with model access groups and generates team API keys. Teams are configured in `config.json` under `litellm.rbac.teams`.
+
+#### Setup IAM Identity Center (OIDC SSO)
+
+```bash
+./cli security iam-identity-center install
+./cli security iam-identity-center uninstall
+```
+
+Provisions OIDC application and user groups (senior-dev, junior-dev) via Terraform. OIDC config is automatically saved to `config.local.json`.
 
 ## LLM/Embedding Model Management
 
@@ -241,9 +333,36 @@ This command will:
 
 ### How can I use this starter kit without having a Route 53 hosted zone?
 
-With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. litellm.<DOMAIN> and openwebui.<DOMAIN>.
+With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. litellm.\<DOMAIN\> and openwebui.\<DOMAIN\>.
 
-Alternatively, when the `DOMAIN` filed on `.env` (or `.env.local`) is empty, mulitple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
+Alternatively, when the `DOMAIN` field on `.env` (or `.env.local`) is empty, multiple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
+
+### How does kGateway integrate with the existing ingress?
+
+When `kgateway.enabled` is `true` in `config.json` (default), kGateway replaces all individual ALB Ingress resources with a unified Gateway API routing layer:
+
+- **With kGateway**: CloudFront → NLB → kGateway → HTTPRoutes per service (subdomain-based)
+- **Without kGateway** (`kgateway.enabled: false`): Falls back to per-service ALB Ingress (backward compatible)
+
+kGateway uses OAuth2-Proxy for OIDC authentication with Redis-backed sessions and forwards identity headers (`x-user-email`, `x-user-groups`) to upstream services.
+
+### How does the RBAC model access control work?
+
+LiteLLM Team RBAC restricts which models each user group can access:
+
+1. IAM Identity Center defines user groups (`senior-dev`, `junior-dev`)
+2. Users authenticate via OIDC SSO through kGateway + OAuth2-Proxy
+3. `x-user-groups` header is forwarded to LiteLLM
+4. LiteLLM maps groups to teams with allowed model lists
+5. Requests to unauthorized models return 400 error
+
+Configure teams in `config.json` under `litellm.rbac.teams`. Run `./cli ai-gateway litellm setup-rbac` to apply.
+
+### Can I disable CloudFront/WAF/Shield?
+
+Shield Advanced is disabled by default (`kgateway.enableShieldAdvanced: false`) due to cost ($3,000/month). Shield Standard is free and always active.
+
+CloudFront and WAF are provisioned as part of kGateway install. To skip them, install kGateway components individually instead of using `demo-setup`.
 
 ### How can I configure and update the LiteLLM proxy model list?
 

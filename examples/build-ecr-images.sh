@@ -17,6 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXAMPLES=(
     "mcp-server/calculator:mcp-server-calculator"
     "strands-agents/calculator-agent:strands-agents-calculator-agent"
+    "mcp-server/code-review:mcp-server-code-review"
     "agno/calculator-agent:agno-calculator-agent"
     "openclaw/shared:openclaw-bridge-server"
     "openclaw/shared:openclaw-devops-agent:openclaw/devops-agent"

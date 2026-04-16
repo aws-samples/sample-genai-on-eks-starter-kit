@@ -1,0 +1,25 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: oidc-auth
+  namespace: gloo-system
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: main-gateway
+  extAuth:
+    http:
+      backendRef:
+        name: oauth2-proxy
+        namespace: oauth2-proxy
+        port: 80
+      path: /oauth2/auth
+      headersToBackend:
+      - cookie
+      - authorization
+      headersToUpstream:
+      - x-auth-request-email
+      - x-auth-request-groups
+      - x-auth-request-preferred-username
+      - x-auth-request-access-token

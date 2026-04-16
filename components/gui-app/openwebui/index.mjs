@@ -38,6 +38,19 @@ export async function install() {
     OPENWEBUI_ADMIN_EMAIL: process.env.OPENWEBUI_ADMIN_EMAIL,
     OPENWEBUI_ADMIN_PASSWORD: process.env.OPENWEBUI_ADMIN_PASSWORD,
   };
+  // Redis session backend (optional)
+  if (process.env.REDIS_PASSWORD) {
+    valuesVars.REDIS_URL = `redis://:${process.env.REDIS_PASSWORD}@redis-master.redis:6379/0`;
+  }
+  // kGateway mode: disable ingress, use trusted email header from gateway
+  if (config?.kgateway?.enabled) {
+    valuesVars.KGATEWAY_ENABLED = true;
+  } else if (process.env.OIDC_CLIENT_ID) {
+    // Fallback: OIDC SSO directly in OpenWebUI (no gateway)
+    valuesVars.OIDC_CLIENT_ID = process.env.OIDC_CLIENT_ID;
+    valuesVars.OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET;
+    valuesVars.OIDC_ISSUER_URL = process.env.OIDC_ISSUER_URL;
+  }
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install openwebui open-webui/open-webui --version ${OPENWEBUI_CHART_VERSION} --namespace openwebui --create-namespace -f ${valuesRenderedPath}`;
 }

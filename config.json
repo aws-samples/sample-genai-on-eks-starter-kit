@@ -3,17 +3,21 @@
     "components": [
       { "category": "llm-model", "component": "vllm" },
       { "category": "o11y", "component": "langfuse" },
-      { "category": "gui-app", "component": "openwebui" },
       { "category": "vector-database", "component": "qdrant" },
-      { "category": "vector-database", "component": "milvus" },
       { "category": "embedding-model", "component": "tei" },
       { "category": "ai-gateway", "component": "litellm" },
-      { "category": "o11y", "component": "amp-amg" },
-      { "category": "security", "component": "external-secrets" }
+      { "category": "session-store", "component": "redis" },
+      { "category": "security", "component": "external-secrets" },
+      { "category": "security", "component": "iam-identity-center" },
+      { "category": "api-gateway", "component": "oauth2-proxy" },
+      { "category": "api-gateway", "component": "kgateway" },
+      { "category": "gui-app", "component": "openwebui" },
+      { "category": "o11y", "component": "amp-amg" }
     ],
     "examples": [
       { "category": "mcp-server", "example": "calculator" },
-      { "category": "strands-agents", "example": "calculator-agent" }
+      { "category": "strands-agents", "example": "calculator-agent" },
+      { "category": "mcp-server", "example": "code-review" }
     ]
   },
   "llm-model": {
@@ -94,9 +98,32 @@
     },
     "embedding": { "models": [] }
   },
+  "kgateway": {
+    "enabled": true,
+    "enableShieldAdvanced": false,
+    "waf": {
+      "rateLimitPerIP": 2000,
+      "enableGeoRestriction": false,
+      "allowedCountries": []
+    }
+  },
   "litellm": {
     "enableBedrockGuardrail": false,
-    "enableGuardrailsAI": false
+    "enableGuardrailsAI": false,
+    "rbac": {
+      "teams": [
+        {
+          "alias": "senior-dev",
+          "models": ["all-models"],
+          "description": "Senior developers - access to all models"
+        },
+        {
+          "alias": "junior-dev",
+          "models": ["vllm/qwen3-30b-instruct-fp8"],
+          "description": "Junior developers - limited model access"
+        }
+      ]
+    }
   },
   "ai-agent": {
     "openclaw": {
@@ -107,6 +134,15 @@
     }
   },
   "examples": {
+    "mcp-server": {
+      "code-review": {
+        "env": {
+          "TEI_BASE_URL": "http://qwen3-embedding-06b-bf16-cpu.tei:80",
+          "QDRANT_URL": "http://qdrant.qdrant:6333",
+          "QDRANT_COLLECTION": "code-review"
+        }
+      }
+    },
     "agno": {
       "calculator-agent": {
         "env": {

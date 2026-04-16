@@ -13,6 +13,14 @@
       ]
     },
     {
+      "dir": "api-gateway",
+      "name": "API Gateway",
+      "components": [
+        { "dir": "kgateway", "name": "kGateway" },
+        { "dir": "oauth2-proxy", "name": "OAuth2 Proxy" }
+      ]
+    },
+    {
       "dir": "ai-gateway",
       "name": "AI Gateway",
       "components": [
@@ -58,14 +66,31 @@
     },
     { "dir": "workflow-automation", "name": "Workflow Automation", "components": [{ "dir": "n8n", "name": "n8n" }] },
     { "dir": "ai-agent", "name": "AI Agent", "components": [{ "dir": "openclaw", "name": "OpenClaw" }] },
-    { "dir": "security", "name": "Security", "components": [{ "dir": "external-secrets", "name": "External Secrets Operator" }] }
+    { "dir": "session-store", "name": "Session Store", "components": [{ "dir": "redis", "name": "Redis" }] },
+    {
+      "dir": "security",
+      "name": "Security",
+      "components": [
+        { "dir": "external-secrets", "name": "External Secrets Operator" },
+        { "dir": "iam-identity-center", "name": "IAM Identity Center (OIDC)" }
+      ]
+    }
   ],
   "exampleCategories": [
-    { "dir": "mcp-server", "name": "MCP Server", "examples": [{ "dir": "calculator", "name": "Calculator" }] },
+    {
+      "dir": "mcp-server",
+      "name": "MCP Server",
+      "examples": [
+        { "dir": "calculator", "name": "Calculator" },
+        { "dir": "code-review", "name": "Code Review" }
+      ]
+    },
     {
       "dir": "strands-agents",
       "name": "Strands Agents",
-      "examples": [{ "dir": "calculator-agent", "name": "Calculator Agent" }]
+      "examples": [
+        { "dir": "calculator-agent", "name": "Calculator Agent" }
+      ]
     },
     {
       "dir": "agno",

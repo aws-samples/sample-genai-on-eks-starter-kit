@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: code-review
+  namespace: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: code-review
+  template:
+    metadata:
+      labels:
+        app: code-review
+    spec:
+      {{#unless useBuildx}}
+      nodeSelector:
+        kubernetes.io/arch: {{{arch}}}
+      {{/unless}}
+      containers:
+        - name: server
+          image: {{{IMAGE}}}
+          env:
+            - name: TEI_BASE_URL
+              value: "{{{TEI_BASE_URL}}}"
+            - name: QDRANT_URL
+              value: "{{{QDRANT_URL}}}"
+            - name: QDRANT_COLLECTION
+              value: "{{{QDRANT_COLLECTION}}}"
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 250m
+              memory: 768Mi
+            limits:
+              memory: 768Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-review
+  namespace: mcp-server
+spec:
+  selector:
+    app: code-review
+  ports:
+    - name: http
+      port: 8000

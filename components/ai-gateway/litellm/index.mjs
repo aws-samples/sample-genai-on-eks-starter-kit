@@ -40,66 +40,90 @@ export async function install() {
   };
   for (const [key, value] of Object.entries(config["llm-model"])) {
     integration["llm-model"][key] = {};
-    if (key !== "ollama") {
-      for (const model of value.models) {
-        if (model.deploy) {
-          const result = await $`kubectl get pod -n ${key} -l app=${model.name} --ignore-not-found`;
-          if (result.stdout.includes(model.name)) {
-            integration["llm-model"][key][model.name] = true;
+    try {
+      if (key !== "ollama") {
+        for (const model of value.models) {
+          if (model.deploy) {
+            const result = await $`kubectl get pod -n ${key} -l app=${model.name} --ignore-not-found`;
+            if (result.stdout.includes(model.name)) {
+              integration["llm-model"][key][model.name] = true;
+            }
+          }
+        }
+      } else {
+        const result = await $`kubectl get pod -n ollama -l app=ollama --ignore-not-found`;
+        if (result.stdout.includes("ollama")) {
+          for (const model of value.models) {
+            integration["llm-model"][key][model] = true;
           }
         }
       }
-    } else {
-      const result = await $`kubectl get pod -n ollama -l app=ollama --ignore-not-found`;
-      if (result.stdout.includes("ollama")) {
-        for (const model of value.models) {
-          integration["llm-model"][key][model] = true;
-        }
-      }
+    } catch {
+      // namespace may not exist if this component is not installed — skip
     }
   }
   for (const [key, value] of Object.entries(config["embedding-model"])) {
     integration["embedding-model"][key] = {};
-    for (const model of value.models) {
-      if (model.deploy) {
-        const result = await $`kubectl get pod -n ${key} -l app=${model.name} --ignore-not-found`;
-        if (result.stdout.includes(model.name)) {
-          integration["embedding-model"][key][model.name] = true;
+    try {
+      for (const model of value.models) {
+        if (model.deploy) {
+          const result = await $`kubectl get pod -n ${key} -l app=${model.name} --ignore-not-found`;
+          if (result.stdout.includes(model.name)) {
+            integration["embedding-model"][key][model.name] = true;
+          }
         }
       }
+    } catch {
+      // namespace may not exist if this component is not installed — skip
     }
   }
-  const mcpServices =
-    await $`kubectl get services -n mcp-server --no-headers -o custom-columns=":metadata.name" --ignore-not-found`;
-  if (mcpServices.stdout.trim()) {
-    const serviceNames = mcpServices.stdout
-      .trim()
-      .split("\n")
-      .filter((name) => name.trim());
-    for (const serviceName of serviceNames) {
-      integration["mcp-servers"].push(serviceName.trim());
+  try {
+    const mcpServices =
+      await $`kubectl get services -n mcp-server --no-headers -o custom-columns=":metadata.name" --ignore-not-found`;
+    if (mcpServices.stdout.trim()) {
+      const serviceNames = mcpServices.stdout
+        .trim()
+        .split("\n")
+        .filter((name) => name.trim());
+      for (const serviceName of serviceNames) {
+        integration["mcp-servers"].push(serviceName.trim());
+      }
     }
+  } catch {
+    // mcp-server namespace may not exist yet — skip MCP integration
   }
   const callbacks = [],
     successCallback = [],
     failureCallback = [];
-  let result = await $`kubectl get pod -n langfuse -l app=web --ignore-not-found`;
-  if (result.stdout.includes("langfuse")) {
-    integration.o11y.langfuse = true;
-    callbacks.push("langfuse");
-    successCallback.push("langfuse");
-    failureCallback.push("langfuse");
+  try {
+    let result = await $`kubectl get pod -n langfuse -l app=web --ignore-not-found`;
+    if (result.stdout.includes("langfuse")) {
+      integration.o11y.langfuse = true;
+      callbacks.push("langfuse");
+      successCallback.push("langfuse");
+      failureCallback.push("langfuse");
+    }
+  } catch {
+    // langfuse namespace may not exist — skip
   }
-  result = await $`kubectl get pod -n  mlflow -l app=mlflow --ignore-not-found`;
-  if (result.stdout.includes("mlflow")) {
-    integration.o11y.mlflow = true;
-    successCallback.push("mlflow");
-    failureCallback.push("mlflow");
+  try {
+    let result = await $`kubectl get pod -n mlflow -l app=mlflow --ignore-not-found`;
+    if (result.stdout.includes("mlflow")) {
+      integration.o11y.mlflow = true;
+      successCallback.push("mlflow");
+      failureCallback.push("mlflow");
+    }
+  } catch {
+    // mlflow namespace may not exist — skip
   }
-  result = await $`kubectl get pod -n phoenix -l app=phoenix --ignore-not-found`;
-  if (result.stdout.includes("phoenix")) {
-    integration.o11y.phoenix = true;
-    callbacks.push("arize_phoenix");
+  try {
+    let result = await $`kubectl get pod -n phoenix -l app=phoenix --ignore-not-found`;
+    if (result.stdout.includes("phoenix")) {
+      integration.o11y.phoenix = true;
+      callbacks.push("arize_phoenix");
+    }
+  } catch {
+    // phoenix namespace may not exist — skip
   }
   integration.o11y.config = {
     callbacks: JSON.stringify(callbacks),
@@ -124,6 +148,7 @@ export async function install() {
     LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY,
     LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY,
     PHOENIX_API_KEY: process.env.PHOENIX_API_KEY,
+    KGATEWAY_ENABLED: config?.kgateway?.enabled || false,
     integration,
   };
   if (integration.o11y.mlflow) {
@@ -135,6 +160,8 @@ export async function install() {
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
 }
+
+export { setupRBAC } from "./setup-rbac.mjs";
 
 export async function uninstall() {
   await $`helm uninstall litellm --namespace litellm`;

@@ -77,6 +77,7 @@ envVars:
   PHOENIX_COLLECTOR_HTTP_ENDPOINT: http://phoenix-svc.phoenix:6006/v1/traces
   {{/if}}
 
+{{#unless KGATEWAY_ENABLED}}
 ingress:
   enabled: true
   className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
@@ -92,6 +93,10 @@ ingress:
       {{#if DOMAIN}}
       host: litellm.{{{DOMAIN}}}
       {{/if}}
+{{else}}
+ingress:
+  enabled: false
+{{/unless}}
 
 proxy_config:
   general_settings:
@@ -122,6 +127,8 @@ proxy_config:
         {{#if @root.integration.bedrock.region}}
         aws_region_name: {{{@root.integration.bedrock.region}}}
         {{/if}}
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # Bedrock Embedding Models
     {{#each integration.bedrock.embedding}}
@@ -138,6 +145,8 @@ proxy_config:
         model: openai/{{@key}}
         api_key: fake-key
         api_base: http://{{@key}}.vllm:8000/v1
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # SGlang Models
     {{#each integration.llm-model.sglang}}
@@ -146,6 +155,8 @@ proxy_config:
         model: openai/{{@key}}
         api_key: fake-key
         api_base: http://{{@key}}.sglang:30000/v1
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # TGI Models
     {{#each integration.llm-model.tgi}}
@@ -154,6 +165,8 @@ proxy_config:
         model: openai/{{@key}}
         api_key: fake-key
         api_base: http://{{@key}}.tgi:80/v1
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # Ollama Models
     {{#each integration.llm-model.ollama}}
@@ -163,6 +176,8 @@ proxy_config:
         api_key: fake-key
         api_base: http://ollama.ollama:11434
         drop_params: true
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # TEI Models
     {{#each integration.embedding-model.tei}}

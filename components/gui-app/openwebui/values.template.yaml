@@ -1,4 +1,5 @@
 nameOverride: openwebui
+{{#unless KGATEWAY_ENABLED}}
 ingress:
   enabled: true
   annotations:
@@ -9,25 +10,69 @@ ingress:
   {{else}}
   host:
   {{/if}}
+{{else}}
+ingress:
+  enabled: false
+{{/unless}}
 
 # openaiBaseApiUrl: https://litellm.{{{DOMAIN}}}/v1
 openaiBaseApiUrl: http://litellm.litellm:4000/v1
 
+openaiBaseApiKey: {{{LITELLM_API_KEY}}}
+
 extraEnvVars:
-  - name: OPENAI_API_KEY
-    value: {{{LITELLM_API_KEY}}}
   - name: WEBUI_ADMIN_EMAIL
     value: {{{OPENWEBUI_ADMIN_EMAIL}}}
   - name: WEBUI_ADMIN_PASSWORD
     value: {{{OPENWEBUI_ADMIN_PASSWORD}}}
+  {{#if REDIS_URL}}
+  - name: WEBUI_SESSION_COOKIE_SECURE
+    value: "true"
+  - name: WEBUI_SESSION_COOKIE_SAME_SITE
+    value: "lax"
+  {{/if}}
+  {{#if KGATEWAY_ENABLED}}
+  - name: WEBUI_AUTH_TRUSTED_EMAIL_HEADER
+    value: "x-auth-request-email"
+  {{else}}
+  {{#if OIDC_CLIENT_ID}}
+  - name: ENABLE_OAUTH_SIGNUP
+    value: "true"
+  - name: ENABLE_OAUTH_GROUP_MANAGEMENT
+    value: "true"
+  - name: ENABLE_OAUTH_ROLE_MANAGEMENT
+    value: "true"
+  - name: OAUTH_CLIENT_ID
+    value: "{{{OIDC_CLIENT_ID}}}"
+  - name: OAUTH_CLIENT_SECRET
+    value: "{{{OIDC_CLIENT_SECRET}}}"
+  - name: OPENID_PROVIDER_URL
+    value: "{{{OIDC_ISSUER_URL}}}/.well-known/openid-configuration"
+  - name: OAUTH_PROVIDER_NAME
+    value: "AWS SSO"
+  - name: OAUTH_SCOPES
+    value: "openid email profile"
+  - name: OAUTH_GROUPS_CLAIM
+    value: "groups"
+  - name: OAUTH_ADMIN_ROLES
+    value: "admin"
+  {{/if}}
+  {{/if}}
 
 ollama:
   enabled: false
 pipelines:
   enabled: false
 
+{{#if REDIS_URL}}
+redis:
+  enabled: false
+redisUrl: "{{{REDIS_URL}}}"
+{{/if}}
+
 persistence:
   enabled: true
+  storageClass: efs
   size: 100Gi
 
 resources:
