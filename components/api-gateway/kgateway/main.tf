@@ -261,3 +261,52 @@ output "nlb_dns_name" {
 output "waf_web_acl_arn" {
   value = aws_wafv2_web_acl.main.arn
 }
+
+# ─── cert-manager Pod Identity (Route53 DNS-01 challenge) ────────
+variable "hosted_zone_id" {
+  type    = string
+  default = ""
+}
+
+resource "aws_iam_role" "cert_manager" {
+  name = "${var.name}-${var.region}-cert-manager"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "pods.eks.amazonaws.com" }
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "cert_manager_route53" {
+  role = aws_iam_role.cert_manager.name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "route53:GetChange"
+        Resource = "arn:aws:route53:::change/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["route53:ChangeResourceRecordSets", "route53:ListResourceRecordSets"]
+        Resource = var.hosted_zone_id != "" ? "arn:aws:route53:::hostedzone/${var.hosted_zone_id}" : "arn:aws:route53:::hostedzone/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = "route53:ListHostedZonesByName"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_eks_pod_identity_association" "cert_manager" {
+  cluster_name    = var.name
+  namespace       = "cert-manager"
+  service_account = "cert-manager"
+  role_arn        = aws_iam_role.cert_manager.arn
+}
