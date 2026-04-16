@@ -217,6 +217,7 @@ export async function uninstall() {
   // Remove K8s resources
   await $`kubectl delete httplistenerpolicy enable-websocket -n ${NAMESPACE} --ignore-not-found`;
   await $`kubectl delete trafficpolicy increase-timeout -n ${NAMESPACE} --ignore-not-found`;
+  await $`kubectl delete gatewayextension oauth2-proxy-auth -n ${NAMESPACE} --ignore-not-found`;
   const renderedFiles = ["traffic-policy", "secret", "httproutes", "gateway"];
   for (const f of renderedFiles) {
     const renderedPath = path.join(DIR, `${f}.rendered.yaml`);

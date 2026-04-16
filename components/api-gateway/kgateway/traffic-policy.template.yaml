@@ -1,3 +1,28 @@
+# GatewayExtension: OAuth2-Proxy external auth service
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: GatewayExtension
+metadata:
+  name: oauth2-proxy-auth
+  namespace: kgateway-system
+spec:
+  extAuth:
+    httpService:
+      backendRef:
+        name: oauth2-proxy
+        namespace: oauth2-proxy
+        port: 80
+      pathPrefix: /oauth2/auth
+      authorizationResponse:
+        headersToBackend:
+        - x-auth-request-email
+        - x-auth-request-groups
+        - x-auth-request-preferred-username
+        - x-auth-request-access-token
+    headersToForward:
+    - cookie
+    - authorization
+---
+# TrafficPolicy: apply ext auth to all routes via Gateway
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: TrafficPolicy
 metadata:
@@ -9,17 +34,5 @@ spec:
     kind: Gateway
     name: main-gateway
   extAuth:
-    http:
-      backendRef:
-        name: oauth2-proxy
-        namespace: oauth2-proxy
-        port: 80
-      path: /oauth2/auth
-      headersToBackend:
-      - cookie
-      - authorization
-      headersToUpstream:
-      - x-auth-request-email
-      - x-auth-request-groups
-      - x-auth-request-preferred-username
-      - x-auth-request-access-token
+    extensionRef:
+      name: oauth2-proxy-auth
