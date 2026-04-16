@@ -184,3 +184,18 @@ spec:
   to:
   - group: ""
     kind: Service
+---
+# ReferenceGrant for GatewayExtension (ext auth -> oauth2-proxy service)
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-ext-auth
+  namespace: oauth2-proxy
+spec:
+  from:
+  - group: gateway.kgateway.dev
+    kind: GatewayExtension
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service

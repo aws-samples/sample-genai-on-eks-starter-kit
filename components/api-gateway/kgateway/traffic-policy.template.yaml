@@ -36,3 +36,31 @@ spec:
   extAuth:
     extensionRef:
       name: oauth2-proxy-auth
+---
+# Disable auth for Keycloak (OIDC provider must be accessible without auth)
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: no-auth-keycloak
+  namespace: kgateway-system
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: keycloak
+  extAuth:
+    disable: {}
+---
+# Disable auth for OAuth2-Proxy callback endpoints
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: no-auth-oauth2-proxy
+  namespace: kgateway-system
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: oauth2-proxy
+  extAuth:
+    disable: {}
