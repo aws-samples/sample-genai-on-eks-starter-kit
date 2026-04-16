@@ -3,7 +3,6 @@
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
-import handlebars from "handlebars";
 import { $ } from "zx";
 $.verbose = true;
 
@@ -30,36 +29,111 @@ export async function install() {
   console.log("Installing Keycloak (OIDC Provider)");
   console.log("========================================\n");
 
+  const ADMIN_USER = process.env.KEYCLOAK_ADMIN_USER;
+  const ADMIN_PASS = process.env.KEYCLOAK_ADMIN_PASSWORD;
+  const DOMAIN = process.env.DOMAIN;
+
+  await $`kubectl create namespace ${NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -`;
+
+  // Deploy PostgreSQL via Helm (Bitnami standalone)
+  console.log("  Installing PostgreSQL for Keycloak...");
   await $`helm repo add bitnami https://charts.bitnami.com/bitnami --force-update`;
   await $`helm repo update bitnami`;
-
-  const valuesTemplatePath = path.join(DIR, "values.template.yaml");
-  const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
-  const valuesTemplateString = fs.readFileSync(valuesTemplatePath, "utf8");
-  const valuesTemplate = handlebars.compile(valuesTemplateString);
-  const valuesVars = {
-    KEYCLOAK_ADMIN_USER: process.env.KEYCLOAK_ADMIN_USER,
-    KEYCLOAK_ADMIN_PASSWORD: process.env.KEYCLOAK_ADMIN_PASSWORD,
-  };
-  fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
-
-  await $`helm upgrade --install keycloak bitnami/keycloak \
+  await $`helm upgrade --install keycloak-postgresql bitnami/postgresql \
     --namespace ${NAMESPACE} \
-    --create-namespace \
-    -f ${valuesRenderedPath} \
-    --wait --timeout 10m`;
+    --set image.registry=public.ecr.aws \
+    --set image.repository=agentic-ai-platforms-on-k8s/postgresql \
+    --set image.tag=17.5.0-debian-12-r8 \
+    --set auth.postgresPassword=keycloak-pg-pass \
+    --set auth.database=keycloak \
+    --set primary.resources.requests.cpu=125m \
+    --set primary.resources.requests.memory=256Mi \
+    --set primary.resources.limits.memory=256Mi \
+    --wait --timeout 5m`;
 
-  console.log("  Keycloak installed");
+  // Deploy Keycloak using official image (not Bitnami chart)
+  console.log("  Deploying Keycloak...");
+  const kcHostname = DOMAIN ? `https://keycloak.${DOMAIN}` : "";
+  const deployYaml = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: ${NAMESPACE}
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+      - name: keycloak
+        image: quay.io/keycloak/keycloak:26.3
+        args: ["start-dev"]
+        ports:
+        - containerPort: 8080
+        env:
+        - name: KC_BOOTSTRAP_ADMIN_USERNAME
+          value: "${ADMIN_USER}"
+        - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+          value: "${ADMIN_PASS}"
+        - name: KC_DB
+          value: "postgres"
+        - name: KC_DB_URL
+          value: "jdbc:postgresql://keycloak-postgresql.${NAMESPACE}:5432/keycloak"
+        - name: KC_DB_USERNAME
+          value: "postgres"
+        - name: KC_DB_PASSWORD
+          value: "keycloak-pg-pass"
+        - name: KC_PROXY_HEADERS
+          value: "xforwarded"
+        - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
+          value: "true"
+        ${kcHostname ? `- name: KC_HOSTNAME\n          value: "${kcHostname}"` : ""}
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /realms/master
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: ${NAMESPACE}
+spec:
+  selector:
+    app: keycloak
+  ports:
+  - port: 80
+    targetPort: 8080
+`;
+  await $`echo ${deployYaml} | kubectl apply -f -`;
 
   // Wait for Keycloak to be ready
-  await $`kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=keycloak -n ${NAMESPACE} --timeout=300s`;
+  console.log("  Waiting for Keycloak to be ready...");
+  await $`kubectl wait --for=condition=Available deploy/keycloak -n ${NAMESPACE} --timeout=300s`;
+  // Extra wait for readiness probe
+  await $`kubectl wait --for=condition=Ready pod -l app=keycloak -n ${NAMESPACE} --timeout=120s`;
+
+  console.log("  Keycloak deployed");
 
   // Configure realm, client, and groups via Keycloak Admin API
   console.log("\nConfiguring Keycloak realm and OIDC client...");
   const KEYCLOAK_URL = `http://keycloak.${NAMESPACE}:80`;
-  const ADMIN_USER = process.env.KEYCLOAK_ADMIN_USER;
-  const ADMIN_PASS = process.env.KEYCLOAK_ADMIN_PASSWORD;
-  const DOMAIN = process.env.DOMAIN;
   const REALM = "genai";
 
   // Get admin token
@@ -191,7 +265,9 @@ export async function install() {
 export async function uninstall() {
   console.log("\nUninstalling Keycloak...");
   try {
-    await $`helm uninstall keycloak --namespace ${NAMESPACE}`;
+    await $`kubectl delete deploy keycloak -n ${NAMESPACE} --ignore-not-found`;
+    await $`kubectl delete svc keycloak -n ${NAMESPACE} --ignore-not-found`;
+    await $`helm uninstall keycloak-postgresql --namespace ${NAMESPACE}`;
     console.log("Keycloak uninstalled.");
   } catch {
     console.log("Keycloak not found or already removed.");
