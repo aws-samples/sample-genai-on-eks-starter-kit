@@ -17,10 +17,11 @@ ingress:
 
 # openaiBaseApiUrl: https://litellm.{{{DOMAIN}}}/v1
 openaiBaseApiUrl: http://litellm.litellm:4000/v1
+openaiApiKey: "{{{LITELLM_API_KEY}}}"
 
 extraEnvVars:
-  - name: OPENAI_API_KEY
-    value: "{{{LITELLM_API_KEY}}}"
+  - name: ENABLE_OPENAI_API
+    value: "true"
   - name: WEBUI_ADMIN_EMAIL
     value: {{{OPENWEBUI_ADMIN_EMAIL}}}
   - name: WEBUI_ADMIN_PASSWORD
