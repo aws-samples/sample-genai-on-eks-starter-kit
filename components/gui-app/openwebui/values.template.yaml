@@ -22,6 +22,8 @@ openaiApiKey: "{{{LITELLM_API_KEY}}}"
 extraEnvVars:
   - name: ENABLE_OPENAI_API
     value: "true"
+  - name: ENABLE_STREAMING_CHAT_COMPLETION
+    value: "false"
   - name: WEBUI_ADMIN_EMAIL
     value: {{{OPENWEBUI_ADMIN_EMAIL}}}
   - name: WEBUI_ADMIN_PASSWORD

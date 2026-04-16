@@ -1,3 +1,7 @@
+global:
+  security:
+    allowInsecureImages: true
+
 image:
   registry: quay.io
   repository: keycloak/keycloak
@@ -21,7 +25,7 @@ postgresql:
   enabled: true
   image:
     registry: public.ecr.aws
-    repository: bitnami/postgresql
+    repository: agentic-ai-platforms-on-k8s/postgresql
     tag: 17.5.0-debian-12-r8
   auth:
     postgresPassword: keycloak-pg-pass
