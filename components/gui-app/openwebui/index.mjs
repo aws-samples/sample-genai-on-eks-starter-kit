@@ -42,11 +42,21 @@ export async function install() {
   if (process.env.REDIS_PASSWORD) {
     valuesVars.REDIS_URL = `redis://:${process.env.REDIS_PASSWORD}@redis-master.redis:6379/0`;
   }
-  // kGateway mode: disable ingress, use trusted email header from gateway
+  // kGateway mode: disable ingress
   if (config?.kgateway?.enabled) {
     valuesVars.KGATEWAY_ENABLED = true;
-  } else if (process.env.OIDC_CLIENT_ID) {
-    // Fallback: OIDC SSO directly in OpenWebUI (no gateway)
+  }
+  // OIDC: activate trusted email header only when OAuth2-Proxy is running
+  if (config?.kgateway?.enabled && process.env.OIDC_CLIENT_ID) {
+    try {
+      const result = await $`kubectl get pod -n oauth2-proxy -l app.kubernetes.io/name=oauth2-proxy --no-headers --ignore-not-found`.quiet();
+      if (result.stdout.includes("Running")) {
+        valuesVars.OIDC_ACTIVE = true;
+      }
+    } catch {}
+  }
+  // Fallback: OIDC SSO directly in OpenWebUI (no gateway)
+  if (!config?.kgateway?.enabled && process.env.OIDC_CLIENT_ID) {
     valuesVars.OIDC_CLIENT_ID = process.env.OIDC_CLIENT_ID;
     valuesVars.OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET;
     valuesVars.OIDC_ISSUER_URL = process.env.OIDC_ISSUER_URL;

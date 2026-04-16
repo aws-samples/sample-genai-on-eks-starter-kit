@@ -31,7 +31,7 @@ extraEnvVars:
   - name: WEBUI_SESSION_COOKIE_SAME_SITE
     value: "lax"
   {{/if}}
-  {{#if KGATEWAY_ENABLED}}
+  {{#if OIDC_ACTIVE}}
   - name: WEBUI_AUTH_TRUSTED_EMAIL_HEADER
     value: "x-auth-request-email"
   {{else}}
