@@ -14,8 +14,8 @@ let BASE_DIR;
 let config;
 let utils;
 
-const KGATEWAY_VERSION = "2.0.2";
-const NAMESPACE = "gloo-system";
+const KGATEWAY_VERSION = "v2.2.3";
+const NAMESPACE = "kgateway-system";
 
 export async function init(_BASE_DIR, _config, _utils) {
   BASE_DIR = _BASE_DIR;
@@ -39,8 +39,8 @@ export async function install() {
   console.log("\n[2/5] Installing kGateway CRDs...");
   await $`helm upgrade -i --create-namespace \
     --namespace ${NAMESPACE} \
-    --version ${KGATEWAY_VERSION} gloo-gateway-crds \
-    oci://us-docker.pkg.dev/solo-public/gloo-gateway/charts/gloo-gateway-crds`;
+    --version ${KGATEWAY_VERSION} kgateway-crds \
+    oci://cr.kgateway.dev/kgateway-dev/charts/kgateway-crds`;
 
   console.log("\nInstalling kGateway...");
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
@@ -51,8 +51,8 @@ export async function install() {
 
   await $`helm upgrade -i --create-namespace \
     --namespace ${NAMESPACE} \
-    --version ${KGATEWAY_VERSION} gloo-gateway \
-    oci://us-docker.pkg.dev/solo-public/gloo-gateway/charts/gloo-gateway \
+    --version ${KGATEWAY_VERSION} kgateway \
+    oci://cr.kgateway.dev/kgateway-dev/charts/kgateway \
     -f ${valuesRenderedPath}`;
 
   console.log("  kGateway installed");
@@ -136,12 +136,12 @@ export async function uninstall() {
 
   // Uninstall Helm
   try {
-    await $`helm uninstall gloo-gateway --namespace ${NAMESPACE}`;
+    await $`helm uninstall kgateway --namespace ${NAMESPACE}`;
   } catch {
     console.log("kGateway Helm release not found.");
   }
   try {
-    await $`helm uninstall gloo-gateway-crds --namespace ${NAMESPACE}`;
+    await $`helm uninstall kgateway-crds --namespace ${NAMESPACE}`;
   } catch {
     console.log("kGateway CRDs Helm release not found.");
   }

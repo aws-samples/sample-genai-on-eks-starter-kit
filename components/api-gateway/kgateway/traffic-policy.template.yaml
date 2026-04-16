@@ -2,7 +2,7 @@ apiVersion: gateway.kgateway.dev/v1alpha1
 kind: TrafficPolicy
 metadata:
   name: oidc-auth
-  namespace: gloo-system
+  namespace: kgateway-system
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io

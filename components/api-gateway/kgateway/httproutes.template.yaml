@@ -3,7 +3,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: oauth2-proxy
-  namespace: gloo-system
+  namespace: kgateway-system
 spec:
   parentRefs:
   - name: main-gateway
@@ -20,7 +20,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: openwebui
-  namespace: gloo-system
+  namespace: kgateway-system
 spec:
   parentRefs:
   - name: main-gateway
@@ -37,7 +37,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: litellm
-  namespace: gloo-system
+  namespace: kgateway-system
 spec:
   parentRefs:
   - name: main-gateway
@@ -54,7 +54,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: langfuse
-  namespace: gloo-system
+  namespace: kgateway-system
 spec:
   parentRefs:
   - name: main-gateway
@@ -71,7 +71,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: qdrant
-  namespace: gloo-system
+  namespace: kgateway-system
 spec:
   parentRefs:
   - name: main-gateway
@@ -93,7 +93,7 @@ spec:
   from:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    namespace: gloo-system
+    namespace: kgateway-system
   to:
   - group: ""
     kind: Service
@@ -107,7 +107,7 @@ spec:
   from:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    namespace: gloo-system
+    namespace: kgateway-system
   to:
   - group: ""
     kind: Service
@@ -121,7 +121,7 @@ spec:
   from:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    namespace: gloo-system
+    namespace: kgateway-system
   to:
   - group: ""
     kind: Service
@@ -135,7 +135,7 @@ spec:
   from:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    namespace: gloo-system
+    namespace: kgateway-system
   to:
   - group: ""
     kind: Service
@@ -149,7 +149,7 @@ spec:
   from:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    namespace: gloo-system
+    namespace: kgateway-system
   to:
   - group: ""
     kind: Service
