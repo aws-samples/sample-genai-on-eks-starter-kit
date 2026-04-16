@@ -133,98 +133,102 @@ spec:
   console.log("  Keycloak deployed");
 
   // Configure realm, client, and groups via Keycloak Admin API
+  // Use kubectl port-forward + local curl since official Keycloak image doesn't include curl
   console.log("\nConfiguring Keycloak realm and OIDC client...");
-  const KEYCLOAK_URL = `http://keycloak.${NAMESPACE}:80`;
   const REALM = "genai";
+  const LOCAL_PORT = 18080;
 
-  // Get admin token
-  const tokenResult = await $`kubectl exec -n ${NAMESPACE} deploy/keycloak -- \
-    curl -sf -X POST "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "username=${ADMIN_USER}&password=${ADMIN_PASS}&grant_type=password&client_id=admin-cli"`.quiet();
-  const adminToken = JSON.parse(tokenResult.stdout).access_token;
+  // Start port-forward in background
+  const pf = $`kubectl port-forward -n ${NAMESPACE} svc/keycloak ${LOCAL_PORT}:80`.quiet().nothrow();
+  await new Promise((r) => setTimeout(r, 3000)); // wait for port-forward to establish
 
-  // Create realm
+  const KC_URL = `http://localhost:${LOCAL_PORT}`;
+  let clientSecret;
   try {
-    await $`kubectl exec -n ${NAMESPACE} deploy/keycloak -- \
-      curl -sf -X POST "${KEYCLOAK_URL}/admin/realms" \
-      -H "Authorization: Bearer ${adminToken}" \
-      -H "Content-Type: application/json" \
-      -d ${JSON.stringify({ realm: REALM, enabled: true, registrationAllowed: false })}`.quiet();
-    console.log(`  Realm '${REALM}' created`);
-  } catch {
-    console.log(`  Realm '${REALM}' already exists`);
-  }
+    // Get admin token
+    const tokenResult = await $`curl -sf -X POST ${KC_URL}/realms/master/protocol/openid-connect/token \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -d "username=${ADMIN_USER}&password=${ADMIN_PASS}&grant_type=password&client_id=admin-cli"`.quiet();
+    const adminToken = JSON.parse(tokenResult.stdout).access_token;
 
-  // Create OIDC client
-  const clientConfig = {
-    clientId: "genai-platform",
-    name: "GenAI Platform",
-    enabled: true,
-    publicClient: false,
-    protocol: "openid-connect",
-    standardFlowEnabled: true,
-    directAccessGrantsEnabled: true,
-    redirectUris: DOMAIN ? [`https://*.${DOMAIN}/*`] : ["http://localhost:*/*"],
-    webOrigins: DOMAIN ? [`https://*.${DOMAIN}`] : ["*"],
-    attributes: { "post.logout.redirect.uris": DOMAIN ? `https://*.${DOMAIN}/*` : "*" },
-  };
-  try {
-    await $`kubectl exec -n ${NAMESPACE} deploy/keycloak -- \
-      curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
-      -H "Authorization: Bearer ${adminToken}" \
-      -H "Content-Type: application/json" \
-      -d ${JSON.stringify(clientConfig)}`.quiet();
-    console.log("  OIDC client 'genai-platform' created");
-  } catch {
-    console.log("  OIDC client 'genai-platform' already exists");
-  }
-
-  // Get client ID and secret
-  const clientsResult = await $`kubectl exec -n ${NAMESPACE} deploy/keycloak -- \
-    curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=genai-platform" \
-    -H "Authorization: Bearer ${adminToken}"`.quiet();
-  const clients = JSON.parse(clientsResult.stdout);
-  const clientUuid = clients[0].id;
-
-  const secretResult = await $`kubectl exec -n ${NAMESPACE} deploy/keycloak -- \
-    curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${clientUuid}/client-secret" \
-    -H "Authorization: Bearer ${adminToken}"`.quiet();
-  const clientSecret = JSON.parse(secretResult.stdout).value;
-
-  // Create groups
-  for (const group of ["senior-dev", "junior-dev"]) {
+    // Create realm
     try {
-      await $`kubectl exec -n ${NAMESPACE} deploy/keycloak -- \
-        curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" \
+      await $`curl -sf -X POST ${KC_URL}/admin/realms \
         -H "Authorization: Bearer ${adminToken}" \
         -H "Content-Type: application/json" \
-        -d ${JSON.stringify({ name: group })}`.quiet();
-      console.log(`  Group '${group}' created`);
+        -d ${JSON.stringify({ realm: REALM, enabled: true, registrationAllowed: false })}`.quiet();
+      console.log(`  Realm '${REALM}' created`);
     } catch {
-      console.log(`  Group '${group}' already exists`);
+      console.log(`  Realm '${REALM}' already exists`);
     }
-  }
 
-  // Create a demo user
-  const demoUser = {
-    username: "demo",
-    email: process.env.OPENWEBUI_ADMIN_EMAIL || "admin@example.com",
-    enabled: true,
-    emailVerified: true,
-    firstName: "Demo",
-    lastName: "User",
-    credentials: [{ type: "password", value: process.env.OPENWEBUI_ADMIN_PASSWORD || "Pass@123", temporary: false }],
-  };
-  try {
-    await $`kubectl exec -n ${NAMESPACE} deploy/keycloak -- \
-      curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
-      -H "Authorization: Bearer ${adminToken}" \
-      -H "Content-Type: application/json" \
-      -d ${JSON.stringify(demoUser)}`.quiet();
-    console.log("  Demo user created");
-  } catch {
-    console.log("  Demo user already exists");
+    // Create OIDC client
+    const clientConfig = {
+      clientId: "genai-platform",
+      name: "GenAI Platform",
+      enabled: true,
+      publicClient: false,
+      protocol: "openid-connect",
+      standardFlowEnabled: true,
+      directAccessGrantsEnabled: true,
+      redirectUris: DOMAIN ? [`https://*.${DOMAIN}/*`] : ["http://localhost:*/*"],
+      webOrigins: DOMAIN ? [`https://*.${DOMAIN}`] : ["*"],
+      attributes: { "post.logout.redirect.uris": DOMAIN ? `https://*.${DOMAIN}/*` : "*" },
+    };
+    try {
+      await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/clients \
+        -H "Authorization: Bearer ${adminToken}" \
+        -H "Content-Type: application/json" \
+        -d ${JSON.stringify(clientConfig)}`.quiet();
+      console.log("  OIDC client 'genai-platform' created");
+    } catch {
+      console.log("  OIDC client 'genai-platform' already exists");
+    }
+
+    // Get client ID and secret
+    const clientsResult = await $`curl -sf "${KC_URL}/admin/realms/${REALM}/clients?clientId=genai-platform" \
+      -H "Authorization: Bearer ${adminToken}"`.quiet();
+    const clients = JSON.parse(clientsResult.stdout);
+    const clientUuid = clients[0].id;
+
+    const secretResult = await $`curl -sf "${KC_URL}/admin/realms/${REALM}/clients/${clientUuid}/client-secret" \
+      -H "Authorization: Bearer ${adminToken}"`.quiet();
+    clientSecret = JSON.parse(secretResult.stdout).value;
+
+    // Create groups
+    for (const group of ["senior-dev", "junior-dev"]) {
+      try {
+        await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/groups \
+          -H "Authorization: Bearer ${adminToken}" \
+          -H "Content-Type: application/json" \
+          -d ${JSON.stringify({ name: group })}`.quiet();
+        console.log(`  Group '${group}' created`);
+      } catch {
+        console.log(`  Group '${group}' already exists`);
+      }
+    }
+
+    // Create a demo user
+    const demoUser = {
+      username: "demo",
+      email: process.env.OPENWEBUI_ADMIN_EMAIL || "admin@example.com",
+      enabled: true,
+      emailVerified: true,
+      firstName: "Demo",
+      lastName: "User",
+      credentials: [{ type: "password", value: process.env.OPENWEBUI_ADMIN_PASSWORD || "Pass@123", temporary: false }],
+    };
+    try {
+      await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/users \
+        -H "Authorization: Bearer ${adminToken}" \
+        -H "Content-Type: application/json" \
+        -d ${JSON.stringify(demoUser)}`.quiet();
+      console.log("  Demo user created");
+    } catch {
+      console.log("  Demo user already exists");
+    }
+  } finally {
+    pf.kill();
   }
 
   // Save OIDC config
