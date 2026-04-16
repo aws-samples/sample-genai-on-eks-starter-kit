@@ -66,6 +66,48 @@ export async function install() {
     console.log("  Installing cert-manager...");
     await $`kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml`;
     await $`kubectl wait --for=condition=Ready pods --all -n cert-manager --timeout=120s`;
+
+    // Create IRSA role for cert-manager to access Route53 (DNS-01 challenge)
+    console.log("  Creating IRSA role for cert-manager...");
+    const clusterName = process.env.EKS_CLUSTER_NAME;
+    const region = process.env.REGION;
+    const accountId = (await $`aws sts get-caller-identity --query Account --output text`.quiet()).stdout.trim();
+    const oidcUrl = (await $`aws eks describe-cluster --name ${clusterName} --region ${region} --query "cluster.identity.oidc.issuer" --output text`.quiet()).stdout.trim();
+    const oidcId = oidcUrl.split("/").pop();
+    const hostedZoneId = (await $`aws route53 list-hosted-zones-by-name --dns-name ${process.env.DOMAIN} --query "HostedZones[0].Id" --output text`.quiet()).stdout.trim().replace("/hostedzone/", "");
+    const roleName = `${clusterName}-cert-manager`;
+
+    const trustPolicy = JSON.stringify({
+      Version: "2012-10-17",
+      Statement: [{
+        Effect: "Allow",
+        Principal: { Federated: `arn:aws:iam::${accountId}:oidc-provider/oidc.eks.${region}.amazonaws.com/id/${oidcId}` },
+        Action: "sts:AssumeRoleWithWebIdentity",
+        Condition: { StringEquals: {
+          [`oidc.eks.${region}.amazonaws.com/id/${oidcId}:sub`]: "system:serviceaccount:cert-manager:cert-manager",
+          [`oidc.eks.${region}.amazonaws.com/id/${oidcId}:aud`]: "sts.amazonaws.com",
+        }},
+      }],
+    });
+
+    try {
+      await $`aws iam create-role --role-name ${roleName} --assume-role-policy-document ${trustPolicy} --region ${region}`.quiet();
+    } catch { /* role may already exist */ }
+
+    const route53Policy = JSON.stringify({
+      Version: "2012-10-17",
+      Statement: [
+        { Effect: "Allow", Action: "route53:GetChange", Resource: "arn:aws:route53:::change/*" },
+        { Effect: "Allow", Action: ["route53:ChangeResourceRecordSets", "route53:ListResourceRecordSets"], Resource: `arn:aws:route53:::hostedzone/${hostedZoneId}` },
+        { Effect: "Allow", Action: "route53:ListHostedZonesByName", Resource: "*" },
+      ],
+    });
+    await $`aws iam put-role-policy --role-name ${roleName} --policy-name route53-dns01 --policy-document ${route53Policy}`.quiet();
+
+    await $`kubectl annotate serviceaccount cert-manager -n cert-manager eks.amazonaws.com/role-arn=arn:aws:iam::${accountId}:role/${roleName} --overwrite`;
+    await $`kubectl rollout restart deployment cert-manager -n cert-manager`;
+    await $`kubectl wait --for=condition=Ready pods --all -n cert-manager --timeout=60s`;
+    console.log("  cert-manager IRSA configured");
   }
 
   // Create ClusterIssuer + Certificate if not exists
