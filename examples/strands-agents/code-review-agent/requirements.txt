@@ -1,8 +1,0 @@
-strands-agents==0.1.8
-strands-agents[otel]==0.1.8
-fastapi[standard]==0.115.13
-pydantic==2.11.7
-litellm==1.83.0
-langfuse==3.0.5
-openai>=2.8.0
-qdrant-client==1.14.2

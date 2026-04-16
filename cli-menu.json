@@ -72,8 +72,7 @@
       "dir": "security",
       "name": "Security",
       "components": [
-        { "dir": "external-secrets", "name": "External Secrets Operator" },
-        { "dir": "iam-identity-center", "name": "IAM Identity Center (OIDC)" }
+        { "dir": "external-secrets", "name": "External Secrets Operator" }
       ]
     }
   ],

@@ -75,6 +75,25 @@ export async function install() {
   });
   await $`kubectl apply -f ${routesRenderedPath}`;
 
+  // Enable WebSocket upgrade (required for OpenWebUI Socket.IO)
+  console.log("  Enabling WebSocket upgrade support...");
+  const wsPolicy = `
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: HTTPListenerPolicy
+metadata:
+  name: enable-websocket
+  namespace: ${NAMESPACE}
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: main-gateway
+  upgradeConfig:
+    enabledUpgrades:
+    - websocket
+`;
+  await $`echo ${wsPolicy} | kubectl apply -f -`;
+
   // Step 5: Apply OIDC auth (if configured)
   if (process.env.OIDC_CLIENT_ID && process.env.OIDC_CLIENT_SECRET) {
     console.log("\n[5/5] Configuring OIDC authentication...");
