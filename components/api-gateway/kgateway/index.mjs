@@ -14,7 +14,7 @@ let BASE_DIR;
 let config;
 let utils;
 
-const KGATEWAY_VERSION = "2.2.2";
+const KGATEWAY_VERSION = "2.0.2";
 const NAMESPACE = "gloo-system";
 
 export async function init(_BASE_DIR, _config, _utils) {
