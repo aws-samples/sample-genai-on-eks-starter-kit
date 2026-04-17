@@ -14,8 +14,8 @@ The starter kit includes the configurable components and examples from several c
 - Session Store - [Redis](https://redis.io) (OAuth2 + OpenWebUI session management)
 - Workflow Automation - [n8n](https://docs.n8n.io)
 - AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
-- Auth - [Keycloak](https://www.keycloak.org/) (OIDC Provider)
-- Security - [External Secrets Operator](https://external-secrets.io)
+- Auth - [Keycloak](https://www.keycloak.org/) (self-hosted OIDC Provider, replaceable with any external OIDC issuer)
+- Security - [External Secrets Operator](https://external-secrets.io), [cert-manager](https://cert-manager.io) (Let's Encrypt via Route 53 DNS-01)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
 - AI Agent Framework - [Strands Agents](https://strandsagents.com), [Agno](https://docs.agno.com)
 
@@ -99,16 +99,33 @@ This command uses a **2-pass install** to automatically handle OIDC configuratio
   16. LiteLLM Team RBAC     (auto-configured)
 ```
 
-All OIDC credentials (`OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_ISSUER_URL`) are **auto-generated** by Keycloak install and saved to `.env.local`. No manual setup required.
+All OIDC credentials (`OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_ISSUER_URL`) are **auto-generated** by Keycloak install and saved to `.env.local`. Two demo users (`senior-demo`, `junior-demo`) are provisioned and pre-assigned to their groups. No manual setup required.
 
 #### Demo Architecture
 
 ```
-NLB → kGateway (TLS termination + unified routing)
-  → OAuth2-Proxy (OIDC + Redis session) → Keycloak
-  → x-user-email, x-user-groups headers injected
-  → OpenWebUI, LiteLLM (team RBAC), Langfuse, Qdrant
-  → Code Review MCP Server (RAG: TEI embedding → Qdrant → LLM review)
+Browser
+  │
+  ▼
+NLB → kGateway (HTTPS / TLS termination via cert-manager + Let's Encrypt)
+  │     │
+  │     ├── ext-auth ──► OAuth2-Proxy (OIDC + Redis session) ──► Keycloak (realm: genai)
+  │     │
+  │     └── HTTPRoutes per subdomain (openwebui, litellm, langfuse, qdrant, auth, keycloak)
+  │            │
+  │            ├── x-auth-request-email / -groups / -preferred-username injected
+  │            │
+  │            ▼
+  │        ┌── OpenWebUI  ──(ENABLE_FORWARD_USER_INFO_HEADERS)──► LiteLLM ──► Bedrock / vLLM / SGLang / Ollama
+  │        │                                                        │
+  │        │                               /etc/litellm/custom_callbacks/openwebui_metadata_hook.py
+  │        │                                 maps X-OpenWebUI-User-* headers into
+  │        │                                 Langfuse trace_user_id / session_id / tags
+  │        │                                                        │
+  │        │                                                        ▼
+  │        │                                                    Langfuse (per-user / per-session / per-model cost)
+  │        │
+  │        └── Qdrant  ◄──  Code Review MCP Server (TEI embeddings → Qdrant vector search → LLM review)
 ```
 
 #### Code Review Agent (RAG Example)
@@ -119,13 +136,18 @@ The demo includes a Code Review Agent that demonstrates the full RAG lifecycle:
 - Agent retrieves relevant code via vector search and provides reviews using LLM
 - All interactions traced in Langfuse
 
-#### RBAC (Role-Based Access Control)
+#### Role-Based Access Control & Per-user Observability
 
-Users authenticate via Keycloak OIDC. User groups map to LiteLLM teams with different model access:
-- `senior-dev` group → access to all models
-- `junior-dev` group → access to limited models
+Identity flows through every layer, not just the front door:
 
-Teams are configured in `config.json` under `litellm.rbac.teams` and automatically provisioned during demo-setup.
+1. **Keycloak** issues ID tokens containing `email`, `preferred_username`, and `groups` claims
+2. **OAuth2-Proxy** validates the token and injects `x-auth-request-email` / `x-auth-request-groups` headers via kGateway ext-auth
+3. **OpenWebUI** trusts the email header (`WEBUI_AUTH_TRUSTED_EMAIL_HEADER`), syncs Keycloak groups into its own RBAC, and forwards `X-OpenWebUI-User-Email` / `X-OpenWebUI-User-Name` / `X-OpenWebUI-User-Role` / `X-OpenWebUI-Chat-Id` to LiteLLM when `ENABLE_FORWARD_USER_INFO_HEADERS=true`
+4. **LiteLLM** runs a custom pre-call hook that turns those headers into Langfuse metadata (`trace_user_id`, `session_id`, `tags=["role:<x>", "domain:<y>"]`), so **Langfuse's Users and Sessions tabs show real per-user cost and usage**
+5. **LiteLLM Team RBAC** restricts models per team (`senior-dev` → all models, `junior-dev` → limited)
+6. **OpenWebUI Model RBAC** hides models the user's group cannot call (configured via `components/gui-app/openwebui/setup-rbac.mjs` from the same `litellm.rbac.teams` in `config.json`)
+
+Teams are configured in `config.json` under `litellm.rbac.teams` and LiteLLM teams are provisioned automatically during demo-setup.
 
 Check [Demo Walkthrough](docs/DEMO_WALKTHROUGH.md) on how to setup and use the demo
 
@@ -222,6 +244,14 @@ You can install or uninstall individual components/examples using the CLI:
 ```
 
 Creates teams with model access groups and generates team API keys. Teams are configured in `config.json` under `litellm.rbac.teams`.
+
+#### Setup OpenWebUI Model RBAC
+
+```bash
+./cli gui-app openwebui setup-rbac
+```
+
+Aligns per-model `access_control` in OpenWebUI with the same `litellm.rbac.teams` definition, so `senior-demo` and `junior-demo` users only see models their group can actually call. Requires `OPENWEBUI_ADMIN_API_KEY` in `.env.local` (create one via Settings → Account → API Keys on first admin login, since SSO-only mode blocks password sign-in from scripts).
 
 ## LLM/Embedding Model Management
 
@@ -323,36 +353,70 @@ This command will:
 
 ### How can I use this starter kit without having a Route 53 hosted zone?
 
-With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. litellm.\<DOMAIN\> and openwebui.\<DOMAIN\>.
+With a `DOMAIN` configured in a Route 53 hosted zone (recommended), kGateway exposes every service on a subdomain (`openwebui.<DOMAIN>`, `litellm.<DOMAIN>`, etc.) behind a single NLB. TLS is handled by cert-manager obtaining a wildcard certificate from Let's Encrypt via the Route 53 DNS-01 challenge (cert-manager uses Pod Identity for Route 53 access — no IRSA configuration required). External-DNS auto-creates the A records.
 
-Alternatively, when the `DOMAIN` field on `.env` (or `.env.local`) is empty, multiple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
+Without `DOMAIN`, kGateway falls back to individual ALB ingresses with HTTP. In that mode SSO is disabled and only the services that support basic-auth (e.g. Qdrant) are reachable.
 
 ### How does kGateway integrate with the existing ingress?
 
 When `kgateway.enabled` is `true` in `config.json` (default), kGateway replaces all individual ALB Ingress resources with a unified Gateway API routing layer:
 
-- **With kGateway**: CloudFront → NLB → kGateway → HTTPRoutes per service (subdomain-based)
+- **With kGateway**: NLB → kGateway → HTTPRoutes per service (subdomain-based), with CloudFront + WAF optional in front
 - **Without kGateway** (`kgateway.enabled: false`): Falls back to per-service ALB Ingress (backward compatible)
 
-kGateway uses OAuth2-Proxy for OIDC authentication with Redis-backed sessions and forwards identity headers (`x-user-email`, `x-user-groups`) to upstream services.
+kGateway uses OAuth2-Proxy via a `GatewayExtension` / `TrafficPolicy` ext-auth pipeline. Auth is attached at the Gateway level with `no-auth` policies disabling enforcement only for the Keycloak and OAuth2-Proxy hosts themselves. Every protected host has a `/oauth2` prefix route that forwards directly to OAuth2-Proxy, so `/oauth2/sign_out` and `/oauth2/callback` work on any subdomain. The `auth.<DOMAIN>/` root redirects to OpenWebUI so users are never left on an empty "Authenticated" page after login.
+
+### How does authentication and SSO work?
+
+The end-to-end SSO flow on a fresh demo-setup:
+
+1. User hits `https://openwebui.<DOMAIN>/`
+2. kGateway ext-auth calls OAuth2-Proxy → no session cookie → 302 to Keycloak `/oauth2/callback` on `auth.<DOMAIN>`
+3. User logs in to Keycloak (realm `genai`, demo users `senior-demo` or `junior-demo`, password in `.env`)
+4. Keycloak callback sets the `_oauth2_proxy` cookie on `.<DOMAIN>` and OAuth2-Proxy redirects back
+5. Subsequent requests include `x-auth-request-email` / `-groups` / `-preferred-username` headers, visible to every service behind kGateway — so **a single login gives SSO across OpenWebUI, Langfuse, Qdrant, and LiteLLM**
+6. Logout is a three-step chain: OpenWebUI → `auth.<DOMAIN>/oauth2/sign_out` → Keycloak logout → back to OpenWebUI
+
+### Why Keycloak and not AWS IAM Identity Center?
+
+The demo stack uses Keycloak (in-cluster) rather than IAM Identity Center because the demo must be **self-contained** and reproducible in any AWS account:
+
+- **IAM Identity Center** requires Organizations management or delegated-admin permissions, has region availability constraints, and provisions apps/users/groups via the console (not easily automated for a one-shot `./cli demo-setup`)
+- **Keycloak** runs as a pod in the same EKS cluster, exposes an Admin API the installer fully automates (realm, client, `groups` scope + mapper, demo users, group assignment), and speaks plain OIDC
+
+OpenWebUI, OAuth2-Proxy, and LiteLLM only speak standard OIDC, so Keycloak is effectively a *drop-in default*. To use Okta / Azure AD / IAM Identity Center in production, disable the Keycloak component in `config.json` and populate `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` / `OIDC_ISSUER_URL` in `.env.local` manually — no downstream component changes needed.
 
 ### How does the RBAC model access control work?
 
-LiteLLM Team RBAC restricts which models each user group can access:
+Two complementary layers:
 
+**LiteLLM Team RBAC** (backend-enforced):
 1. Keycloak defines user groups (`senior-dev`, `junior-dev`)
-2. Users authenticate via Keycloak OIDC through kGateway + OAuth2-Proxy
-3. `x-user-groups` header is forwarded to LiteLLM
-4. LiteLLM maps groups to teams with allowed model lists
-5. Requests to unauthorized models return 400 error
+2. `./cli ai-gateway litellm setup-rbac` creates matching LiteLLM teams with allowed model lists and mints per-team virtual API keys
+3. Requests hitting disallowed models return 400
 
-Configure teams in `config.json` under `litellm.rbac.teams`. Run `./cli ai-gateway litellm setup-rbac` to apply.
+**OpenWebUI Model RBAC** (UI-enforced):
+1. `ENABLE_OAUTH_GROUP_MANAGEMENT=true` auto-creates OpenWebUI groups from Keycloak `groups` claim on first login
+2. `./cli gui-app openwebui setup-rbac` (or the Admin Panel) writes `access_control` on each model so users only see models their group is allowed to use
+3. Requires an OpenWebUI admin API key (`OPENWEBUI_ADMIN_API_KEY` in `.env.local`) since SSO mode blocks password sign-in — create one via Settings → Account → API Keys on first admin login
+
+Configure teams once in `config.json` under `litellm.rbac.teams` — both RBAC layers read it as the source of truth.
+
+### How is per-user cost and usage tracked in Langfuse?
+
+OpenWebUI normally calls LiteLLM with a single shared master key, so every LLM request looks like it came from one user. This demo installs a custom LiteLLM pre-call hook (`components/ai-gateway/litellm/openwebui-metadata-hook.py`, mounted via ConfigMap at `/etc/litellm/custom_callbacks/`) that:
+
+- Reads `X-OpenWebUI-User-Email`, `-User-Name`, `-User-Role`, `-Chat-Id` headers (OpenWebUI forwards these when `ENABLE_FORWARD_USER_INFO_HEADERS=true`)
+- Writes them into LiteLLM's metadata as `trace_user_id`, `session_id`, and `tags`
+- Langfuse then groups cost/usage per user, per chat session, per role — all visible in the Users and Sessions tabs out of the box
+
+No extra configuration is needed — the hook is mounted automatically when LiteLLM installs.
 
 ### Can I disable CloudFront/WAF/Shield?
 
 Shield Advanced is disabled by default (`kgateway.enableShieldAdvanced: false`) due to cost ($3,000/month). Shield Standard is free and always active.
 
-CloudFront and WAF are provisioned as part of kGateway install. To skip them, install kGateway components individually instead of using `demo-setup`.
+CloudFront and WAF are optional; they're provisioned by the kGateway component's Terraform when enabled in `config.json`. To skip them entirely, set the corresponding flags off and install kGateway individually instead of using `demo-setup`.
 
 ### How can I configure and update the LiteLLM proxy model list?
 
@@ -361,16 +425,21 @@ Run `./cli litellm install` again to update the LiteLLM models.
 For Bedrock models, the model list hardcoded on config.json.
 
 ```json
-# Example:
+// Example:
 "bedrock": {
   "llm": {
     "models": [
-      { "name": "amazon-nova-premier", "model": "us.amazon.nova-premier-v1:0" },
-      { "name": "claude-4-opus", "model": "us.anthropic.claude-opus-4-20250514-v1:0" },
+      { "name": "claude-4.5-sonnet", "model": "global.anthropic.claude-sonnet-4-5-20250929-v1:0" },
+      { "name": "claude-4.5-haiku", "model": "global.anthropic.claude-haiku-4-5-20251001-v1:0" },
+      { "name": "claude-opus-4.6", "model": "global.anthropic.claude-opus-4-6-v1" },
+      { "name": "amazon-nova-2-lite", "model": "global.amazon.nova-2-lite-v1:0" },
+      { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0", "region": "us-east-1" }
     ]
   }
 }
 ```
+
+Models with a `region` field are pinned to that region (e.g. models only available in us-east-1). Models with `"deploy": false` are skipped.
 
 ### How can I change the EC2 GPU instance families and purchasing options?
 
