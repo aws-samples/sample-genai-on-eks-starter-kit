@@ -45,14 +45,12 @@ export async function install() {
   if (config?.kgateway?.enabled) {
     valuesVars.KGATEWAY_ENABLED = true;
   }
-  // OIDC: activate trusted email header only when OAuth2-Proxy is running
+  // OIDC: activate trusted email header when kGateway handles auth via OAuth2-Proxy
   if (config?.kgateway?.enabled && process.env.OIDC_CLIENT_ID) {
-    try {
-      const result = await $`kubectl get pod -n oauth2-proxy -l app.kubernetes.io/name=oauth2-proxy --no-headers --ignore-not-found`.quiet();
-      if (result.stdout.includes("Running")) {
-        valuesVars.OIDC_ACTIVE = true;
-      }
-    } catch {}
+    valuesVars.OIDC_ACTIVE = true;
+    valuesVars.OIDC_CLIENT_ID = process.env.OIDC_CLIENT_ID;
+    valuesVars.OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET;
+    valuesVars.OIDC_ISSUER_URL = process.env.OIDC_ISSUER_URL;
   }
   // Fallback: OIDC SSO directly in OpenWebUI (no gateway)
   if (!config?.kgateway?.enabled && process.env.OIDC_CLIENT_ID) {
@@ -63,6 +61,8 @@ export async function install() {
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install openwebui open-webui/open-webui --namespace openwebui --create-namespace -f ${valuesRenderedPath}`;
 }
+
+export { setupRBAC } from "./setup-rbac.mjs";
 
 export async function uninstall() {
   await $`helm uninstall openwebui --namespace openwebui`;

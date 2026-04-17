@@ -15,6 +15,7 @@ extraArgs:
   session-store-type: redis
   redis-connection-url: "redis://:{{{REDIS_PASSWORD}}}@redis-master.redis:6379/1"
   scope: "openid email profile groups"
+  upstream: "static://200"
   whitelist-domain: ".{{{DOMAIN}}}"
   email-domain: "*"
   reverse-proxy: "true"

@@ -41,6 +41,28 @@ spec:
   hostnames:
   - "auth.{{{DOMAIN}}}"
   rules:
+  # OAuth2 endpoints (/oauth2/start, /oauth2/callback, /oauth2/sign_out, etc.)
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+  # Root path: redirect to OpenWebUI (post-login landing)
+  - matches:
+    - path:
+        type: Exact
+        value: /
+    filters:
+    - type: RequestRedirect
+      requestRedirect:
+        hostname: openwebui.{{{DOMAIN}}}
+        port: 443
+        scheme: https
+        statusCode: 302
+  # Any other path falls through to oauth2-proxy
   - backendRefs:
     - name: oauth2-proxy
       namespace: oauth2-proxy
@@ -58,6 +80,14 @@ spec:
   hostnames:
   - "openwebui.{{{DOMAIN}}}"
   rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
   - backendRefs:
     - name: openwebui
       namespace: openwebui
@@ -75,6 +105,14 @@ spec:
   hostnames:
   - "litellm.{{{DOMAIN}}}"
   rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
   - backendRefs:
     - name: litellm
       namespace: litellm
@@ -92,6 +130,14 @@ spec:
   hostnames:
   - "langfuse.{{{DOMAIN}}}"
   rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
   - backendRefs:
     - name: langfuse-web
       namespace: langfuse
@@ -109,6 +155,14 @@ spec:
   hostnames:
   - "qdrant.{{{DOMAIN}}}"
   rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
   - backendRefs:
     - name: qdrant
       namespace: qdrant

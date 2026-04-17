@@ -21,6 +21,10 @@ spec:
     headersToForward:
     - cookie
     - authorization
+    - x-forwarded-host
+    - x-forwarded-proto
+    - x-forwarded-uri
+    - x-forwarded-for
 ---
 # TrafficPolicy: apply ext auth to all routes via Gateway
 apiVersion: gateway.kgateway.dev/v1alpha1

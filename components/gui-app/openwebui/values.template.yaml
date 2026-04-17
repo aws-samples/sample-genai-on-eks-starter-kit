@@ -37,6 +37,32 @@ extraEnvVars:
   {{#if OIDC_ACTIVE}}
   - name: WEBUI_AUTH_TRUSTED_EMAIL_HEADER
     value: "x-auth-request-email"
+  - name: WEBUI_AUTH_TRUSTED_NAME_HEADER
+    value: "x-auth-request-preferred-username"
+  - name: WEBUI_AUTH_SIGNOUT_REDIRECT_URL
+    value: "https://auth.{{{DOMAIN}}}/oauth2/sign_out?rd=https%3A%2F%2Fkeycloak.{{{DOMAIN}}}%2Frealms%2Fgenai%2Fprotocol%2Fopenid-connect%2Flogout%3Fclient_id%3D{{{OIDC_CLIENT_ID}}}%26post_logout_redirect_uri%3Dhttps%253A%252F%252Fopenwebui.{{{DOMAIN}}}%252F"
+  # Forward user identity headers to upstream LLM APIs (LiteLLM)
+  - name: ENABLE_FORWARD_USER_INFO_HEADERS
+    value: "true"
+  # Enable OIDC directly in OpenWebUI for group sync from Keycloak
+  - name: ENABLE_OAUTH_SIGNUP
+    value: "true"
+  - name: ENABLE_OAUTH_GROUP_MANAGEMENT
+    value: "true"
+  - name: ENABLE_OAUTH_GROUP_CREATION
+    value: "true"
+  - name: OAUTH_CLIENT_ID
+    value: "{{{OIDC_CLIENT_ID}}}"
+  - name: OAUTH_CLIENT_SECRET
+    value: "{{{OIDC_CLIENT_SECRET}}}"
+  - name: OPENID_PROVIDER_URL
+    value: "{{{OIDC_ISSUER_URL}}}/.well-known/openid-configuration"
+  - name: OAUTH_PROVIDER_NAME
+    value: "Keycloak"
+  - name: OAUTH_SCOPES
+    value: "openid email profile groups"
+  - name: OAUTH_GROUPS_CLAIM
+    value: "groups"
   {{else}}
   {{#if OIDC_CLIENT_ID}}
   - name: ENABLE_OAUTH_SIGNUP

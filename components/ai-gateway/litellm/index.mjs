@@ -126,8 +126,11 @@ export async function install() {
   } catch {
     // phoenix namespace may not exist — skip
   }
+  // Include the OpenWebUI metadata hook as a callback (pre_call + success/failure events)
+  const callbacksWithHook = [...callbacks, "custom_callbacks.openwebui_metadata_hook.instance"];
   integration.o11y.config = {
     callbacks: JSON.stringify(callbacks),
+    callbacks_with_hook: JSON.stringify(callbacksWithHook),
     success_callback: JSON.stringify(successCallback),
     failure_callback: JSON.stringify(failureCallback),
   };
@@ -159,6 +162,14 @@ export async function install() {
     valuesVars.MLFLOW_PASSWORD = process.env.MLFLOW_PASSWORD;
   }
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
+
+  // Create ConfigMap for the OpenWebUI metadata hook (maps forwarded headers → Langfuse metadata)
+  await $`kubectl create namespace litellm --dry-run=client -o yaml | kubectl apply -f -`;
+  await $`kubectl -n litellm create configmap litellm-custom-callbacks \
+    --from-file=__init__.py=/dev/null \
+    --from-file=openwebui_metadata_hook.py=${path.join(DIR, "openwebui-metadata-hook.py")} \
+    --dry-run=client -o yaml | kubectl apply -f -`;
+
   await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
 }
 

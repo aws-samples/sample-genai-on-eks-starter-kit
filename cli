@@ -176,6 +176,18 @@ program
         } catch (error) {
           console.warn("Warning: LiteLLM RBAC setup failed (can be run manually later):", error.message);
         }
+
+        // Post-install: Setup OpenWebUI Model RBAC (groups must already exist)
+        try {
+          console.log("\nSetting up OpenWebUI Model RBAC...");
+          const openwebuiModule = await import(path.join(COMPONENTS_DIR, "gui-app", "openwebui", "index.mjs"));
+          await openwebuiModule.init(DIR, config, utils);
+          if (openwebuiModule.setupRBAC) {
+            await openwebuiModule.setupRBAC(config);
+          }
+        } catch (error) {
+          console.warn("Warning: OpenWebUI RBAC setup failed (run manually after first SSO login):", error.message);
+        }
       }
 
       console.log("\n========================================");

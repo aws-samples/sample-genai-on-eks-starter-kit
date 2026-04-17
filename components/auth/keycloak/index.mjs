@@ -171,9 +171,31 @@ spec:
       protocol: "openid-connect",
       standardFlowEnabled: true,
       directAccessGrantsEnabled: true,
-      redirectUris: DOMAIN ? [`https://*.${DOMAIN}/*`] : ["http://localhost:*/*"],
-      webOrigins: DOMAIN ? [`https://*.${DOMAIN}`] : ["*"],
-      attributes: { "post.logout.redirect.uris": DOMAIN ? `https://*.${DOMAIN}/*` : "*" },
+      redirectUris: DOMAIN
+        ? [
+            `https://auth.${DOMAIN}/oauth2/callback`,
+            `https://openwebui.${DOMAIN}/*`,
+            `https://litellm.${DOMAIN}/*`,
+            `https://langfuse.${DOMAIN}/*`,
+            `https://qdrant.${DOMAIN}/*`,
+            `https://keycloak.${DOMAIN}/*`,
+          ]
+        : ["http://localhost:*/*"],
+      webOrigins: DOMAIN
+        ? [
+            `https://auth.${DOMAIN}`,
+            `https://openwebui.${DOMAIN}`,
+            `https://litellm.${DOMAIN}`,
+            `https://langfuse.${DOMAIN}`,
+            `https://qdrant.${DOMAIN}`,
+            `https://keycloak.${DOMAIN}`,
+          ]
+        : ["*"],
+      attributes: {
+        "post.logout.redirect.uris": DOMAIN
+          ? `https://openwebui.${DOMAIN}/*##https://litellm.${DOMAIN}/*##https://langfuse.${DOMAIN}/*`
+          : "*",
+      },
     };
     try {
       await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/clients \
@@ -183,6 +205,36 @@ spec:
       console.log("  OIDC client 'genai-platform' created");
     } catch {
       console.log("  OIDC client 'genai-platform' already exists");
+    }
+
+    // Create 'groups' client scope with group membership mapper (required by OAuth2-Proxy)
+    const groupsScopeConfig = {
+      name: "groups",
+      protocol: "openid-connect",
+      description: "Group membership",
+      attributes: { "include.in.token.scope": "true", "display.on.consent.screen": "true" },
+      protocolMappers: [{
+        name: "groups",
+        protocol: "openid-connect",
+        protocolMapper: "oidc-group-membership-mapper",
+        consentRequired: false,
+        config: {
+          "full.path": "false",
+          "id.token.claim": "true",
+          "access.token.claim": "true",
+          "claim.name": "groups",
+          "userinfo.token.claim": "true",
+        },
+      }],
+    };
+    try {
+      await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/client-scopes \
+        -H "Authorization: Bearer ${adminToken}" \
+        -H "Content-Type: application/json" \
+        -d ${JSON.stringify(groupsScopeConfig)}`.quiet();
+      console.log("  Client scope 'groups' created");
+    } catch {
+      console.log("  Client scope 'groups' already exists");
     }
 
     // Get client ID and secret
@@ -195,7 +247,22 @@ spec:
       -H "Authorization: Bearer ${adminToken}"`.quiet();
     clientSecret = JSON.parse(secretResult.stdout).value;
 
-    // Create groups
+    // Assign 'groups' scope to the client
+    const scopesResult = await $`curl -sf "${KC_URL}/admin/realms/${REALM}/client-scopes" \
+      -H "Authorization: Bearer ${adminToken}"`.quiet();
+    const groupsScope = JSON.parse(scopesResult.stdout).find((s) => s.name === "groups");
+    if (groupsScope) {
+      try {
+        await $`curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/clients/${clientUuid}/default-client-scopes/${groupsScope.id}" \
+          -H "Authorization: Bearer ${adminToken}"`.quiet();
+        console.log("  Assigned 'groups' scope to client");
+      } catch {
+        console.log("  'groups' scope already assigned");
+      }
+    }
+
+    // Create groups and capture their IDs for user-group assignment
+    const groupIds = {};
     for (const group of ["senior-dev", "junior-dev"]) {
       try {
         await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/groups \
@@ -206,26 +273,52 @@ spec:
       } catch {
         console.log(`  Group '${group}' already exists`);
       }
+      const groupsResult = await $`curl -sf "${KC_URL}/admin/realms/${REALM}/groups?search=${group}" \
+        -H "Authorization: Bearer ${adminToken}"`.quiet();
+      const matches = JSON.parse(groupsResult.stdout);
+      const found = matches.find((g) => g.name === group);
+      if (found) groupIds[group] = found.id;
     }
 
-    // Create a demo user
-    const demoUser = {
-      username: "demo",
-      email: process.env.OPENWEBUI_ADMIN_EMAIL || "admin@example.com",
-      enabled: true,
-      emailVerified: true,
-      firstName: "Demo",
-      lastName: "User",
-      credentials: [{ type: "password", value: process.env.OPENWEBUI_ADMIN_PASSWORD || "Pass@123", temporary: false }],
-    };
-    try {
-      await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/users \
-        -H "Authorization: Bearer ${adminToken}" \
-        -H "Content-Type: application/json" \
-        -d ${JSON.stringify(demoUser)}`.quiet();
-      console.log("  Demo user created");
-    } catch {
-      console.log("  Demo user already exists");
+    // Create demo users (one per group) for RBAC testing
+    const pass = process.env.OPENWEBUI_ADMIN_PASSWORD || "Pass@123";
+    const domainPart = (process.env.OPENWEBUI_ADMIN_EMAIL || "admin@example.com").split("@")[1] || "example.com";
+    const demoUsers = [
+      { username: "senior-demo", email: `senior-demo@${domainPart}`, firstName: "Senior", lastName: "Demo", group: "senior-dev" },
+      { username: "junior-demo", email: `junior-demo@${domainPart}`, firstName: "Junior", lastName: "Demo", group: "junior-dev" },
+    ];
+    for (const u of demoUsers) {
+      const body = {
+        username: u.username,
+        email: u.email,
+        enabled: true,
+        emailVerified: true,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        credentials: [{ type: "password", value: pass, temporary: false }],
+      };
+      try {
+        await $`curl -sf -X POST ${KC_URL}/admin/realms/${REALM}/users \
+          -H "Authorization: Bearer ${adminToken}" \
+          -H "Content-Type: application/json" \
+          -d ${JSON.stringify(body)}`.quiet();
+        console.log(`  User '${u.username}' created`);
+      } catch {
+        console.log(`  User '${u.username}' already exists`);
+      }
+      // Lookup user id and assign to group
+      const userSearch = await $`curl -sf "${KC_URL}/admin/realms/${REALM}/users?username=${u.username}&exact=true" \
+        -H "Authorization: Bearer ${adminToken}"`.quiet();
+      const userMatches = JSON.parse(userSearch.stdout);
+      if (userMatches.length > 0 && groupIds[u.group]) {
+        try {
+          await $`curl -sf -X PUT "${KC_URL}/admin/realms/${REALM}/users/${userMatches[0].id}/groups/${groupIds[u.group]}" \
+            -H "Authorization: Bearer ${adminToken}"`.quiet();
+          console.log(`  Assigned '${u.username}' -> '${u.group}'`);
+        } catch {
+          console.log(`  '${u.username}' already in '${u.group}'`);
+        }
+      }
     }
   } finally {
     pf.kill();

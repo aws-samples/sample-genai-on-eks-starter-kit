@@ -51,6 +51,17 @@ postgresql:
 serviceAccount:
   create: true
 
+# Mount custom Python callback (OpenWebUI header → Langfuse metadata)
+# LiteLLM resolves callback module paths relative to the config file location (/etc/litellm)
+volumes:
+  - name: litellm-custom-callbacks
+    configMap:
+      name: litellm-custom-callbacks
+volumeMounts:
+  - name: litellm-custom-callbacks
+    mountPath: /etc/litellm/custom_callbacks
+    readOnly: true
+
 masterkey: {{{LITELLM_API_KEY}}}
 envVars:
   # SERVER_ROOT_PATH: /litellm # Same as Ingress path
@@ -59,6 +70,8 @@ envVars:
   # LITELLM_LOG: DEBUG
   UI_USERNAME: {{{LITELLM_UI_USERNAME}}}
   UI_PASSWORD: {{{LITELLM_UI_PASSWORD}}}
+  # Ensure /app is on PYTHONPATH so `custom_callbacks.openwebui_metadata_hook` resolves
+  PYTHONPATH: "/app"
   {{#if @root.integration.o11y.langfuse}}
   LANGFUSE_HOST: http://langfuse-web.langfuse:3000
   LANGFUSE_PUBLIC_KEY: {{{LANGFUSE_PUBLIC_KEY}}}
@@ -105,10 +118,9 @@ proxy_config:
     store_prompts_in_spend_logs: true
   litellm_settings:
     drop_params: true
+    # Callbacks: observability (langfuse/phoenix) + OpenWebUI header→metadata hook
+    callbacks: {{{integration.o11y.config.callbacks_with_hook}}}
     {{#with integration.o11y.config}}
-    {{#if callbacks}}
-    callbacks: {{{callbacks}}}
-    {{/if}}
     {{#if success_callback}}
     success_callback: {{{success_callback}}}
     {{/if}}
