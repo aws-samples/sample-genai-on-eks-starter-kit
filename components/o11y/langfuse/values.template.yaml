@@ -39,6 +39,8 @@ langfuse:
       value: {{{LANGFUSE_USERNAME}}}
     - name: LANGFUSE_INIT_USER_PASSWORD
       value: {{{LANGFUSE_PASSWORD}}}
+    - name: LANGFUSE_LLM_CONNECTION_WHITELISTED_HOST
+      value: litellm.litellm.svc.cluster.local
   resources:
     requests:
       cpu: 1 
