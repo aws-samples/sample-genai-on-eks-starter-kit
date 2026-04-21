@@ -120,15 +120,7 @@ For full details on platform prerequisites, deployment modes (aggregated vs disa
 
 ## GPU Hunter - GPU & Neuron Instance Discovery
 
-[GPU Hunter](gpu-hunter/) is a Go CLI tool that discovers GPU and Neuron instance availability across AWS regions. Use it to find the best instances, regions, and pricing **before** deploying your GenAI workloads.
-
-**Features:**
-- 🔍 Discover all GPU (NVIDIA, AMD, Habana) and Neuron (Inferentia, Trainium) instance types
-- 💰 Compare spot vs on-demand pricing across regions
-- 📊 Spot placement scores (1-10) indicating likelihood of getting capacity
-- ⚡ Historical spot interruption rates from AWS Spot Advisor
-- 🖥️ Interactive TUI for browsing instances
-- 🎯 Probe actual capacity by launching and immediately terminating instances
+[GPU Hunter](gpu-hunter/) is an interactive CLI tool for finding GPU and Neuron instance availability, pricing, and spot capacity across AWS regions. Use it **before** deploying your GenAI workloads to pick the best instance type and region.
 
 ### Quick Start
 
@@ -136,23 +128,13 @@ For full details on platform prerequisites, deployment modes (aggregated vs disa
 cd gpu-hunter
 go build -o gpu-hunter ./cmd/gpu-hunter
 
-# Hunt for all accelerator instances in default GPU-heavy regions
-./gpu-hunter
-
-# Hunt in a specific region
-./gpu-hunter --regions us-west-2
-
-# Interactive TUI
-./gpu-hunter tui
-
-# Lookup a specific instance type across all regions
-./gpu-hunter lookup g6e.xlarge
-
-# Probe actual spot capacity
-./gpu-hunter probe g6e.xlarge --capacity spot --all-regions
+# Launch interactive TUI with spot placement scores
+./gpu-hunter tui --spot-score
 ```
 
-> **Requires:** Go 1.21+, AWS credentials with EC2 read permissions. See [gpu-hunter/README.md](gpu-hunter/README.md) for full documentation, IAM requirements, and all CLI options.
+This opens a terminal UI where you can browse all GPU/Neuron instances, filter by manufacturer, sort by price or spot score, lookup instances across regions, and probe actual capacity — all from one screen.
+
+> **Requires:** Go 1.21+, AWS credentials. See [gpu-hunter/README.md](gpu-hunter/README.md) for full documentation.
 
 ## Components & Examples Management
 
