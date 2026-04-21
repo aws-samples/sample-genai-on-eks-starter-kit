@@ -14,6 +14,7 @@ The starter kit includes the configurable components and examples from several c
 - AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
 - AI Agent Framework - [Strands Agents ](https://strandsagents.com), [Agno](https://docs.agno.com)
+- GPU Planning - [GPU Hunter](gpu-hunter/README.md)
 
 ## Prerequisites
 
@@ -116,6 +117,42 @@ This starter kit supports deploying [NVIDIA Dynamo](https://developer.nvidia.com
 ```
 
 For full details on platform prerequisites, deployment modes (aggregated vs disaggregated), KV cache routing, monitoring dashboards, benchmarking, and AIConfigurator, see the [NVIDIA Platform README](components/nvidia-platform/README.md).
+
+## GPU Hunter - GPU & Neuron Instance Discovery
+
+[GPU Hunter](gpu-hunter/) is a Go CLI tool that discovers GPU and Neuron instance availability across AWS regions. Use it to find the best instances, regions, and pricing **before** deploying your GenAI workloads.
+
+**Features:**
+- 🔍 Discover all GPU (NVIDIA, AMD, Habana) and Neuron (Inferentia, Trainium) instance types
+- 💰 Compare spot vs on-demand pricing across regions
+- 📊 Spot placement scores (1-10) indicating likelihood of getting capacity
+- ⚡ Historical spot interruption rates from AWS Spot Advisor
+- 🖥️ Interactive TUI for browsing instances
+- 🎯 Probe actual capacity by launching and immediately terminating instances
+
+### Quick Start
+
+```bash
+cd gpu-hunter
+go build -o gpu-hunter ./cmd/gpu-hunter
+
+# Hunt for all accelerator instances in default GPU-heavy regions
+./gpu-hunter
+
+# Hunt in a specific region
+./gpu-hunter --regions us-west-2
+
+# Interactive TUI
+./gpu-hunter tui
+
+# Lookup a specific instance type across all regions
+./gpu-hunter lookup g6e.xlarge
+
+# Probe actual spot capacity
+./gpu-hunter probe g6e.xlarge --capacity spot --all-regions
+```
+
+> **Requires:** Go 1.21+, AWS credentials with EC2 read permissions. See [gpu-hunter/README.md](gpu-hunter/README.md) for full documentation, IAM requirements, and all CLI options.
 
 ## Components & Examples Management
 
