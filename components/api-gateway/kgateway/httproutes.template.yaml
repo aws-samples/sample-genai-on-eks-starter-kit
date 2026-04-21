@@ -1,0 +1,255 @@
+# Keycloak (OIDC Provider)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: keycloak
+  namespace: kgateway-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "keycloak.{{{DOMAIN}}}"
+  rules:
+  - backendRefs:
+    - name: keycloak
+      namespace: keycloak
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: keycloak
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service
+---
+# OAuth2-Proxy routes (must be accessible without auth)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: oauth2-proxy
+  namespace: kgateway-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "auth.{{{DOMAIN}}}"
+  rules:
+  # OAuth2 endpoints (/oauth2/start, /oauth2/callback, /oauth2/sign_out, etc.)
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+  # Root path: redirect to OpenWebUI (post-login landing)
+  - matches:
+    - path:
+        type: Exact
+        value: /
+    filters:
+    - type: RequestRedirect
+      requestRedirect:
+        hostname: openwebui.{{{DOMAIN}}}
+        port: 443
+        scheme: https
+        statusCode: 302
+  # Any other path falls through to oauth2-proxy
+  - backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+---
+# OpenWebUI
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: openwebui
+  namespace: kgateway-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "openwebui.{{{DOMAIN}}}"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+  - backendRefs:
+    - name: openwebui
+      namespace: openwebui
+      port: 80
+---
+# LiteLLM
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: litellm
+  namespace: kgateway-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "litellm.{{{DOMAIN}}}"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+  - backendRefs:
+    - name: litellm
+      namespace: litellm
+      port: 4000
+---
+# Langfuse
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: langfuse
+  namespace: kgateway-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "langfuse.{{{DOMAIN}}}"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+  - backendRefs:
+    - name: langfuse-web
+      namespace: langfuse
+      port: 3000
+---
+# Qdrant
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qdrant
+  namespace: kgateway-system
+spec:
+  parentRefs:
+  - name: main-gateway
+  hostnames:
+  - "qdrant.{{{DOMAIN}}}"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /oauth2
+    backendRefs:
+    - name: oauth2-proxy
+      namespace: oauth2-proxy
+      port: 80
+  - backendRefs:
+    - name: qdrant
+      namespace: qdrant
+      port: 6333
+---
+# ReferenceGrants (allow gloo-system HTTPRoutes to reference services in other namespaces)
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: oauth2-proxy
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: openwebui
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: litellm
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: langfuse
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gloo-routes
+  namespace: qdrant
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service
+---
+# ReferenceGrant for GatewayExtension (ext auth -> oauth2-proxy service)
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-ext-auth
+  namespace: oauth2-proxy
+spec:
+  from:
+  - group: gateway.kgateway.dev
+    kind: GatewayExtension
+    namespace: kgateway-system
+  to:
+  - group: ""
+    kind: Service

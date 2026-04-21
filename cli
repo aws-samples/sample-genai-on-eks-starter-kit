@@ -103,18 +103,106 @@ program
         await utils.checkHtpasswd();
       }
       await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
-      const installItems = async (items, ITEMS_DIR, itemKey) => {
-        const itemPaths = items.map((item) => {
-          return path.join(ITEMS_DIR, item.category, item[itemKey], "index.mjs");
-        });
-        for (const itemPath of itemPaths) {
-          const itemModule = await import(itemPath);
-          await itemModule.init(DIR, config, utils);
-          await itemModule.install();
-        }
+
+      const installItem = async (item, ITEMS_DIR, itemKey) => {
+        const itemPath = path.join(ITEMS_DIR, item.category, item[itemKey], "index.mjs");
+        const itemModule = await import(itemPath);
+        await itemModule.init(DIR, config, utils);
+        await itemModule.install();
+        return itemModule;
       };
-      await installItems(config.demo.components, COMPONENTS_DIR, "component");
-      await installItems(config.demo.examples, EXAMPLES_DIR, "example");
+
+      // 2-pass install: separate OIDC-dependent components
+      const oidcDependentCategories = new Set(["api-gateway"]);
+      const pass1Components = config.demo.components.filter((c) => !oidcDependentCategories.has(c.category));
+      const pass2Components = config.demo.components.filter((c) => oidcDependentCategories.has(c.category));
+
+      // Pass 1: Install base components (including iam-identity-center which generates OIDC config)
+      console.log("\n=== Pass 1: Base components ===\n");
+      for (const item of pass1Components) {
+        await installItem(item, COMPONENTS_DIR, "component");
+      }
+
+      // Reload config and env after IAM Identity Center install
+      mergeConfig("config.local.json");
+      dotenv.config({ path: envLocalPath, override: true });
+
+      // Generate and persist OIDC cookie secret if not set
+      if (!process.env.OIDC_COOKIE_SECRET) {
+        const crypto = await import("crypto");
+        const cookieSecret = crypto.randomBytes(32).toString("base64url");
+        process.env.OIDC_COOKIE_SECRET = cookieSecret;
+        let envLocalContent = "";
+        if (fs.existsSync(envLocalPath)) {
+          envLocalContent = fs.readFileSync(envLocalPath, "utf8");
+        }
+        const regex = /^OIDC_COOKIE_SECRET=.*$/m;
+        if (regex.test(envLocalContent)) {
+          envLocalContent = envLocalContent.replace(regex, `OIDC_COOKIE_SECRET=${cookieSecret}`);
+        } else {
+          envLocalContent = envLocalContent.trimEnd() + `\nOIDC_COOKIE_SECRET=${cookieSecret}\n`;
+        }
+        fs.writeFileSync(envLocalPath, envLocalContent);
+      }
+
+      // Pass 2: Install OIDC-dependent components (oauth2-proxy, kgateway)
+      if (pass2Components.length > 0) {
+        console.log("\n=== Pass 2: API Gateway + Auth ===\n");
+        for (const item of pass2Components) {
+          try {
+            await installItem(item, COMPONENTS_DIR, "component");
+          } catch (error) {
+            console.warn(`Warning: ${item.component} install failed (OIDC may not be configured):`, error.message);
+            console.warn("  Run './cli configure' to set OIDC_CLIENT_SECRET, then re-install individually.");
+          }
+        }
+      }
+
+      // Install examples
+      console.log("\n=== Examples ===\n");
+      for (const item of config.demo.examples) {
+        await installItem(item, EXAMPLES_DIR, "example");
+      }
+
+      // Post-install: Setup LiteLLM Team RBAC
+      if (config.litellm?.rbac?.teams) {
+        try {
+          console.log("\nSetting up LiteLLM Team RBAC...");
+          const litellmModule = await import(path.join(COMPONENTS_DIR, "ai-gateway", "litellm", "index.mjs"));
+          await litellmModule.init(DIR, config, utils);
+          if (litellmModule.setupRBAC) {
+            await litellmModule.setupRBAC(config);
+          }
+        } catch (error) {
+          console.warn("Warning: LiteLLM RBAC setup failed (can be run manually later):", error.message);
+        }
+
+        // Post-install: Setup OpenWebUI Model RBAC (groups must already exist)
+        try {
+          console.log("\nSetting up OpenWebUI Model RBAC...");
+          const openwebuiModule = await import(path.join(COMPONENTS_DIR, "gui-app", "openwebui", "index.mjs"));
+          await openwebuiModule.init(DIR, config, utils);
+          if (openwebuiModule.setupRBAC) {
+            await openwebuiModule.setupRBAC(config);
+          }
+        } catch (error) {
+          console.warn("Warning: OpenWebUI RBAC setup failed (run manually after first SSO login):", error.message);
+        }
+      }
+
+      console.log("\n========================================");
+      console.log("Demo setup complete!");
+      console.log("========================================\n");
+      if (process.env.DOMAIN) {
+        console.log(`  OpenWebUI:  https://openwebui.${process.env.DOMAIN}`);
+        console.log(`  LiteLLM:    https://litellm.${process.env.DOMAIN}`);
+        console.log(`  Langfuse:   https://langfuse.${process.env.DOMAIN}`);
+        console.log(`  Qdrant:     https://qdrant.${process.env.DOMAIN}`);
+      }
+      if (!process.env.OIDC_CLIENT_SECRET) {
+        console.log("\n  Note: OIDC_CLIENT_SECRET not set. SSO login is not active.");
+        console.log("  Set it in .env.local and re-run: ./cli api-gateway oauth2-proxy install");
+      }
     } catch (error) {
       console.error("Error setting up demo environment:", error);
       process.exit(1);

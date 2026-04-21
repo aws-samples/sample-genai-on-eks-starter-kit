@@ -1,0 +1,70 @@
+# GatewayExtension: OAuth2-Proxy external auth service
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: GatewayExtension
+metadata:
+  name: oauth2-proxy-auth
+  namespace: kgateway-system
+spec:
+  extAuth:
+    httpService:
+      backendRef:
+        name: oauth2-proxy
+        namespace: oauth2-proxy
+        port: 80
+      pathPrefix: /oauth2/auth
+      authorizationResponse:
+        headersToBackend:
+        - x-auth-request-email
+        - x-auth-request-groups
+        - x-auth-request-preferred-username
+        - x-auth-request-access-token
+    headersToForward:
+    - cookie
+    - authorization
+    - x-forwarded-host
+    - x-forwarded-proto
+    - x-forwarded-uri
+    - x-forwarded-for
+---
+# TrafficPolicy: apply ext auth to all routes via Gateway
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: oidc-auth
+  namespace: kgateway-system
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: main-gateway
+  extAuth:
+    extensionRef:
+      name: oauth2-proxy-auth
+---
+# Disable auth for Keycloak (OIDC provider must be accessible without auth)
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: no-auth-keycloak
+  namespace: kgateway-system
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: keycloak
+  extAuth:
+    disable: {}
+---
+# Disable auth for OAuth2-Proxy callback endpoints
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  name: no-auth-oauth2-proxy
+  namespace: kgateway-system
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: oauth2-proxy
+  extAuth:
+    disable: {}

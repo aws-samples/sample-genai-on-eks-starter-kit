@@ -21,7 +21,6 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const OPENWEBUI_CHART_VERSION = "12.8.1";
   const requiredEnvVars = ["LITELLM_API_KEY", "OPENWEBUI_ADMIN_EMAIL", "OPENWEBUI_ADMIN_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
@@ -38,9 +37,32 @@ export async function install() {
     OPENWEBUI_ADMIN_EMAIL: process.env.OPENWEBUI_ADMIN_EMAIL,
     OPENWEBUI_ADMIN_PASSWORD: process.env.OPENWEBUI_ADMIN_PASSWORD,
   };
+  // Redis session backend (optional)
+  if (process.env.REDIS_PASSWORD) {
+    valuesVars.REDIS_URL = `redis://:${process.env.REDIS_PASSWORD}@redis-master.redis:6379/0`;
+  }
+  // kGateway mode: disable ingress
+  if (config?.kgateway?.enabled) {
+    valuesVars.KGATEWAY_ENABLED = true;
+  }
+  // OIDC: activate trusted email header when kGateway handles auth via OAuth2-Proxy
+  if (config?.kgateway?.enabled && process.env.OIDC_CLIENT_ID) {
+    valuesVars.OIDC_ACTIVE = true;
+    valuesVars.OIDC_CLIENT_ID = process.env.OIDC_CLIENT_ID;
+    valuesVars.OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET;
+    valuesVars.OIDC_ISSUER_URL = process.env.OIDC_ISSUER_URL;
+  }
+  // Fallback: OIDC SSO directly in OpenWebUI (no gateway)
+  if (!config?.kgateway?.enabled && process.env.OIDC_CLIENT_ID) {
+    valuesVars.OIDC_CLIENT_ID = process.env.OIDC_CLIENT_ID;
+    valuesVars.OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET;
+    valuesVars.OIDC_ISSUER_URL = process.env.OIDC_ISSUER_URL;
+  }
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
-  await $`helm upgrade --install openwebui open-webui/open-webui --version ${OPENWEBUI_CHART_VERSION} --namespace openwebui --create-namespace -f ${valuesRenderedPath}`;
+  await $`helm upgrade --install openwebui open-webui/open-webui --namespace openwebui --create-namespace -f ${valuesRenderedPath}`;
 }
+
+export { setupRBAC } from "./setup-rbac.mjs";
 
 export async function uninstall() {
   await $`helm uninstall openwebui --namespace openwebui`;

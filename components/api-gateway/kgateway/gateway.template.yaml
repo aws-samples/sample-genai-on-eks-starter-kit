@@ -1,0 +1,24 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: main-gateway
+  namespace: kgateway-system
+spec:
+  gatewayClassName: kgateway
+  infrastructure:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+      service.beta.kubernetes.io/aws-load-balancer-type: external
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    hostname: "*.{{{DOMAIN}}}"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: wildcard-tls
+    allowedRoutes:
+      namespaces:
+        from: All

@@ -33,9 +33,11 @@ export async function install() {
   const valuesVars = {
     DOMAIN: process.env.DOMAIN,
     MILVUS_BUCKET_NAME: milvusBucketName,
-    AWS_REGION: process.env.AWS_REGION,
+    AWS_REGION: process.env.REGION || process.env.AWS_REGION,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
+  await $`helm repo add milvus https://zilliztech.github.io/milvus-helm/ --force-update`;
+  await $`helm repo update milvus`;
   await $`helm upgrade --install milvus milvus/milvus --namespace milvus --create-namespace -f ${valuesRenderedPath}`;
 
   const { MILVUS_USERNAME, MILVUS_PASSWORD } = process.env;

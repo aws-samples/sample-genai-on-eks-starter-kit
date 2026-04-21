@@ -11,6 +11,7 @@ langfuse:
       value: secret
   encryptionKey:
     value: 7188cd4d31f5b0470ed96fa34615a3e779f3a71d1d0f68fc5c166b1c6e515c59 # Dummy key
+  {{#unless KGATEWAY_ENABLED}}
   ingress:
     enabled: true
     annotations:
@@ -25,6 +26,10 @@ langfuse:
         {{#if DOMAIN}}
         host: langfuse.{{{DOMAIN}}}
         {{/if}}
+  {{else}}
+  ingress:
+    enabled: false
+  {{/unless}}
 
   additionalEnv:
     - name: LANGFUSE_INIT_ORG_ID
@@ -39,6 +44,8 @@ langfuse:
       value: {{{LANGFUSE_USERNAME}}}
     - name: LANGFUSE_INIT_USER_PASSWORD
       value: {{{LANGFUSE_PASSWORD}}}
+    - name: LANGFUSE_LLM_CONNECTION_WHITELISTED_HOST
+      value: "litellm.litellm.svc.cluster.local"
   resources:
     requests:
       cpu: 1 

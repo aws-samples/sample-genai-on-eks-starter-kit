@@ -51,6 +51,17 @@ postgresql:
 serviceAccount:
   create: true
 
+# Mount custom Python callback (OpenWebUI header → Langfuse metadata)
+# LiteLLM resolves callback module paths relative to the config file location (/etc/litellm)
+volumes:
+  - name: litellm-custom-callbacks
+    configMap:
+      name: litellm-custom-callbacks
+volumeMounts:
+  - name: litellm-custom-callbacks
+    mountPath: /etc/litellm/custom_callbacks
+    readOnly: true
+
 masterkey: {{{LITELLM_API_KEY}}}
 envVars:
   # SERVER_ROOT_PATH: /litellm # Same as Ingress path
@@ -59,6 +70,8 @@ envVars:
   # LITELLM_LOG: DEBUG
   UI_USERNAME: {{{LITELLM_UI_USERNAME}}}
   UI_PASSWORD: {{{LITELLM_UI_PASSWORD}}}
+  # Ensure /app is on PYTHONPATH so `custom_callbacks.openwebui_metadata_hook` resolves
+  PYTHONPATH: "/app"
   {{#if @root.integration.o11y.langfuse}}
   LANGFUSE_HOST: http://langfuse-web.langfuse:3000
   LANGFUSE_PUBLIC_KEY: {{{LANGFUSE_PUBLIC_KEY}}}
@@ -77,6 +90,7 @@ envVars:
   PHOENIX_COLLECTOR_HTTP_ENDPOINT: http://phoenix-svc.phoenix:6006/v1/traces
   {{/if}}
 
+{{#unless KGATEWAY_ENABLED}}
 ingress:
   enabled: true
   className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
@@ -92,6 +106,10 @@ ingress:
       {{#if DOMAIN}}
       host: litellm.{{{DOMAIN}}}
       {{/if}}
+{{else}}
+ingress:
+  enabled: false
+{{/unless}}
 
 proxy_config:
   general_settings:
@@ -100,10 +118,9 @@ proxy_config:
     store_prompts_in_spend_logs: true
   litellm_settings:
     drop_params: true
+    # Callbacks: observability (langfuse/phoenix) + OpenWebUI header→metadata hook
+    callbacks: {{{integration.o11y.config.callbacks_with_hook}}}
     {{#with integration.o11y.config}}
-    {{#if callbacks}}
-    callbacks: {{{callbacks}}}
-    {{/if}}
     {{#if success_callback}}
     success_callback: {{{success_callback}}}
     {{/if}}
@@ -119,9 +136,15 @@ proxy_config:
     - model_name: bedrock/{{{name}}}
       litellm_params:
         model: bedrock/{{{model}}}
+        {{#if region}}
+        aws_region_name: {{{region}}}
+        {{else}}
         {{#if @root.integration.bedrock.region}}
         aws_region_name: {{{@root.integration.bedrock.region}}}
         {{/if}}
+        {{/if}}
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # Bedrock Embedding Models
     {{#each integration.bedrock.embedding}}
@@ -138,6 +161,8 @@ proxy_config:
         model: openai/{{@key}}
         api_key: fake-key
         api_base: http://{{@key}}.vllm:8000/v1
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # SGlang Models
     {{#each integration.llm-model.sglang}}
@@ -146,6 +171,8 @@ proxy_config:
         model: openai/{{@key}}
         api_key: fake-key
         api_base: http://{{@key}}.sglang:30000/v1
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # TGI Models
     {{#each integration.llm-model.tgi}}
@@ -154,6 +181,8 @@ proxy_config:
         model: openai/{{@key}}
         api_key: fake-key
         api_base: http://{{@key}}.tgi:80/v1
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # Ollama Models
     {{#each integration.llm-model.ollama}}
@@ -163,6 +192,8 @@ proxy_config:
         api_key: fake-key
         api_base: http://ollama.ollama:11434
         drop_params: true
+      model_info:
+        access_groups: ["all-models"]
     {{/each}}
     # TEI Models
     {{#each integration.embedding-model.tei}}
@@ -176,8 +207,8 @@ proxy_config:
   {{#if integration.mcp-servers.length}}
   mcp_servers:
     {{#each integration.mcp-servers}}
-    {{this}}:
-      url: "http://{{this}}.mcp-server:8000/mcp"
+    {{this.alias}}:
+      url: "http://{{this.name}}.mcp-server:8000/mcp"
       transport: "http"
       auth_type: "api_key"
       spec_version: "2025-03-26"

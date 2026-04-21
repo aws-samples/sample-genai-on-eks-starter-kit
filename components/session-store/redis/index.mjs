@@ -1,3 +1,5 @@
+#!/usr/bin/env zx
+
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
@@ -5,12 +7,14 @@ import handlebars from "handlebars";
 import { $ } from "zx";
 $.verbose = true;
 
-export const name = "MLflow";
+export const name = "Redis";
 const __filename = fileURLToPath(import.meta.url);
 const DIR = path.dirname(__filename);
 let BASE_DIR;
 let config;
 let utils;
+
+const NAMESPACE = "redis";
 
 export async function init(_BASE_DIR, _config, _utils) {
   BASE_DIR = _BASE_DIR;
@@ -19,29 +23,36 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["MLFLOW_USERNAME", "MLFLOW_PASSWORD"];
+  const requiredEnvVars = ["REDIS_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
-  await utils.terraform.apply(DIR);
-  const mlflowBucketName = await utils.terraform.output(DIR, { outputName: "mlflow_bucket_name" });
+  await $`helm repo add bitnami https://charts.bitnami.com/bitnami --force-update`;
+  await $`helm repo update bitnami`;
 
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
   const valuesTemplateString = fs.readFileSync(valuesTemplatePath, "utf8");
   const valuesTemplate = handlebars.compile(valuesTemplateString);
   const valuesVars = {
-    DOMAIN: process.env.DOMAIN,
-    MLFLOW_USERNAME: process.env.MLFLOW_USERNAME,
-    MLFLOW_PASSWORD: process.env.MLFLOW_PASSWORD,
-    MLFLOW_BUCKET_NAME: mlflowBucketName,
-    AWS_REGION: process.env.REGION || process.env.AWS_REGION,
+    REDIS_PASSWORD: process.env.REDIS_PASSWORD,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
-  await $`helm repo add community-charts https://community-charts.github.io/helm-charts`;
-  await $`helm upgrade --install mlflow community-charts/mlflow --namespace mlflow --create-namespace -f ${valuesRenderedPath}`;
+  await $`helm upgrade --install redis bitnami/redis --namespace ${NAMESPACE} --create-namespace -f ${valuesRenderedPath} --wait --timeout 5m`;
+
+  console.log("Redis installed successfully!");
+  console.log(`Redis endpoint: redis-master.${NAMESPACE}:6379`);
 }
 
 export async function uninstall() {
-  await $`helm uninstall mlflow --namespace mlflow`;
-  await utils.terraform.destroy(DIR);
+  try {
+    await $`helm uninstall redis --namespace ${NAMESPACE}`;
+    console.log("Redis uninstalled.");
+  } catch {
+    console.log("Redis not found or already removed.");
+  }
+  try {
+    await $`kubectl delete namespace ${NAMESPACE} --ignore-not-found`;
+  } catch {
+    // ignore
+  }
 }

@@ -13,6 +13,14 @@
       ]
     },
     {
+      "dir": "api-gateway",
+      "name": "API Gateway",
+      "components": [
+        { "dir": "kgateway", "name": "kGateway" },
+        { "dir": "oauth2-proxy", "name": "OAuth2 Proxy" }
+      ]
+    },
+    {
       "dir": "ai-gateway",
       "name": "AI Gateway",
       "components": [
@@ -42,7 +50,8 @@
       "components": [
         { "dir": "langfuse", "name": "Langfuse" },
         { "dir": "mlflow", "name": "MLflow" },
-        { "dir": "phoenix", "name": "Phoenix" }
+        { "dir": "phoenix", "name": "Phoenix" },
+        { "dir": "amp-amg", "name": "Amazon Managed Prometheus & Grafana (AMP/AMG)" }
       ]
     },
     { "dir": "gui-app", "name": "GUI App", "components": [{ "dir": "openwebui", "name": "Open WebUI" }] },
@@ -56,14 +65,32 @@
       ]
     },
     { "dir": "workflow-automation", "name": "Workflow Automation", "components": [{ "dir": "n8n", "name": "n8n" }] },
-    { "dir": "ai-agent", "name": "AI Agent", "components": [{ "dir": "openclaw", "name": "OpenClaw" }] }
+    { "dir": "ai-agent", "name": "AI Agent", "components": [{ "dir": "openclaw", "name": "OpenClaw" }] },
+    { "dir": "session-store", "name": "Session Store", "components": [{ "dir": "redis", "name": "Redis" }] },
+    { "dir": "auth", "name": "Auth", "components": [{ "dir": "keycloak", "name": "Keycloak" }] },
+    {
+      "dir": "security",
+      "name": "Security",
+      "components": [
+        { "dir": "external-secrets", "name": "External Secrets Operator" }
+      ]
+    }
   ],
   "exampleCategories": [
-    { "dir": "mcp-server", "name": "MCP Server", "examples": [{ "dir": "calculator", "name": "Calculator" }] },
+    {
+      "dir": "mcp-server",
+      "name": "MCP Server",
+      "examples": [
+        { "dir": "calculator", "name": "Calculator" },
+        { "dir": "code-review", "name": "Code Review" }
+      ]
+    },
     {
       "dir": "strands-agents",
       "name": "Strands Agents",
-      "examples": [{ "dir": "calculator-agent", "name": "Calculator Agent" }]
+      "examples": [
+        { "dir": "calculator-agent", "name": "Calculator Agent" }
+      ]
     },
     {
       "dir": "agno",

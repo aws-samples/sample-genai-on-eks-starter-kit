@@ -1,0 +1,35 @@
+config:
+  clientID: "{{{OIDC_CLIENT_ID}}}"
+  clientSecret: "{{{OIDC_CLIENT_SECRET}}}"
+  cookieSecret: "{{{OIDC_COOKIE_SECRET}}}"
+
+extraArgs:
+  provider: oidc
+  oidc-issuer-url: "{{{OIDC_ISSUER_URL}}}"
+  redirect-url: "https://auth.{{{DOMAIN}}}/oauth2/callback"
+  cookie-secure: "true"
+  cookie-domain: ".{{{DOMAIN}}}"
+  set-xauthrequest: "true"
+  set-authorization-header: "true"
+  pass-access-token: "true"
+  session-store-type: redis
+  redis-connection-url: "redis://:{{{REDIS_PASSWORD}}}@redis-master.redis:6379/1"
+  scope: "openid email profile groups"
+  upstream: "static://200"
+  whitelist-domain: ".{{{DOMAIN}}}"
+  email-domain: "*"
+  reverse-proxy: "true"
+  skip-provider-button: "true"
+
+ingress:
+  enabled: false
+
+redis:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi

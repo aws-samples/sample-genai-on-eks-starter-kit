@@ -26,6 +26,7 @@ AGENTS.md
 .env.local
 config.local.json
 *.rendered.yaml
+oidc-credentials.json
 test*.py
 test*.mjs
 terraform/eks.tf

@@ -3,14 +3,21 @@
     "components": [
       { "category": "llm-model", "component": "vllm" },
       { "category": "o11y", "component": "langfuse" },
-      { "category": "gui-app", "component": "openwebui" },
       { "category": "vector-database", "component": "qdrant" },
       { "category": "embedding-model", "component": "tei" },
-      { "category": "ai-gateway", "component": "litellm" }
+      { "category": "ai-gateway", "component": "litellm" },
+      { "category": "session-store", "component": "redis" },
+      { "category": "auth", "component": "keycloak" },
+      { "category": "api-gateway", "component": "oauth2-proxy" },
+      { "category": "api-gateway", "component": "kgateway" },
+      { "category": "security", "component": "external-secrets" },
+      { "category": "gui-app", "component": "openwebui" },
+      { "category": "o11y", "component": "amp-amg" }
     ],
     "examples": [
       { "category": "mcp-server", "example": "calculator" },
-      { "category": "strands-agents", "example": "calculator-agent" }
+      { "category": "strands-agents", "example": "calculator-agent" },
+      { "category": "mcp-server", "example": "code-review" }
     ]
   },
   "llm-model": {
@@ -30,7 +37,7 @@
         { "name": "qwen3-omni-30b-captioner", "deploy": false },
         { "name": "gpt-oss-20b", "deploy": false },
         { "name": "gpt-oss-120b", "deploy": false },
-        { "name": "deepseek-r1-qwen3-8b", "deploy": false },
+        { "name": "deepseek-r1-qwen3-8b", "deploy": true },
         { "name": "gemma3-27b-gptq", "deploy": false },
         { "name": "magistral-24b-fp8", "deploy": false },
         { "name": "llama-4-scout-17b-16e-instruct-fp8", "deploy": false },
@@ -79,21 +86,44 @@
     "region": null,
     "llm": {
       "models": [
-        { "name": "amazon-nova-premier", "model": "us.amazon.nova-premier-v1:0" },
+        { "name": "amazon-nova-premier", "model": "us.amazon.nova-premier-v1:0", "region": "us-east-1", "deploy": false },
         { "name": "amazon-nova-2-lite", "model": "global.amazon.nova-2-lite-v1:0" },
-        { "name": "claude-opus-4.6", "model": "global.anthropic.claude-opus-4-6-20260214-v1:0" },
+        { "name": "claude-opus-4.6", "model": "global.anthropic.claude-opus-4-6-v1" },
         { "name": "claude-4.5-opus", "model": "global.anthropic.claude-opus-4-5-20251101-v1:0" },
         { "name": "claude-4.5-sonnet", "model": "global.anthropic.claude-sonnet-4-5-20250929-v1:0" },
         { "name": "claude-4.5-haiku", "model": "global.anthropic.claude-haiku-4-5-20251001-v1:0" },
-        { "name": "llama4-maverick", "model": "us.meta.llama4-maverick-17b-instruct-v1:0" },
-        { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0" }
+        { "name": "llama4-maverick", "model": "us.meta.llama4-maverick-17b-instruct-v1:0", "region": "us-east-1" },
+        { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0", "region": "us-east-1" }
       ]
     },
     "embedding": { "models": [] }
   },
+  "kgateway": {
+    "enabled": true,
+    "enableShieldAdvanced": false,
+    "waf": {
+      "rateLimitPerIP": 2000,
+      "enableGeoRestriction": false,
+      "allowedCountries": []
+    }
+  },
   "litellm": {
     "enableBedrockGuardrail": false,
-    "enableGuardrailsAI": false
+    "enableGuardrailsAI": false,
+    "rbac": {
+      "teams": [
+        {
+          "alias": "senior-dev",
+          "models": ["all-models"],
+          "description": "Senior developers - access to all models"
+        },
+        {
+          "alias": "junior-dev",
+          "models": ["vllm/qwen3-30b-instruct-fp8"],
+          "description": "Junior developers - limited model access"
+        }
+      ]
+    }
   },
   "ai-agent": {
     "openclaw": {
@@ -104,6 +134,15 @@
     }
   },
   "examples": {
+    "mcp-server": {
+      "code-review": {
+        "env": {
+          "TEI_BASE_URL": "http://qwen3-embedding-06b-bf16-cpu.tei:80",
+          "QDRANT_URL": "http://qdrant.qdrant:6333",
+          "QDRANT_COLLECTION": "code-review"
+        }
+      }
+    },
     "agno": {
       "calculator-agent": {
         "env": {

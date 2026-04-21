@@ -192,6 +192,8 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
         graph = graph.with_config({
             "run_name": "credit_underwriting_agent_with_image_id",
             "callbacks": callbacks,
+            "tags": ["loan-processing", "agent", "langgraph"],
+            "metadata": {"langfuse_session_id": "loan-buddy"},
             "recursion_limit": 20,
         })
         

@@ -4,7 +4,10 @@
       { "category": "llm-model", "component": "vllm" },
       { "category": "o11y", "component": "langfuse" },
       { "category": "gui-app", "component": "openwebui" },
-      { "category": "ai-gateway", "component": "litellm" }
+      { "category": "ai-gateway", "component": "litellm" },
+      { "category": "vector-database", "component": "milvus" },
+      { "category": "o11y", "component": "amp-amg" },
+      { "category": "security", "component": "external-secrets" }
     ],
     "examples": []
   },
