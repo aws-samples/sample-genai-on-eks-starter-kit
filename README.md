@@ -14,6 +14,7 @@ The starter kit includes the configurable components and examples from several c
 - AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)
 - MCP Server - [FastMCP 2.0](https://gofastmcp.com)
 - AI Agent Framework - [Strands Agents ](https://strandsagents.com), [Agno](https://docs.agno.com)
+- GPU Planning - [GPU Hunter](gpu-hunter/README.md)
 
 ## Prerequisites
 
@@ -116,6 +117,24 @@ This starter kit supports deploying [NVIDIA Dynamo](https://developer.nvidia.com
 ```
 
 For full details on platform prerequisites, deployment modes (aggregated vs disaggregated), KV cache routing, monitoring dashboards, benchmarking, and AIConfigurator, see the [NVIDIA Platform README](components/nvidia-platform/README.md).
+
+## GPU Hunter - GPU & Neuron Instance Discovery
+
+[GPU Hunter](gpu-hunter/) is an interactive CLI tool for finding GPU and Neuron instance availability, pricing, and spot capacity across AWS regions. Use it **before** deploying your GenAI workloads to pick the best instance type and region.
+
+### Quick Start
+
+```bash
+cd gpu-hunter
+go build -o gpu-hunter ./cmd/gpu-hunter
+
+# Launch interactive TUI with spot placement scores
+./gpu-hunter tui --spot-score
+```
+
+This opens a terminal UI where you can browse all GPU/Neuron instances, filter by manufacturer, sort by price or spot score, lookup instances across regions, and probe actual capacity — all from one screen.
+
+> **Requires:** Go 1.21+, AWS credentials. See [gpu-hunter/README.md](gpu-hunter/README.md) for full documentation.
 
 ## Components & Examples Management
 
