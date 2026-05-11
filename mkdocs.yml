@@ -1,0 +1,133 @@
+site_name: GenAI on EKS Starter Kit
+site_url: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/
+site_description: A starter kit for deploying and managing GenAI components on Amazon EKS
+repo_url: https://github.com/aws-samples/sample-genai-on-eks-starter-kit
+repo_name: aws-samples/sample-genai-on-eks-starter-kit
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  logo: assets/images/logo.svg
+  favicon: assets/images/logo.svg
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/aws-samples/sample-genai-on-eks-starter-kit
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Prerequisites: getting-started/prerequisites.md
+    - Quick Start: getting-started/quick-start.md
+    - Infrastructure Setup: getting-started/infrastructure.md
+    - Demo Walkthrough: getting-started/demo-walkthrough.md
+  - Components:
+    - Overview: components/index.md
+    - NVIDIA Platform:
+      - Overview: components/nvidia-platform/index.md
+      - GPU Operator: components/nvidia-platform/gpu-operator.md
+      - Monitoring: components/nvidia-platform/monitoring.md
+      - Dynamo Platform: components/nvidia-platform/dynamo-platform.md
+      - Dynamo vLLM Serving: components/nvidia-platform/dynamo-vllm.md
+      - AIPerf Benchmark: components/nvidia-platform/benchmark.md
+      - AIConfigurator: components/nvidia-platform/aiconfigurator.md
+    - AI Gateway:
+      - LiteLLM: components/ai-gateway/litellm.md
+      - Kong: components/ai-gateway/kong.md
+    - LLM Model:
+      - vLLM: components/llm-model/vllm.md
+      - SGLang: components/llm-model/sglang.md
+      - TGI: components/llm-model/tgi.md
+      - Ollama: components/llm-model/ollama.md
+    - Embedding Model:
+      - Text Embedding Inference (TEI): components/embedding-model/tei.md
+    - Guardrail:
+      - Guardrails AI: components/guardrail/guardrails-ai.md
+    - Observability:
+      - Langfuse: components/observability/langfuse.md
+      - MLflow: components/observability/mlflow.md
+      - Phoenix: components/observability/phoenix.md
+    - GUI App:
+      - Open WebUI: components/gui-app/openwebui.md
+    - Vector Database:
+      - Qdrant: components/vector-database/qdrant.md
+      - Chroma: components/vector-database/chroma.md
+      - Milvus: components/vector-database/milvus.md
+    - Workflow Automation:
+      - n8n: components/workflow-automation/n8n.md
+    - AI Agent:
+      - OpenClaw: components/ai-agent/openclaw.md
+  - Examples:
+    - Overview: examples/index.md
+    - MCP Server:
+      - Calculator: examples/mcp-server/calculator.md
+    - Strands Agents:
+      - Calculator Agent: examples/strands-agents/calculator-agent.md
+    - Agno:
+      - Calculator Agent: examples/agno/calculator-agent.md
+    - OpenClaw:
+      - Document Writer: examples/openclaw/doc-writer.md
+      - DevOps Agent: examples/openclaw/devops-agent.md
+  - Reference:
+    - CLI Commands: reference/cli-commands.md
+    - Configuration: reference/configuration.md
+    - FAQ: reference/faq.md
+    - Security: reference/security.md
