@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecting Flexible AI Platform on AWS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --aws-orange: #FF9900;
+    --aws-orange-light: #FFB84D;
+    --aws-dark: #0D1117;
+    --aws-navy: #0F1B2D;
+    --aws-mid: #1A2B45;
+    --aws-border: rgba(255,153,0,0.2);
+    --aws-border-soft: rgba(255,255,255,0.08);
+    --aws-text: #E8EFF7;
+    --aws-muted: #8BA3BE;
+    --accent-blue: #4A9EE7;
+    --accent-purple: #A78BFA;
+    --accent-green: #34D399;
+    --font-display: 'DM Mono', monospace;
+    --font-body: 'Inter', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    background: var(--aws-dark);
+    color: var(--aws-text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(13,17,23,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--aws-border);
+    padding: 0 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 60px;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em;
+    color: var(--aws-orange); text-decoration: none;
+  }
+  .nav-logo svg { width: 28px; height: 28px; }
+  .nav-links { display: flex; gap: 26px; list-style: none; }
+  .nav-links a {
+    color: var(--aws-muted); text-decoration: none;
+    font-size: 13px; letter-spacing: 0.04em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--aws-orange); }
+  .nav-cta {
+    background: var(--aws-orange); color: var(--aws-dark) !important;
+    padding: 7px 18px; border-radius: 4px;
+    font-weight: 700 !important; font-size: 13px !important;
+  }
+  .nav-cta:hover { background: var(--aws-orange-light) !important; color: var(--aws-dark) !important; }
+
+  .hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 100px 5% 60px;
+    position: relative; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 50%, rgba(255,153,0,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 20% 80%, rgba(74,158,231,0.05) 0%, transparent 60%),
+      linear-gradient(160deg, var(--aws-dark) 0%, var(--aws-navy) 100%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,153,0,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,153,0,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 60% 40%, black 0%, transparent 70%);
+  }
+  .hero-content { position: relative; z-index: 2; max-width: 880px; }
+  .hero h1 {
+    font-size: clamp(38px, 5.5vw, 68px);
+    font-weight: 900; line-height: 1.08;
+    letter-spacing: -0.025em; margin-bottom: 24px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  .hero h1 .accent { color: var(--aws-orange); }
+  .hero-sub {
+    font-family: var(--font-display);
+    font-size: clamp(18px, 2.5vw, 28px);
+    color: var(--aws-orange);
+    letter-spacing: 0.04em; margin-bottom: 28px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+  .hero p {
+    font-size: 17px; color: var(--aws-muted);
+    max-width: 660px; margin-bottom: 40px;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+  .hero-actions {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+  .btn-primary {
+    background: var(--aws-orange); color: var(--aws-dark);
+    padding: 14px 32px; border-radius: 4px;
+    font-weight: 700; font-size: 15px; text-decoration: none;
+    border: none; cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary:hover { background: var(--aws-orange-light); transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent; color: var(--aws-text);
+    padding: 14px 32px; border-radius: 4px;
+    font-weight: 500; font-size: 15px; text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.2); cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, transform 0.15s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-outline:hover { border-color: var(--aws-orange); color: var(--aws-orange); transform: translateY(-1px); }
+
+  section { padding: 100px 5%; }
+  .section-label {
+    font-family: var(--font-display);
+    font-size: 11px; letter-spacing: 0.15em;
+    color: var(--aws-orange); text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 700; letter-spacing: -0.02em;
+    margin-bottom: 16px; line-height: 1.2;
+  }
+  .section-desc {
+    font-size: 16px; color: var(--aws-muted);
+    max-width: 720px; margin-bottom: 60px;
+  }
+
+  /* OVERVIEW */
+  #overview {
+    background: var(--aws-navy);
+    border-top: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--aws-border);
+  }
+  .overview-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+  .overview-text p {
+    font-size: 16px; color: var(--aws-muted); line-height: 1.8;
+    margin-bottom: 20px;
+  }
+  .overview-text strong { color: var(--aws-text); }
+  .overview-text .quote-block strong { color: var(--accent-blue); }
+  .tech-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .pill {
+    font-family: var(--font-display); font-size: 11px;
+    background: rgba(255,153,0,0.1);
+    border: 1px solid var(--aws-border);
+    color: var(--aws-orange);
+    padding: 6px 12px; border-radius: 20px;
+  }
+  .flex-circle {
+    position: relative; width: 100%;
+    aspect-ratio: 1; max-width: 480px; margin: 0 auto;
+  }
+  .flex-circle svg { width: 100%; height: 100%; }
+  .flex-tagline { text-align: center; margin-top: 24px; }
+  .flex-tagline-main { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .flex-tagline-main span { color: var(--aws-orange); }
+  .flex-tagline-sub { font-size: 14px; color: var(--aws-muted); }
+
+  /* VALUE PROPS */
+  #value { background: var(--aws-dark); }
+  .value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .value-card {
+    background: var(--aws-navy);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 12px; padding: 32px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+  .value-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
+  .value-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; background: var(--aws-orange);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .value-card:hover::before { transform: scaleX(1); }
+  .value-icon {
+    width: 52px; height: 52px;
+    background: rgba(255,153,0,0.1);
+    border: 1px solid var(--aws-border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin-bottom: 20px;
+  }
+  .value-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
+  .value-card p { font-size: 14px; color: var(--aws-muted); line-height: 1.7; }
+
+  /* FLEXIBILITY (5 dimensions) */
+  #flexibility {
+    background: var(--aws-navy);
+    border-top: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--aws-border);
+  }
+  .flex-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .flex-card {
+    background: var(--aws-mid);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 10px; padding: 24px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .flex-card:hover { border-color: var(--aws-orange); transform: translateY(-3px); }
+  .flex-icon { font-size: 28px; margin-bottom: 14px; }
+  .flex-card h4 {
+    font-size: 15px; font-weight: 700; margin-bottom: 6px;
+    color: var(--aws-text); line-height: 1.3;
+  }
+  .flex-card .flex-en {
+    font-family: var(--font-display); font-size: 11px;
+    color: var(--accent-blue); margin-bottom: 14px;
+  }
+  .flex-card .flex-key {
+    font-size: 13px; color: var(--aws-orange); font-weight: 500;
+    margin-bottom: 12px; font-style: italic;
+  }
+  .flex-card p { font-size: 12px; color: var(--aws-muted); line-height: 1.6; }
+
+  /* FUNCTIONAL VIEW */
+  #functional { background: var(--aws-dark); }
+  .image-placeholder {
+    background: var(--aws-navy);
+    border: 2px dashed var(--aws-border);
+    border-radius: 12px;
+    min-height: 480px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
+    color: var(--aws-muted);
+  }
+  .image-placeholder-icon { font-size: 48px; opacity: 0.5; }
+  .image-placeholder-text { font-size: 14px; font-family: var(--font-display); letter-spacing: 0.05em; }
+  .arch-diagram {
+    background: var(--aws-navy);
+    border: 1px solid var(--aws-border);
+    border-radius: 12px;
+    padding: 24px;
+    overflow: hidden;
+  }
+  .arch-diagram svg { width: 100%; height: auto; display: block; }
+  .arch-caption {
+    margin-top: 16px; text-align: center;
+    font-family: var(--font-display); font-size: 11px; letter-spacing: 0.08em;
+    color: var(--aws-muted); text-transform: uppercase;
+  }
+
+  /* BENEFITS */
+  #benefits {
+    background: var(--aws-navy);
+    border-top: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--aws-border);
+  }
+  .benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .benefit-card {
+    background: var(--aws-mid);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 12px; padding: 32px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+  .benefit-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
+  .benefit-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px; transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .benefit-card:hover::before { transform: scaleX(1); }
+  .benefit-card.b1::before { background: var(--accent-purple); }
+  .benefit-card.b2::before { background: var(--accent-green); }
+  .benefit-card.b3::before { background: var(--accent-blue); }
+  .benefit-card.b4::before { background: var(--aws-orange); }
+  .benefit-icon {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 20px;
+  }
+  .benefit-card.b1 .benefit-icon { background: rgba(167,139,250,0.15); }
+  .benefit-card.b2 .benefit-icon { background: rgba(52,211,153,0.15); }
+  .benefit-card.b3 .benefit-icon { background: rgba(74,158,231,0.15); }
+  .benefit-card.b4 .benefit-icon { background: rgba(255,153,0,0.15); }
+  .benefit-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; line-height: 1.3; }
+  .benefit-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .benefit-card li {
+    font-size: 13px; color: var(--aws-muted);
+    padding-left: 16px; position: relative; line-height: 1.6;
+  }
+  .benefit-card li::before {
+    content: '✓'; color: var(--aws-orange);
+    position: absolute; left: 0; font-weight: 700;
+  }
+
+  /* USE CASES */
+  #usecases { background: var(--aws-dark); }
+  .usecase-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .usecase-card {
+    background: var(--aws-navy);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 12px; padding: 28px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .usecase-card:hover { border-color: var(--aws-orange); transform: translateY(-3px); }
+  .usecase-num {
+    font-family: var(--font-display);
+    font-size: 28px; color: var(--aws-orange);
+    line-height: 1; margin-bottom: 16px; font-weight: 500;
+  }
+  .usecase-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; line-height: 1.35; }
+  .usecase-card p { font-size: 13px; color: var(--aws-muted); line-height: 1.65; }
+
+  /* OFFERINGS */
+  #offerings {
+    background: var(--aws-navy);
+    border-top: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--aws-border);
+  }
+  .offering-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .offering-card {
+    background: var(--aws-mid);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 12px; padding: 32px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .offering-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
+  .offering-icon {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 20px;
+    background: linear-gradient(135deg, rgba(255,153,0,0.15), rgba(255,153,0,0.05));
+    border: 1px solid var(--aws-border);
+  }
+  .offering-card h3 {
+    font-size: 17px; font-weight: 700; margin-bottom: 16px;
+    color: var(--aws-orange); line-height: 1.3;
+  }
+  .offering-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .offering-card li {
+    font-size: 13px; color: var(--aws-muted);
+    padding-left: 14px; position: relative; line-height: 1.6;
+  }
+  .offering-card li::before {
+    content: '→'; color: var(--aws-orange);
+    position: absolute; left: 0;
+  }
+
+  /* CUSTOMER STORIES - empty placeholder */
+  #customers { background: var(--aws-dark); }
+  .customers-placeholder {
+    background: var(--aws-navy);
+    border: 2px dashed var(--aws-border);
+    border-radius: 12px;
+    min-height: 240px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
+    color: var(--aws-muted);
+  }
+
+  /* CONTACT */
+  #contact {
+    background: var(--aws-navy);
+    border-top: 1px solid var(--aws-border);
+  }
+  .contact-layout {
+    display: grid; grid-template-columns: 1fr 1.2fr; gap: 80px; align-items: start;
+  }
+  .contact-info h2 { font-size: clamp(28px, 3.5vw, 40px); margin-bottom: 16px; }
+  .contact-info > p { font-size: 16px; color: var(--aws-muted); margin-bottom: 32px; }
+  .contact-emails { display: flex; flex-direction: column; gap: 12px; }
+  .contact-email {
+    display: flex; gap: 14px; align-items: center;
+    background: var(--aws-mid);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 8px; padding: 16px 20px;
+    text-decoration: none; color: var(--aws-text);
+    transition: border-color 0.2s;
+  }
+  .contact-email:hover { border-color: var(--aws-orange); }
+  .contact-email-icon { font-size: 20px; }
+  .contact-email-text { font-size: 14px; font-weight: 500; font-family: var(--font-display); }
+
+  .contact-form-wrapper {
+    background: var(--aws-mid);
+    border: 1px solid var(--aws-border);
+    border-radius: 12px; padding: 36px;
+  }
+  .form-title { font-size: 20px; font-weight: 700; margin-bottom: 24px; }
+  .form-group { margin-bottom: 20px; }
+  .form-group label {
+    display: block; font-size: 13px; color: var(--aws-muted);
+    margin-bottom: 8px;
+  }
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    background: var(--aws-navy);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 6px; padding: 12px 16px;
+    color: var(--aws-text); font-size: 14px;
+    font-family: var(--font-body);
+    transition: border-color 0.2s; outline: none;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus { border-color: var(--aws-orange); }
+  .form-group textarea { resize: vertical; min-height: 100px; }
+  .form-submit {
+    width: 100%;
+    background: var(--aws-orange); color: var(--aws-dark);
+    padding: 14px; border-radius: 6px;
+    font-weight: 700; font-size: 15px;
+    border: none; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .form-submit:hover { background: var(--aws-orange-light); }
+
+  footer {
+    background: var(--aws-dark);
+    border-top: 1px solid var(--aws-border);
+    padding: 32px 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: var(--aws-muted); flex-wrap: wrap; gap: 16px;
+  }
+  .footer-logo { font-family: var(--font-display); font-size: 12px; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reveal {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 1100px) {
+    .flex-grid { grid-template-columns: repeat(3, 1fr); }
+    .usecase-grid { grid-template-columns: repeat(3, 1fr); }
+    .benefits-grid, .offering-grid, .value-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .overview-layout, .contact-layout { grid-template-columns: 1fr; gap: 40px; }
+    nav .nav-links { display: none; }
+  }
+  @media (max-width: 600px) {
+    .flex-grid, .usecase-grid, .benefits-grid, .offering-grid, .value-grid { grid-template-columns: 1fr; }
+    section { padding: 60px 5%; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-logo">
+    <svg viewBox="0 0 40 40" fill="none">
+      <rect width="40" height="40" rx="6" fill="#FF9900" opacity="0.15"/>
+      <path d="M8 28C12 24 16 20 20 20C24 20 28 24 32 28" stroke="#FF9900" stroke-width="2" stroke-linecap="round"/>
+      <path d="M8 20C12 16 16 14 20 14C24 14 28 16 32 20" stroke="#FF9900" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+      <path d="M8 12C12 10 16 9 20 9C24 9 28 10 32 12" stroke="#FF9900" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+    </svg>
+    FLEXIBLE AI · AWS
+  </a>
+  <ul class="nav-links">
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#value">Value Proposition</a></li>
+    <li><a href="#flexibility">Flexibility</a></li>
+    <li><a href="#functional">Functional View</a></li>
+    <li><a href="#benefits">Benefits</a></li>
+    <li><a href="#usecases">Use Cases</a></li>
+    <li><a href="#offerings">Offerings</a></li>
+    <li><a href="#customers">Customers</a></li>
+    <li><a href="landing.html" title="한국어">KO</a></li>
+    <li><a href="../" title="Back to docs site">Docs</a></li>
+    <li><a href="#contact" class="nav-cta">Contact</a></li>
+  </ul>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <h1>Architecting Flexible<br><span class="accent">AI Platform</span> on AWS</h1>
+    <div class="hero-sub">Run Any Model, Anywhere.</div>
+    <p>A next-generation AI platform built on flexibility, sovereignty, and granular control. Run any model, in any environment, composed to fit your business — not the other way around.</p>
+    <div class="hero-actions">
+      <a href="#overview" class="btn-primary">Explore the solution →</a>
+      <a href="#contact" class="btn-outline">Contact us</a>
+    </div>
+  </div>
+</section>
+
+<!-- 1. OVERVIEW -->
+<section id="overview">
+  <div class="overview-layout">
+    <div class="overview-text reveal">
+      <div class="section-label">OVERVIEW</div>
+      <p class="quote-block">Teams running AI in production keep hitting the same wall. <strong>"New models drop every week, but plugging them into our existing pipeline is rework every time."</strong> <strong>"Each business unit runs its own GPUs and deploys models in isolation — no enterprise-wide cost visibility or governance."</strong> <strong>"API-based model spend is growing faster than we can control."</strong> <strong>"We want to scale into the cloud, but we also need to keep getting value out of the on-prem GPUs we already paid for."</strong> — Flexible AI Platform on AWS is the integrated solution designed to take those production realities head-on.</p>
+      <p>It composes AWS's <strong>core infrastructure</strong> (Graviton, GPU / Trainium / Inferentia, EKS, S3 Vectors) with <strong>proven open-source components</strong> (LangGraph, Mem0, LiteLLM, Langfuse, vLLM, Qwen, …) so customers can pick the models and frameworks they want and run a coherent full-stack AI platform — data pipelines, training, serving, and agentic applications — on top of pre-validated reference architectures and adoption guidance.</p>
+      <div class="tech-pills">
+        <span class="pill">LangGraph</span>
+        <span class="pill">LiteLLM</span>
+        <span class="pill">vLLM</span>
+        <span class="pill">Langfuse</span>
+        <span class="pill">Qwen</span>
+        <span class="pill">Mem0</span>
+        <span class="pill">EKS</span>
+        <span class="pill">Graviton</span>
+        <span class="pill">Inferentia/Trainium</span>
+        <span class="pill">S3 Vectors</span>
+      </div>
+    </div>
+    <div class="reveal">
+      <div class="flex-circle">
+        <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#4A9EE7;stop-opacity:0.9"/>
+              <stop offset="100%" style="stop-color:#2563EB;stop-opacity:0.9"/>
+            </linearGradient>
+            <linearGradient id="grad-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#FF9900;stop-opacity:0.9"/>
+              <stop offset="100%" style="stop-color:#E07000;stop-opacity:0.9"/>
+            </linearGradient>
+            <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:0.9"/>
+              <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:0.9"/>
+            </linearGradient>
+          </defs>
+          <path d="M 200,200 L 200,40 A 160,160 0 0,1 338.56,280 Z" fill="url(#grad-blue)"/>
+          <path d="M 200,200 L 338.56,280 A 160,160 0 0,1 61.44,280 Z" fill="url(#grad-purple)"/>
+          <path d="M 200,200 L 61.44,280 A 160,160 0 0,1 200,40 Z" fill="url(#grad-orange)"/>
+          <circle cx="200" cy="200" r="80" fill="#FFC857"/>
+          <text x="200" y="192" text-anchor="middle" fill="#0D1117" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">AWS AI</text>
+          <text x="200" y="212" text-anchor="middle" fill="#0D1117" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">Infrastructure</text>
+          <text x="200" y="100" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">AWS Services</text>
+          <text x="290" y="240" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="11" font-weight="700">Open-source</text>
+          <text x="290" y="256" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="11" font-weight="700">Frameworks</text>
+          <text x="290" y="272" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="11" font-weight="700">&amp; Models</text>
+          <text x="110" y="248" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="12" font-weight="700">Deployment</text>
+          <text x="110" y="264" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="12" font-weight="700">Options</text>
+        </svg>
+      </div>
+      <div class="flex-tagline">
+        <div class="flex-tagline-main">Run Any Model, <span>Anywhere</span></div>
+        <div class="flex-tagline-sub">with flexibility, sovereignty, and granular control</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. VALUE PROPOSITION -->
+<section id="value">
+  <div class="reveal">
+    <div class="section-label">VALUE PROPOSITION</div>
+  </div>
+  <div class="value-grid">
+    <div class="value-card reveal">
+      <div class="value-icon">🎛️</div>
+      <h3>Customization & Flexibility</h3>
+      <p>Every layer of the AI stack is composable. Mix open-source and proprietary models, mix-and-match frameworks, and keep full visibility and control over weights, data flows, and infrastructure. When a new model lands, add a route — innovation cycles stop being blocked on platform rework.</p>
+    </div>
+    <div class="value-card reveal">
+      <div class="value-icon">🛡️</div>
+      <h3>Sovereignty & Compliance</h3>
+      <p>Meet data residency and compliance requirements without sacrificing access to modern AI. Sensitive data does not leave the customer boundary, and GPUs are not shared with other tenants.</p>
+    </div>
+    <div class="value-card reveal">
+      <div class="value-icon">💰</div>
+      <h3>Cost Efficiency</h3>
+      <p>Compose the right compute per workload — GPU, Trainium, Inferentia, Graviton — and realize up to 40-60% savings versus comparable EC2 instances. Move freely between token-based pricing and GPU-as-a-service so infrastructure spend tracks business value, not abstractions.</p>
+    </div>
+    <div class="value-card reveal">
+      <div class="value-icon">🔍</div>
+      <h3>E2E Observability</h3>
+      <p>One pane of glass across infrastructure, models, agent behavior, and cost. From GPU utilization and system performance, through per-prompt response quality, to fine-grained cost attribution by model, team, or project — every operational signal is available at the code level.</p>
+    </div>
+    <div class="value-card reveal">
+      <div class="value-icon">🚀</div>
+      <h3>Faster Time-to-Value</h3>
+      <p>Pre-validated reference architectures and adoption guidance compress the PoC-to-production journey from months to weeks. Don't redesign from scratch — start building on top of AWS and a proven OSS ecosystem.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. FIVE DIMENSIONS OF FLEXIBILITY -->
+<section id="flexibility">
+  <div class="reveal">
+    <div class="section-label">FLEXIBLE FROM ALL ANGLES</div>
+    <h2 class="section-title">Five Dimensions of Flexibility</h2>
+    <p class="section-desc">Flexible AI delivers flexibility on every axis. When cost, performance, or governance requirements shift, switch on the relevant axis instead of redesigning the whole architecture.</p>
+  </div>
+  <div class="flex-grid">
+    <div class="flex-card reveal">
+      <div class="flex-icon">🖥️</div>
+      <h4>Heterogeneous Compute Choice</h4>
+      <div class="flex-en">Mix GPU · Trainium · Inferentia · Graviton</div>
+      <div class="flex-key">Which silicon do you run on?</div>
+      <p>Pick the optimal compute per workload across GPU, AWS Inferentia/Trainium, and Graviton. No lock-in to a single chip family or instance type.</p>
+    </div>
+    <div class="flex-card reveal">
+      <div class="flex-icon">🔧</div>
+      <h4>Self-Hosted Control</h4>
+      <div class="flex-en">Run open frameworks under your control</div>
+      <div class="flex-key">How do you deploy?</div>
+      <p>Operate open-source frameworks directly to keep full visibility and authority over model weights, data flows, and infrastructure layout.</p>
+    </div>
+    <div class="flex-card reveal">
+      <div class="flex-icon">💰</div>
+      <h4>Flexible Consumption Models</h4>
+      <div class="flex-en">Token-based or per-hour GPU</div>
+      <div class="flex-key">How do you pay for it?</div>
+      <p>Move between token-based pricing and per-hour GPU pricing as the workload demands. Tie infrastructure cost directly to business value.</p>
+    </div>
+    <div class="flex-card reveal">
+      <div class="flex-icon">🌐</div>
+      <h4>Hybrid Deployment Agility</h4>
+      <div class="flex-en">On-prem · EC2 · Bedrock · External</div>
+      <div class="flex-key">Where do you deploy?</div>
+      <p>Move workloads between on-premises, EC2 self-hosted, Amazon Bedrock, and external LLM providers without re-architecting.</p>
+    </div>
+    <div class="flex-card reveal">
+      <div class="flex-icon">🗺️</div>
+      <h4>Integrated Full-Stack Guidance</h4>
+      <div class="flex-en">From model to platform to agents</div>
+      <div class="flex-key">Where do you start?</div>
+      <p>Reference patterns covering model optimization, storage, platform engineering, and agentic applications. Adopt incrementally — pick the layer that matches your current state and grow from there.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. FUNCTIONAL VIEW & BUILDING BLOCKS -->
+<section id="functional">
+  <div class="reveal">
+    <div class="section-label">FUNCTIONAL VIEW & BUILDING BLOCKS</div>
+    <h2 class="section-title">Functional View & Building Blocks</h2>
+    <p class="section-desc">From the application layer down to cloud, on-premises, and edge infrastructure — Flexible AI spans every layer. Adopt the components you need today and grow into the rest, or stand up the integrated platform in one pass.</p>
+  </div>
+  <div class="arch-diagram reveal">
+    <svg viewBox="0 0 1400 940" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Flexible AI layered architecture diagram">
+      <defs>
+        <linearGradient id="layerOrange" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#FF9900" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="#FF9900" stop-opacity="0.02"/>
+        </linearGradient>
+        <linearGradient id="layerBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#4A9EE7" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="#4A9EE7" stop-opacity="0.02"/>
+        </linearGradient>
+        <linearGradient id="layerPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#A78BFA" stop-opacity="0.10"/>
+          <stop offset="100%" stop-color="#A78BFA" stop-opacity="0.02"/>
+        </linearGradient>
+        <linearGradient id="layerGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#34D399" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="#34D399" stop-opacity="0.02"/>
+        </linearGradient>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8BA3BE"/>
+        </marker>
+      </defs>
+
+      <style>
+        .layer-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+        .node-title { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; fill: #E8EFF7; }
+        .node-sub { font-family: 'Inter', sans-serif; font-size: 10px; fill: #8BA3BE; }
+        .node-rect { fill: #1A2B45; stroke: rgba(255,255,255,0.12); stroke-width: 1; rx: 8; ry: 8; }
+        .node-rect.orange { stroke: rgba(255,153,0,0.45); }
+        .node-rect.blue { stroke: rgba(74,158,231,0.45); }
+        .node-rect.purple { stroke: rgba(167,139,250,0.45); }
+        .node-rect.green { stroke: rgba(52,211,153,0.45); }
+        .flow { stroke: #8BA3BE; stroke-width: 1.2; fill: none; opacity: 0.55; }
+      </style>
+
+      <!-- Layer 1 - Users & Clients (top) -->
+      <rect x="40" y="30" width="1320" height="110" fill="url(#layerOrange)" rx="12" ry="12"/>
+      <text x="60" y="55" class="layer-label" fill="#FF9900">USERS &amp; CLIENTS</text>
+      <g transform="translate(80,75)">
+        <rect class="node-rect orange" width="240" height="50"/>
+        <text x="20" y="22" class="node-title">Open WebUI</text>
+        <text x="20" y="38" class="node-sub">Self-service portal · Chat UI</text>
+      </g>
+      <g transform="translate(360,75)">
+        <rect class="node-rect orange" width="280" height="50"/>
+        <text x="20" y="22" class="node-title">Custom Apps &amp; Agents</text>
+        <text x="20" y="38" class="node-sub">SDK / API consumers</text>
+      </g>
+      <g transform="translate(680,75)">
+        <rect class="node-rect orange" width="220" height="50"/>
+        <text x="20" y="22" class="node-title">Workflow Automation</text>
+        <text x="20" y="38" class="node-sub">n8n</text>
+      </g>
+      <g transform="translate(940,75)">
+        <rect class="node-rect orange" width="380" height="50"/>
+        <text x="20" y="22" class="node-title">Workshop / Reference</text>
+        <text x="20" y="38" class="node-sub">eks-genai-workshop · Loan Buddy</text>
+      </g>
+
+      <!-- Layer 2 - Gateway & Guardrails -->
+      <rect x="40" y="170" width="1320" height="110" fill="url(#layerBlue)" rx="12" ry="12"/>
+      <text x="60" y="195" class="layer-label" fill="#4A9EE7">GATEWAY &amp; GUARDRAILS</text>
+      <g transform="translate(80,215)">
+        <rect class="node-rect blue" width="380" height="50"/>
+        <text x="20" y="22" class="node-title">AI Gateway</text>
+        <text x="20" y="38" class="node-sub">LiteLLM · Kong AI Gateway OSS</text>
+      </g>
+      <g transform="translate(500,215)">
+        <rect class="node-rect blue" width="260" height="50"/>
+        <text x="20" y="22" class="node-title">Guardrails</text>
+        <text x="20" y="38" class="node-sub">Guardrails AI</text>
+      </g>
+      <g transform="translate(800,215)">
+        <rect class="node-rect blue" width="520" height="50"/>
+        <text x="20" y="22" class="node-title">Routing &amp; Policy</text>
+        <text x="20" y="38" class="node-sub">Workload-optimized routing · Centralized policy management</text>
+      </g>
+
+      <!-- Layer 3 - Agentic Layer -->
+      <rect x="40" y="310" width="1320" height="140" fill="url(#layerPurple)" rx="12" ry="12"/>
+      <text x="60" y="335" class="layer-label" fill="#A78BFA">AGENTIC LAYER</text>
+      <g transform="translate(80,355)">
+        <rect class="node-rect purple" width="320" height="80"/>
+        <text x="20" y="24" class="node-title">Agent Frameworks</text>
+        <text x="20" y="42" class="node-sub">LangGraph · Strands · Agno</text>
+        <text x="20" y="58" class="node-sub">OpenClaw · Bedrock AgentCore</text>
+      </g>
+      <g transform="translate(440,355)">
+        <rect class="node-rect purple" width="240" height="80"/>
+        <text x="20" y="24" class="node-title">MCP / A2A</text>
+        <text x="20" y="42" class="node-sub">FastMCP 2.0</text>
+        <text x="20" y="58" class="node-sub">Tool servers · Agent-to-agent</text>
+      </g>
+      <g transform="translate(720,355)">
+        <rect class="node-rect purple" width="320" height="80"/>
+        <text x="20" y="24" class="node-title">Retrieval &amp; Memory</text>
+        <text x="20" y="42" class="node-sub">Qdrant · Chroma · Milvus</text>
+        <text x="20" y="58" class="node-sub">S3 Vectors · Mem0</text>
+      </g>
+      <g transform="translate(1080,355)">
+        <rect class="node-rect purple" width="240" height="80"/>
+        <text x="20" y="24" class="node-title">Reference Apps</text>
+        <text x="20" y="42" class="node-sub">Calculator agents</text>
+        <text x="20" y="58" class="node-sub">DevOps / Doc Writer</text>
+      </g>
+
+      <!-- Layer 4 - Model Serving -->
+      <rect x="40" y="480" width="1320" height="140" fill="url(#layerOrange)" rx="12" ry="12"/>
+      <text x="60" y="505" class="layer-label" fill="#FF9900">MODEL SERVING</text>
+      <g transform="translate(80,525)">
+        <rect class="node-rect orange" width="340" height="80"/>
+        <text x="20" y="24" class="node-title">Self-hosted LLM</text>
+        <text x="20" y="42" class="node-sub">vLLM · SGLang · TGI · Ollama</text>
+        <text x="20" y="58" class="node-sub">Ray · NVIDIA Dynamo Platform</text>
+      </g>
+      <g transform="translate(460,525)">
+        <rect class="node-rect orange" width="240" height="80"/>
+        <text x="20" y="24" class="node-title">Embedding</text>
+        <text x="20" y="42" class="node-sub">Text Embedding Inference</text>
+        <text x="20" y="58" class="node-sub">(TEI)</text>
+      </g>
+      <g transform="translate(740,525)">
+        <rect class="node-rect orange" width="280" height="80"/>
+        <text x="20" y="24" class="node-title">AWS Managed</text>
+        <text x="20" y="42" class="node-sub">Amazon Bedrock</text>
+        <text x="20" y="58" class="node-sub">Nova · SageMaker</text>
+      </g>
+      <g transform="translate(1060,525)">
+        <rect class="node-rect orange" width="260" height="80"/>
+        <text x="20" y="24" class="node-title">External LLM</text>
+        <text x="20" y="42" class="node-sub">OpenAI · Anthropic</text>
+        <text x="20" y="58" class="node-sub">Gemini · others</text>
+      </g>
+
+      <!-- Layer 5 - Observability -->
+      <rect x="40" y="650" width="1320" height="80" fill="url(#layerGreen)" rx="12" ry="12"/>
+      <text x="60" y="675" class="layer-label" fill="#34D399">OBSERVABILITY</text>
+      <g transform="translate(80,690)">
+        <rect class="node-rect green" width="380" height="30"/>
+        <text x="20" y="20" class="node-title">Langfuse</text>
+        <text x="160" y="20" class="node-sub">tracing · session/tag</text>
+      </g>
+      <g transform="translate(500,690)">
+        <rect class="node-rect green" width="380" height="30"/>
+        <text x="20" y="20" class="node-title">Phoenix</text>
+        <text x="160" y="20" class="node-sub">evaluation · monitoring</text>
+      </g>
+      <g transform="translate(920,690)">
+        <rect class="node-rect green" width="400" height="30"/>
+        <text x="20" y="20" class="node-title">MLflow</text>
+        <text x="160" y="20" class="node-sub">experiment tracking</text>
+      </g>
+
+      <!-- Layer 6 - Compute & Infrastructure -->
+      <rect x="40" y="760" width="1320" height="160" fill="url(#layerBlue)" rx="12" ry="12"/>
+      <text x="60" y="785" class="layer-label" fill="#4A9EE7">COMPUTE &amp; INFRASTRUCTURE</text>
+      <g transform="translate(80,805)">
+        <rect class="node-rect blue" width="300" height="100"/>
+        <text x="20" y="24" class="node-title">Amazon EKS</text>
+        <text x="20" y="42" class="node-sub">Auto Mode · Standard</text>
+        <text x="20" y="58" class="node-sub">EKS Hybrid Node (on-prem)</text>
+        <text x="20" y="78" class="node-sub">Karpenter · NodePool</text>
+      </g>
+      <g transform="translate(420,805)">
+        <rect class="node-rect blue" width="300" height="100"/>
+        <text x="20" y="24" class="node-title">Heterogeneous Compute</text>
+        <text x="20" y="42" class="node-sub">GPU (g6e · g6 · g5g)</text>
+        <text x="20" y="58" class="node-sub">Trainium / Inferentia (inf2 · trn1)</text>
+        <text x="20" y="78" class="node-sub">Graviton (planning · CPU)</text>
+      </g>
+      <g transform="translate(760,805)">
+        <rect class="node-rect blue" width="280" height="100"/>
+        <text x="20" y="24" class="node-title">Storage &amp; Networking</text>
+        <text x="20" y="42" class="node-sub">EFS model cache · S3 Vectors</text>
+        <text x="20" y="58" class="node-sub">ALB Ingress + ACM</text>
+        <text x="20" y="78" class="node-sub">VPC · Private subnets</text>
+      </g>
+      <g transform="translate(1080,805)">
+        <rect class="node-rect blue" width="240" height="100"/>
+        <text x="20" y="24" class="node-title">Identity &amp; Secrets</text>
+        <text x="20" y="42" class="node-sub">IAM Roles for SA (IRSA)</text>
+        <text x="20" y="58" class="node-sub">AWS Secrets Manager</text>
+        <text x="20" y="78" class="node-sub">ECR + pull-through cache</text>
+      </g>
+
+      <!-- Vertical flow lines between layers -->
+      <line x1="700" y1="140" x2="700" y2="170" class="flow" marker-end="url(#arrow)"/>
+      <line x1="700" y1="280" x2="700" y2="310" class="flow" marker-end="url(#arrow)"/>
+      <line x1="700" y1="450" x2="700" y2="480" class="flow" marker-end="url(#arrow)"/>
+      <line x1="700" y1="620" x2="700" y2="650" class="flow" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+      <line x1="700" y1="730" x2="700" y2="760" class="flow" stroke-dasharray="4 4"/>
+    </svg>
+    <div class="arch-caption">Built from the components in this repository · pick one or compose per category</div>
+  </div>
+</section>
+
+<!-- 5. KEY BENEFITS -->
+<section id="benefits">
+  <div class="reveal">
+    <div class="section-label">KEY BENEFITS</div>
+    <h2 class="section-title">Benefits</h2>
+  </div>
+  <div class="benefits-grid">
+    <div class="benefit-card b1 reveal">
+      <div class="benefit-icon">🚀</div>
+      <h3>Run Any Model Anywhere</h3>
+      <ul>
+        <li>Unified access control</li>
+        <li>No vendor lock-in</li>
+        <li>Data residency and regulatory compliance</li>
+        <li>Self-hosted models, AWS-managed services (Bedrock), and external LLMs — all reachable</li>
+        <li>Self-service portal</li>
+      </ul>
+    </div>
+    <div class="benefit-card b2 reveal">
+      <div class="benefit-icon">💵</div>
+      <h3>Optimize Costs</h3>
+      <ul>
+        <li>Optimize model and GPU utilization</li>
+        <li>Apply and orchestrate heterogeneous compute (GPU / Trainium / Graviton) per workload</li>
+        <li>Smooth migration path from Amazon Bedrock to self-hosted</li>
+      </ul>
+    </div>
+    <div class="benefit-card b3 reveal">
+      <div class="benefit-icon">🛡️</div>
+      <h3>Protect Existing AI Investment</h3>
+      <ul>
+        <li>Bolt-on to existing on-prem environments</li>
+        <li>Hybrid deployment without re-architecting</li>
+        <li>Unified management across on-prem and cloud GPUs</li>
+      </ul>
+    </div>
+    <div class="benefit-card b4 reveal">
+      <div class="benefit-icon">🤖</div>
+      <h3>Agentic AI & Compute Modernization</h3>
+      <ul>
+        <li>One environment for autonomous agent operations</li>
+        <li>End-to-end observability across infrastructure, agent behavior, and outputs</li>
+        <li>Full code-level control over workflows</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 6. KEY USE CASES -->
+<section id="usecases">
+  <div class="reveal">
+    <div class="section-label">KEY USE CASES</div>
+    <h2 class="section-title">Key Use Cases</h2>
+    <p class="section-desc">GPU-backed model serving, AI Gateway, and Observability are shared building blocks. Compose them with use-case-specific components to fit a wide range of scenarios.</p>
+  </div>
+  <div class="usecase-grid">
+    <div class="usecase-card reveal">
+      <div class="usecase-num">01</div>
+      <h3>Self-hosted Model Serving on AWS</h3>
+      <p>Stand up self-hosted model serving on EKS with AI Gateway (LiteLLM, Kong), inference engines (Ray, SGLang, vLLM), observability (Langfuse, MLflow), and vector DB. Native HuggingFace integration keeps you close to the latest models — with data sovereignty and enhanced observability spanning system metrics through to AI-level signals.</p>
+    </div>
+    <div class="usecase-card reveal">
+      <div class="usecase-num">02</div>
+      <h3>Hybrid Model Serving</h3>
+      <p>Run self-hosted, AWS-managed (Bedrock, Nova, SageMaker), and external (OpenAI, Gemini, Anthropic) models on a single platform. The AI gateway performs workload-optimized routing — switch models per workload without code changes — and centralized policy management keeps governance consistent across providers.</p>
+    </div>
+    <div class="usecase-card reveal">
+      <div class="usecase-num">03</div>
+      <h3>Agentic AI</h3>
+      <p>Start with AWS-native runtimes (Bedrock, Strands, AgentCore), then extend into self-hosted on EKS. Combine custom agent workflows (LangGraph, MCP/A2A) with domain-specific SLMs, and apply heterogeneous compute allocation — Graviton for planning, GPU for reasoning, Trainium/Inferentia for inference — to optimize cost.</p>
+    </div>
+    <div class="usecase-card reveal">
+      <div class="usecase-num">04</div>
+      <h3>Hybrid Cluster</h3>
+      <p>Connect AWS Cloud and on-premises into a single cluster via EKS Hybrid Node. Regulated and sensitive workloads stay on-prem; the rest runs on AWS, with automatic fallback during incidents. "Train on-prem, serve globally on AWS" works without re-architecting.</p>
+    </div>
+    <div class="usecase-card reveal">
+      <div class="usecase-num">05</div>
+      <h3>Cost Optimization with Trainium / Inferentia</h3>
+      <p>AWS purpose-built AI silicon delivers up to 40-60% cost savings versus comparable EC2 instances and industry-leading OTPS. Native PyTorch support and the Neuron Kernel Interface enable fine-grained tuning; Neuron Explorer traces execution flow.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. OFFERINGS -->
+<section id="offerings">
+  <div class="reveal">
+    <div class="section-label">OFFERINGS</div>
+    <h2 class="section-title">Offerings</h2>
+    <p class="section-desc">Whether you are building from scratch or hardening an existing environment, Flexible AI offers an architecture, support model, and starter kit for every stage.</p>
+  </div>
+  <div class="offering-grid">
+    <div class="offering-card reveal">
+      <div class="offering-icon">🏗️</div>
+      <h3>Baseline for Building Full-stack AI Platform</h3>
+      <ul>
+        <li>Pre-validated reference architectures combining GPUs, OSS frameworks, and AWS services</li>
+        <li>Flexible, scalable design patterns covering many use cases and deployment options</li>
+        <li>Self-service portal for unified model and agent access</li>
+      </ul>
+    </div>
+    <div class="offering-card reveal">
+      <div class="offering-icon">🤝</div>
+      <h3>White-glove Support</h3>
+      <ul>
+        <li>AWS specialist guidance across compute, Kubernetes, storage, and more</li>
+        <li>Best practices to maximize GPU value in production</li>
+        <li>Deployment support across AWS, on-premises, and edge</li>
+      </ul>
+    </div>
+    <div class="offering-card reveal">
+      <div class="offering-icon">🛍️</div>
+      <h3>Open-source via AWS Marketplace</h3>
+      <ul>
+        <li>OSS stacks pre-configured and optimized by experts</li>
+        <li>1-click launch AMIs — skip the integration code</li>
+        <li>Enterprise Edition with hardened security and governance, or BYOL options</li>
+      </ul>
+    </div>
+    <div class="offering-card reveal">
+      <div class="offering-icon">🚀</div>
+      <h3>Production-ready Starter Kit</h3>
+      <ul>
+        <li>GenAI infrastructure toolkit that accelerates enterprise AI deployment</li>
+        <li>AI Gateway, LLM serving, vector DB, embedding models, and E2E observability included</li>
+        <li>Production-ready out of the box</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8. CUSTOMER STORIES - PLACEHOLDER -->
+<section id="customers">
+  <div class="reveal">
+    <div class="section-label">CUSTOMER STORIES</div>
+    <h2 class="section-title">Customer Stories</h2>
+    <p class="section-desc">Stories from customers redefining their AI infrastructure strategy with the Flexible AI approach are coming soon.</p>
+  </div>
+  <div class="customers-placeholder reveal">
+    <div class="image-placeholder-icon">📋</div>
+    <div class="image-placeholder-text">[ Customer Stories — coming soon ]</div>
+  </div>
+</section>
+
+<!-- 9. CONTACT -->
+<section id="contact">
+  <div class="contact-info reveal" style="max-width: 820px; margin: 0 auto; text-align: center;">
+    <div class="section-label">GET IN TOUCH</div>
+    <h2>Contact us</h2>
+    <p style="margin-left: auto; margin-right: auto;">If you are interested in Flexible AI, reach out via the GitHub channels below, or work with your AWS account team (SA / TAM).</p>
+    <div class="contact-emails" style="max-width: 520px; margin: 0 auto;">
+      <a href="https://github.com/aws-samples/sample-genai-on-eks-starter-kit/discussions/categories/q-a" class="contact-email" target="_blank" rel="noopener">
+        <span class="contact-email-icon">💬</span>
+        <div class="contact-email-text">GitHub Discussions · Q&amp;A</div>
+      </a>
+      <a href="https://github.com/aws-samples/sample-genai-on-eks-starter-kit/issues" class="contact-email" target="_blank" rel="noopener">
+        <span class="contact-email-icon">🐙</span>
+        <div class="contact-email-text">GitHub Issues</div>
+      </a>
+      <a href="https://github.com/aws-samples/sample-genai-on-eks-starter-kit" class="contact-email" target="_blank" rel="noopener">
+        <span class="contact-email-icon">⭐</span>
+        <div class="contact-email-text">aws-samples/sample-genai-on-eks-starter-kit</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">© 2026 Amazon Web Services, Inc.</div>
+  <div>Architecting Flexible AI Platform on AWS</div>
+  <div>Run Any Model, Anywhere.</div>
+</footer>
+
+<script>
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 50);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
