@@ -3,375 +3,322 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Architecting Flexible AI Platform on AWS</title>
+<title>Architecting Flexible AI Solution on AWS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --aws-orange: #FF9900;
-    --aws-orange-light: #FFB84D;
-    --aws-dark: #0D1117;
-    --aws-navy: #0F1B2D;
-    --aws-mid: #1A2B45;
-    --aws-border: rgba(255,153,0,0.2);
-    --aws-border-soft: rgba(255,255,255,0.08);
-    --aws-text: #E8EFF7;
-    --aws-muted: #8BA3BE;
-    --accent-blue: #4A9EE7;
-    --accent-purple: #A78BFA;
-    --accent-green: #34D399;
-    --font-display: 'DM Mono', monospace;
-    --font-body: 'Noto Sans KR', sans-serif;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    font-family: var(--font-body);
-    background: var(--aws-dark);
-    color: var(--aws-text);
-    line-height: 1.7;
-    overflow-x: hidden;
-  }
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(13,17,23,0.92);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--aws-border);
-    padding: 0 5%;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 60px;
-  }
-  .nav-logo {
-    display: flex; align-items: center; gap: 10px;
-    font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em;
-    color: var(--aws-orange); text-decoration: none;
-  }
-  .nav-logo svg { width: 28px; height: 28px; }
-  .nav-links { display: flex; gap: 26px; list-style: none; }
-  .nav-links a {
-    color: var(--aws-muted); text-decoration: none;
-    font-size: 13px; letter-spacing: 0.04em;
-    transition: color 0.2s;
-  }
-  .nav-links a:hover { color: var(--aws-orange); }
-  .nav-cta {
-    background: var(--aws-orange); color: var(--aws-dark) !important;
-    padding: 7px 18px; border-radius: 4px;
-    font-weight: 700 !important; font-size: 13px !important;
-  }
-  .nav-cta:hover { background: var(--aws-orange-light) !important; color: var(--aws-dark) !important; }
+:root {
+--aws-orange: #FF9900;
+--aws-orange-light: #FFB84D;
+--aws-dark: #0D1117;
+--aws-navy: #0F1B2D;
+--aws-mid: #1A2B45;
+--aws-border: rgba(255,153,0,0.2);
+--aws-border-soft: rgba(255,255,255,0.08);
+--aws-text: #E8EFF7;
+--aws-muted: #8BA3BE;
+--accent-blue: #4A9EE7;
+--accent-purple: #A78BFA;
+--accent-green: #34D399;
+--font-display: 'DM Mono', monospace;
+--font-body: 'Noto Sans KR', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+font-family: var(--font-body);
+background: var(--aws-dark);
+color: var(--aws-text);
+line-height: 1.7;
+overflow-x: hidden;
+}
+nav {
+position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+background: rgba(13,17,23,0.92);
+backdrop-filter: blur(12px);
+border-bottom: 1px solid var(--aws-border);
+padding: 0 5%;
+display: flex; align-items: center; justify-content: space-between;
+height: 60px;
+}
+.nav-logo {
+display: flex; align-items: center; gap: 10px;
+font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em;
+color: var(--aws-orange); text-decoration: none;
+}
+.nav-logo svg { width: 28px; height: 28px; }
+.nav-links { display: flex; gap: 26px; list-style: none; }
+.nav-links a {
+color: var(--aws-muted); text-decoration: none;
+font-size: 13px; letter-spacing: 0.04em;
+transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--aws-orange); }
+.nav-cta {
+background: var(--aws-orange); color: var(--aws-dark) !important;
+padding: 7px 18px; border-radius: 4px;
+font-weight: 700 !important; font-size: 13px !important;
+}
+.nav-cta:hover { background: var(--aws-orange-light) !important; color: var(--aws-dark) !important; }
+.hero {
+min-height: 100vh;
+display: flex; align-items: center;
+padding: 100px 5% 60px;
+position: relative; overflow: hidden;
+}
+.hero-bg {
+position: absolute; inset: 0;
+background:
+radial-gradient(ellipse 80% 60% at 70% 50%, rgba(255,153,0,0.08) 0%, transparent 60%),
+radial-gradient(ellipse 60% 80% at 20% 80%, rgba(74,158,231,0.05) 0%, transparent 60%),
+linear-gradient(160deg, var(--aws-dark) 0%, var(--aws-navy) 100%);
+}
+.hero-grid {
+position: absolute; inset: 0;
+background-image:
+linear-gradient(rgba(255,153,0,0.04) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,153,0,0.04) 1px, transparent 1px);
+background-size: 60px 60px;
+mask-image: radial-gradient(ellipse 80% 80% at 60% 40%, black 0%, transparent 70%);
+}
+.hero-content { position: relative; z-index: 2; max-width: 880px; }
+.hero h1 {
+font-size: clamp(38px, 5.5vw, 68px);
+font-weight: 900; line-height: 1.15;
+letter-spacing: -0.025em; margin-bottom: 24px;
+animation: fadeUp 0.6s 0.1s ease both;
+color: var(--aws-text);
+}
+.hero h1 .accent { color: var(--aws-orange); }
+.hero-sub {
+font-family: var(--font-display);
+font-size: clamp(18px, 2.5vw, 28px);
+color: var(--aws-orange);
+letter-spacing: 0.04em; margin-bottom: 28px;
+animation: fadeUp 0.6s 0.2s ease both;
+}
+.hero p {
+font-size: 18px; color: var(--aws-muted);
+max-width: 720px; margin-bottom: 40px;
+animation: fadeUp 0.6s 0.3s ease both;
+word-break: keep-all;
+}
+.hero-actions {
+display: flex; gap: 16px; flex-wrap: wrap;
+animation: fadeUp 0.6s 0.4s ease both;
+}
+.btn-primary {
+background: var(--aws-orange); color: var(--aws-dark);
+padding: 14px 32px; border-radius: 4px;
+font-weight: 700; font-size: 15px; text-decoration: none;
+border: none; cursor: pointer;
+transition: background 0.2s, transform 0.15s;
+display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary:hover { background: var(--aws-orange-light); transform: translateY(-1px); }
+.btn-outline {
+background: transparent; color: var(--aws-text);
+padding: 14px 32px; border-radius: 4px;
+font-weight: 500; font-size: 15px; text-decoration: none;
+border: 1px solid rgba(255,255,255,0.2); cursor: pointer;
+transition: border-color 0.2s, color 0.2s, transform 0.15s;
+display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-outline:hover { border-color: var(--aws-orange); color: var(--aws-orange); transform: translateY(-1px); }
+section { padding: 100px 5%; }
+.section-label {
+font-family: var(--font-display);
+font-size: 11px; letter-spacing: 0.15em;
+color: var(--aws-orange); text-transform: uppercase;
+margin-bottom: 12px;
+}
+.section-title {
+font-size: clamp(28px, 3.5vw, 44px);
+font-weight: 700; letter-spacing: -0.02em;
+margin-bottom: 16px; line-height: 1.2;
+}
+.section-desc {
+font-size: 16px; color: var(--aws-muted);
+max-width: 720px; margin-bottom: 60px;
+}
+/* OVERVIEW */
+#overview {
+background: var(--aws-navy);
+border-top: 1px solid var(--aws-border);
+border-bottom: 1px solid var(--aws-border);
+}
+.overview-layout { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 60px; align-items: center; }
+.overview-text p {
+font-size: 16px; color: var(--aws-muted); line-height: 1.8;
+margin-bottom: 24px; word-break: keep-all;
+}
+.overview-text strong { color: var(--aws-text); }
+.overview-text .quote-block strong { color: var(--accent-blue); }
+.flex-circle {
+position: relative; width: 100%;
+aspect-ratio: 1; max-width: 440px; margin: 0 auto;
+}
+.flex-circle svg { width: 100%; height: 100%; }
+.flex-tagline { text-align: center; margin-top: 24px; }
+.flex-tagline-main { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+.flex-tagline-main span { color: var(--aws-orange); }
+.flex-tagline-sub { font-size: 14px; color: var(--aws-muted); }
+/* VALUE PROPS */
+#value { background: var(--aws-dark); }
+.value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.value-card {
+background: var(--aws-navy);
+border: 1px solid var(--aws-border-soft);
+border-radius: 12px; padding: 32px;
+position: relative; overflow: hidden;
+transition: border-color 0.3s, transform 0.2s;
+}
+.value-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
+.value-card::before {
+content: ''; position: absolute; top: 0; left: 0; right: 0;
+height: 3px; background: var(--aws-orange);
+transform: scaleX(0); transform-origin: left;
+transition: transform 0.3s;
+}
+.value-card:hover::before { transform: scaleX(1); }
+.value-icon {
+width: 52px; height: 52px;
+background: rgba(255,153,0,0.1);
+border: 1px solid var(--aws-border);
+border-radius: 12px;
+display: flex; align-items: center; justify-content: center;
+font-size: 26px; margin-bottom: 20px;
+}
+.value-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; line-height: 1.3; color: var(--aws-orange); }
+.value-card p { font-size: 14.5px; color: var(--aws-muted); line-height: 1.7; word-break: keep-all; }
+/* FLEXIBILITY */
+#flexibility {
+background: var(--aws-navy);
+border-top: 1px solid var(--aws-border);
+border-bottom: 1px solid var(--aws-border);
+}
+.flex-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.flex-card {
+background: var(--aws-mid);
+border: 1px solid var(--aws-border-soft);
+border-radius: 10px; padding: 24px;
+transition: border-color 0.2s, transform 0.2s;
+display: flex; flex-direction: column;
+}
+.flex-card:hover { border-color: var(--aws-orange); transform: translateY(-3px); }
+.flex-icon { font-size: 28px; margin-bottom: 14px; }
+.flex-card h4 {
+font-size: 16px; font-weight: 700; margin-bottom: 14px;
+color: var(--aws-text); line-height: 1.3; height: 2.6em;
+display: flex; align-items: center;
+}
+.flex-card .flex-key {
+font-size: 13.5px; color: var(--aws-orange); font-weight: 500;
+margin-bottom: 12px; font-style: italic; min-height: 3em;
+display: flex; align-items: center;
+}
+.flex-card p { font-size: 13px; color: var(--aws-muted); line-height: 1.6; word-break: keep-all; }
+/* FUNCTIONAL VIEW */
+#functional { background: var(--aws-dark); }
+.arch-diagram {
+background: var(--aws-navy);
+border: 1px solid var(--aws-border);
+border-radius: 12px;
+padding: 24px;
+overflow: hidden;
+}
+.arch-diagram svg { width: 100%; height: auto; display: block; }
+.arch-caption {
+margin-top: 16px; text-align: center;
+font-family: var(--font-display); font-size: 11px; letter-spacing: 0.08em;
+color: var(--aws-muted); text-transform: uppercase;
+}
+/* USE CASES */
+#usecases { background: var(--aws-dark); border-top: 1px solid var(--aws-border);}
+.usecase-row { display: grid; gap: 20px; margin-bottom: 20px; }
+.usecase-row-3 { grid-template-columns: repeat(3, 1fr); }
+.usecase-row-2 { grid-template-columns: repeat(2, 1fr); }
+.usecase-card {
+background: var(--aws-navy);
+border: 1px solid var(--aws-border-soft);
+border-radius: 12px; padding: 32px;
+transition: border-color 0.2s, transform 0.2s;
+}
+.usecase-card:hover { border-color: var(--aws-orange); transform: translateY(-3px); }
+.usecase-num {
+font-family: var(--font-display);
+font-size: 28px; color: var(--aws-orange);
+line-height: 1; margin-bottom: 16px; font-weight: 700;
+}
+.usecase-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; line-height: 1.35; color: var(--aws-text); }
+.usecase-card h4 { font-size: 14px; font-weight: 500; color: var(--accent-blue); margin-bottom: 16px; }
+.usecase-card ul { list-style: none; }
+.usecase-card li { font-size: 13.5px; color: var(--aws-muted); margin-bottom: 8px; padding-left: 14px; position: relative; line-height: 1.5; }
+.usecase-card li::before { content: '•'; color: var(--aws-orange); position: absolute; left: 0; }
+/* GET STARTED (NEW) */
+#getstarted {
+background: linear-gradient(135deg, var(--aws-navy) 0%, var(--aws-dark) 100%);
+border-top: 1px solid var(--aws-border);
+border-bottom: 1px solid var(--aws-border);
+padding: 80px 5%;
+}
+.gs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
+.gs-card {
+background: rgba(255,255,255,0.03);
+border: 1px solid var(--aws-border-soft);
+border-radius: 16px; padding: 40px;
+display: flex; flex-direction: column; gap: 20px;
+transition: all 0.3s ease;
+}
+.gs-card:hover { background: rgba(255,255,255,0.05); border-color: var(--aws-orange); }
+.gs-card h3 { font-size: 22px; font-weight: 700; }
+.gs-card p { color: var(--aws-muted); font-size: 15px; }
+.gs-link {
+color: var(--aws-orange); text-decoration: none;
+font-weight: 700; font-size: 14px;
+display: flex; align-items: center; gap: 8px;
+margin-top: auto;
+}
+.gs-link:hover { text-decoration: underline; }
+/* OFFERINGS */
+#offerings {
+background: var(--aws-navy);
+border-top: 1px solid var(--aws-border);
+border-bottom: 1px solid var(--aws-border);
+}
+.offering-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.offering-card {
+background: var(--aws-mid);
+border: 1px solid var(--aws-border-soft);
+border-radius: 12px; padding: 32px;
+transition: border-color 0.2s, transform 0.2s;
+}
+.offering-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
+.offering-icon {
+width: 56px; height: 56px;
+border-radius: 12px;
+display: flex; align-items: center; justify-content: center;
+font-size: 28px; margin-bottom: 20px;
+background: linear-gradient(135deg, rgba(255,153,0,0.15), rgba(255,153,0,0.05));
+border: 1px solid var(--aws-border);
+}
+.offering-card h3 {
+font-size: 17px; font-weight: 700; margin-bottom: 16px;
+color: var(--aws-orange); line-height: 1.3;
+}
+.offering-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.offering-card li {
+font-size: 13px; color: var(--aws-muted);
+padding-left: 14px; position: relative; line-height: 1.6;
+}
+.offering-card li::before {
+content: '→'; color: var(--aws-orange);
+position: absolute; left: 0;
+}
 
-  .hero {
-    min-height: 100vh;
-    display: flex; align-items: center;
-    padding: 100px 5% 60px;
-    position: relative; overflow: hidden;
-  }
-  .hero-bg {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(ellipse 80% 60% at 70% 50%, rgba(255,153,0,0.08) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 80% at 20% 80%, rgba(74,158,231,0.05) 0%, transparent 60%),
-      linear-gradient(160deg, var(--aws-dark) 0%, var(--aws-navy) 100%);
-  }
-  .hero-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(255,153,0,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,153,0,0.04) 1px, transparent 1px);
-    background-size: 60px 60px;
-    mask-image: radial-gradient(ellipse 80% 80% at 60% 40%, black 0%, transparent 70%);
-  }
-  .hero-content { position: relative; z-index: 2; max-width: 880px; }
-  .hero h1 {
-    font-size: clamp(38px, 5.5vw, 68px);
-    font-weight: 900; line-height: 1.08;
-    letter-spacing: -0.025em; margin-bottom: 24px;
-    animation: fadeUp 0.6s 0.1s ease both;
-  }
-  .hero h1 .accent { color: var(--aws-orange); }
-  .hero-sub {
-    font-family: var(--font-display);
-    font-size: clamp(18px, 2.5vw, 28px);
-    color: var(--aws-orange);
-    letter-spacing: 0.04em; margin-bottom: 28px;
-    animation: fadeUp 0.6s 0.2s ease both;
-  }
-  .hero p {
-    font-size: 17px; color: var(--aws-muted);
-    max-width: 660px; margin-bottom: 40px;
-    animation: fadeUp 0.6s 0.3s ease both;
-  }
-  .hero-actions {
-    display: flex; gap: 16px; flex-wrap: wrap;
-    animation: fadeUp 0.6s 0.4s ease both;
-  }
-  .btn-primary {
-    background: var(--aws-orange); color: var(--aws-dark);
-    padding: 14px 32px; border-radius: 4px;
-    font-weight: 700; font-size: 15px; text-decoration: none;
-    border: none; cursor: pointer;
-    transition: background 0.2s, transform 0.15s;
-    display: inline-flex; align-items: center; gap: 8px;
-  }
-  .btn-primary:hover { background: var(--aws-orange-light); transform: translateY(-1px); }
-  .btn-outline {
-    background: transparent; color: var(--aws-text);
-    padding: 14px 32px; border-radius: 4px;
-    font-weight: 500; font-size: 15px; text-decoration: none;
-    border: 1px solid rgba(255,255,255,0.2); cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, transform 0.15s;
-    display: inline-flex; align-items: center; gap: 8px;
-  }
-  .btn-outline:hover { border-color: var(--aws-orange); color: var(--aws-orange); transform: translateY(-1px); }
 
-  section { padding: 100px 5%; }
-  .section-label {
-    font-family: var(--font-display);
-    font-size: 11px; letter-spacing: 0.15em;
-    color: var(--aws-orange); text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-  .section-title {
-    font-size: clamp(28px, 3.5vw, 44px);
-    font-weight: 700; letter-spacing: -0.02em;
-    margin-bottom: 16px; line-height: 1.2;
-  }
-  .section-desc {
-    font-size: 16px; color: var(--aws-muted);
-    max-width: 720px; margin-bottom: 60px;
-  }
-
-  /* OVERVIEW */
-  #overview {
-    background: var(--aws-navy);
-    border-top: 1px solid var(--aws-border);
-    border-bottom: 1px solid var(--aws-border);
-  }
-  .overview-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
-  .overview-text p {
-    font-size: 16px; color: var(--aws-muted); line-height: 1.8;
-    margin-bottom: 20px;
-  }
-  .overview-text strong { color: var(--aws-text); }
-  .overview-text .quote-block strong { color: var(--accent-blue); }
-  .tech-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-  .pill {
-    font-family: var(--font-display); font-size: 11px;
-    background: rgba(255,153,0,0.1);
-    border: 1px solid var(--aws-border);
-    color: var(--aws-orange);
-    padding: 6px 12px; border-radius: 20px;
-  }
-  .flex-circle {
-    position: relative; width: 100%;
-    aspect-ratio: 1; max-width: 480px; margin: 0 auto;
-  }
-  .flex-circle svg { width: 100%; height: 100%; }
-  .flex-tagline { text-align: center; margin-top: 24px; }
-  .flex-tagline-main { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
-  .flex-tagline-main span { color: var(--aws-orange); }
-  .flex-tagline-sub { font-size: 14px; color: var(--aws-muted); }
-
-  /* VALUE PROPS */
-  #value { background: var(--aws-dark); }
-  .value-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .value-card {
-    background: var(--aws-navy);
-    border: 1px solid var(--aws-border-soft);
-    border-radius: 12px; padding: 32px;
-    position: relative; overflow: hidden;
-    transition: border-color 0.3s, transform 0.2s;
-  }
-  .value-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
-  .value-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 3px; background: var(--aws-orange);
-    transform: scaleX(0); transform-origin: left;
-    transition: transform 0.3s;
-  }
-  .value-card:hover::before { transform: scaleX(1); }
-  .value-icon {
-    width: 52px; height: 52px;
-    background: rgba(255,153,0,0.1);
-    border: 1px solid var(--aws-border);
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; margin-bottom: 20px;
-  }
-  .value-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; line-height: 1.3; }
-  .value-card p { font-size: 14px; color: var(--aws-muted); line-height: 1.7; }
-
-  /* FLEXIBILITY (5 dimensions) */
-  #flexibility {
-    background: var(--aws-navy);
-    border-top: 1px solid var(--aws-border);
-    border-bottom: 1px solid var(--aws-border);
-  }
-  .flex-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
-  .flex-card {
-    background: var(--aws-mid);
-    border: 1px solid var(--aws-border-soft);
-    border-radius: 10px; padding: 24px;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-  .flex-card:hover { border-color: var(--aws-orange); transform: translateY(-3px); }
-  .flex-icon { font-size: 28px; margin-bottom: 14px; }
-  .flex-card h4 {
-    font-size: 15px; font-weight: 700; margin-bottom: 6px;
-    color: var(--aws-text); line-height: 1.3;
-  }
-  .flex-card .flex-en {
-    font-family: var(--font-display); font-size: 11px;
-    color: var(--accent-blue); margin-bottom: 14px;
-  }
-  .flex-card .flex-key {
-    font-size: 13px; color: var(--aws-orange); font-weight: 500;
-    margin-bottom: 12px; font-style: italic;
-  }
-  .flex-card p { font-size: 12px; color: var(--aws-muted); line-height: 1.6; }
-
-  /* FUNCTIONAL VIEW */
-  #functional { background: var(--aws-dark); }
-  .image-placeholder {
-    background: var(--aws-navy);
-    border: 2px dashed var(--aws-border);
-    border-radius: 12px;
-    min-height: 480px;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 12px;
-    color: var(--aws-muted);
-  }
-  .image-placeholder-icon { font-size: 48px; opacity: 0.5; }
-  .image-placeholder-text { font-size: 14px; font-family: var(--font-display); letter-spacing: 0.05em; }
-  .arch-diagram {
-    background: var(--aws-navy);
-    border: 1px solid var(--aws-border);
-    border-radius: 12px;
-    padding: 24px;
-    overflow: hidden;
-  }
-  .arch-diagram svg { width: 100%; height: auto; display: block; }
-  .arch-caption {
-    margin-top: 16px; text-align: center;
-    font-family: var(--font-display); font-size: 11px; letter-spacing: 0.08em;
-    color: var(--aws-muted); text-transform: uppercase;
-  }
-
-  /* BENEFITS */
-  #benefits {
-    background: var(--aws-navy);
-    border-top: 1px solid var(--aws-border);
-    border-bottom: 1px solid var(--aws-border);
-  }
-  .benefits-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  .benefit-card {
-    background: var(--aws-mid);
-    border: 1px solid var(--aws-border-soft);
-    border-radius: 12px; padding: 32px;
-    position: relative; overflow: hidden;
-    transition: border-color 0.3s, transform 0.2s;
-  }
-  .benefit-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
-  .benefit-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 3px; transform: scaleX(0); transform-origin: left;
-    transition: transform 0.3s;
-  }
-  .benefit-card:hover::before { transform: scaleX(1); }
-  .benefit-card.b1::before { background: var(--accent-purple); }
-  .benefit-card.b2::before { background: var(--accent-green); }
-  .benefit-card.b3::before { background: var(--accent-blue); }
-  .benefit-card.b4::before { background: var(--aws-orange); }
-  .benefit-icon {
-    width: 48px; height: 48px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 24px; margin-bottom: 20px;
-  }
-  .benefit-card.b1 .benefit-icon { background: rgba(167,139,250,0.15); }
-  .benefit-card.b2 .benefit-icon { background: rgba(52,211,153,0.15); }
-  .benefit-card.b3 .benefit-icon { background: rgba(74,158,231,0.15); }
-  .benefit-card.b4 .benefit-icon { background: rgba(255,153,0,0.15); }
-  .benefit-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 16px; line-height: 1.3; }
-  .benefit-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-  .benefit-card li {
-    font-size: 13px; color: var(--aws-muted);
-    padding-left: 16px; position: relative; line-height: 1.6;
-  }
-  .benefit-card li::before {
-    content: '✓'; color: var(--aws-orange);
-    position: absolute; left: 0; font-weight: 700;
-  }
-
-  /* USE CASES */
-  #usecases { background: var(--aws-dark); }
-  .usecase-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
-  .usecase-card {
-    background: var(--aws-navy);
-    border: 1px solid var(--aws-border-soft);
-    border-radius: 12px; padding: 28px;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-  .usecase-card:hover { border-color: var(--aws-orange); transform: translateY(-3px); }
-  .usecase-num {
-    font-family: var(--font-display);
-    font-size: 28px; color: var(--aws-orange);
-    line-height: 1; margin-bottom: 16px; font-weight: 500;
-  }
-  .usecase-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 12px; line-height: 1.35; }
-  .usecase-card p { font-size: 13px; color: var(--aws-muted); line-height: 1.65; }
-
-  /* OFFERINGS */
-  #offerings {
-    background: var(--aws-navy);
-    border-top: 1px solid var(--aws-border);
-    border-bottom: 1px solid var(--aws-border);
-  }
-  .offering-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  .offering-card {
-    background: var(--aws-mid);
-    border: 1px solid var(--aws-border-soft);
-    border-radius: 12px; padding: 32px;
-    transition: border-color 0.2s, transform 0.2s;
-  }
-  .offering-card:hover { border-color: var(--aws-orange); transform: translateY(-4px); }
-  .offering-icon {
-    width: 56px; height: 56px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; margin-bottom: 20px;
-    background: linear-gradient(135deg, rgba(255,153,0,0.15), rgba(255,153,0,0.05));
-    border: 1px solid var(--aws-border);
-  }
-  .offering-card h3 {
-    font-size: 17px; font-weight: 700; margin-bottom: 16px;
-    color: var(--aws-orange); line-height: 1.3;
-  }
-  .offering-card ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-  .offering-card li {
-    font-size: 13px; color: var(--aws-muted);
-    padding-left: 14px; position: relative; line-height: 1.6;
-  }
-  .offering-card li::before {
-    content: '→'; color: var(--aws-orange);
-    position: absolute; left: 0;
-  }
-
-  /* CUSTOMER STORIES - empty placeholder */
-  #customers { background: var(--aws-dark); }
-  .customers-placeholder {
-    background: var(--aws-navy);
-    border: 2px dashed var(--aws-border);
-    border-radius: 12px;
-    min-height: 240px;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 12px;
-    color: var(--aws-muted);
-  }
-
-  /* CONTACT */
+/* CONTACT */
   #contact {
     background: var(--aws-navy);
     border-top: 1px solid var(--aws-border);
@@ -428,229 +375,205 @@
   }
   .form-submit:hover { background: var(--aws-orange-light); }
 
-  footer {
-    background: var(--aws-dark);
-    border-top: 1px solid var(--aws-border);
-    padding: 32px 5%;
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 12px; color: var(--aws-muted); flex-wrap: wrap; gap: 16px;
-  }
-  .footer-logo { font-family: var(--font-display); font-size: 12px; }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .reveal {
-    opacity: 0; transform: translateY(24px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
-  }
-  .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  @media (max-width: 1100px) {
-    .flex-grid { grid-template-columns: repeat(3, 1fr); }
-    .usecase-grid { grid-template-columns: repeat(3, 1fr); }
-    .benefits-grid, .offering-grid, .value-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 900px) {
-    .overview-layout, .contact-layout { grid-template-columns: 1fr; gap: 40px; }
-    nav .nav-links { display: none; }
-  }
-  @media (max-width: 600px) {
-    .flex-grid, .usecase-grid, .benefits-grid, .offering-grid, .value-grid { grid-template-columns: 1fr; }
-    section { padding: 60px 5%; }
-  }
+/* FOOTER */
+footer {
+background: var(--aws-dark);
+border-top: 1px solid var(--aws-border);
+padding: 32px 5%;
+display: flex; align-items: center; justify-content: space-between;
+font-size: 12px; color: var(--aws-muted); flex-wrap: wrap; gap: 16px;
+}
+.footer-logo { font-family: var(--font-display); font-size: 12px; }
+@keyframes fadeUp {
+from { opacity: 0; transform: translateY(20px); }
+to { opacity: 1; transform: translateY(0); }
+}
+.reveal {
+opacity: 0; transform: translateY(24px);
+transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+@media (max-width: 1100px) {
+.flex-grid { grid-template-columns: repeat(3, 1fr); }
+.usecase-row-3, .usecase-row-2 { grid-template-columns: 1fr; }
+.offering-grid, .value-grid, .gs-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+.overview-layout { grid-template-columns: 1fr; gap: 40px; }
+nav .nav-links { display: none; }
+}
+@media (max-width: 600px) {
+.flex-grid, .offering-grid, .value-grid, .gs-grid { grid-template-columns: 1fr; }
+section { padding: 60px 5%; }
+}
 </style>
 </head>
 <body>
-
 <nav>
-  <a href="#" class="nav-logo">
-    <svg viewBox="0 0 40 40" fill="none">
-      <rect width="40" height="40" rx="6" fill="#FF9900" opacity="0.15"/>
-      <path d="M8 28C12 24 16 20 20 20C24 20 28 24 32 28" stroke="#FF9900" stroke-width="2" stroke-linecap="round"/>
-      <path d="M8 20C12 16 16 14 20 14C24 14 28 16 32 20" stroke="#FF9900" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
-      <path d="M8 12C12 10 16 9 20 9C24 9 28 10 32 12" stroke="#FF9900" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
-    </svg>
-    FLEXIBLE AI · AWS
-  </a>
-  <ul class="nav-links">
-    <li><a href="#overview">Overview</a></li>
-    <li><a href="#value">Value Proposition</a></li>
-    <li><a href="#flexibility">Flexibility</a></li>
-    <li><a href="#functional">Functional View</a></li>
-    <li><a href="#benefits">Benefits</a></li>
-    <li><a href="#usecases">Use Cases</a></li>
-    <li><a href="#offerings">Offerings</a></li>
-    <li><a href="#customers">Customers</a></li>
-    <li><a href="landing.en.html" title="English">EN</a></li>
-    <li><a href="../" title="Back to docs site">Docs</a></li>
-    <li><a href="#contact" class="nav-cta">문의</a></li>
-  </ul>
+<a href="#" class="nav-logo">
+<svg viewBox="0 0 40 40" fill="none">
+<rect width="40" height="40" rx="6" fill="#FF9900" opacity="0.15"/>
+<path d="M8 28C12 24 16 20 20 20C24 20 28 24 32 28" stroke="#FF9900" stroke-width="2" stroke-linecap="round"/>
+<path d="M8 20C12 16 16 14 20 14C24 14 28 16 32 20" stroke="#FF9900" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+<path d="M8 12C12 10 16 9 20 9C24 9 28 10 32 12" stroke="#FF9900" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+</svg>
+FLEXIBLE AI · AWS
+</a>
+<ul class="nav-links">
+<li><a href="#overview">Overview</a></li>
+<li><a href="#value">Value Proposition</a></li>
+<li><a href="#flexibility">Flexibility</a></li>
+<li><a href="#functional">Functional View</a></li>
+<li><a href="#usecases">Use Cases</a></li>
+<li><a href="#getstarted">Get Started</a></li>
+<li><a href="#contact" class="nav-cta">문의</a></li>
+</ul>
 </nav>
-
 <section class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-grid"></div>
-  <div class="hero-content">
-    <h1>Architecting Flexible<br><span class="accent">AI Platform</span> on AWS</h1>
-    <div class="hero-sub">Run Any Model, Anywhere.</div>
-    <p>유연성(Flexibility), 주권(Sovereignty), 그리고 세밀한 제어(Granular Control)를 갖춘 차세대 AI 플랫폼. 어떤 모델이든, 어떤 환경에서든, 비즈니스 요구에 맞춰 자유롭게 구축하고 운영하세요.</p>
-    <div class="hero-actions">
-      <a href="#overview" class="btn-primary">솔루션 알아보기 →</a>
-      <a href="#contact" class="btn-outline">문의하기</a>
-    </div>
-  </div>
+<div class="hero-bg"></div>
+<div class="hero-grid"></div>
+<div class="hero-content">
+<h1>Architecting<br><span class="accent">Flexible AI Solution</span><br>on AWS</h1>
+<div class="hero-sub">Run Any Model, Anywhere.</div>
+<p>어떤 모델이든, 어떤 인프라든, 어떤 운영 환경이든-<br>전 레이어에 걸친 유연성과 세밀한 제어로 비즈니스에 최적화된 AI 플랫폼을 설계하세요.</p>
+<div class="hero-actions">
+<a href="#overview" class="btn-primary">솔루션 알아보기 →</a>
+<a href="#getstarted" class="btn-outline">Getting Started</a>
+</div>
+</div>
 </section>
-
-<!-- 1. OVERVIEW -->
 <section id="overview">
-  <div class="overview-layout">
-    <div class="overview-text reveal">
-      <div class="section-label">OVERVIEW</div>
-      <p class="quote-block">AI를 프로덕션에서 운영하는 기업들은 공통된 과제에 직면합니다. <strong>"새로운 모델이 매주 쏟아지는데, 기존 파이프라인에 적용하려면 매번 재작업이 필요하다"</strong>, <strong>"사업부·팀마다 GPU를 따로 쓰고 모델을 개별 배포하다 보니, 전사 차원의 비용 가시성과 통합 관리가 불가능하다"</strong>, <strong>"API 기반 모델 호출 비용이 통제 불가능한 속도로 증가하고 있다"</strong>, <strong>"클라우드로 확장하고 싶지만, 그동안 투자해 온 온프레미스 GPU 자산도 함께 활용해야 한다"</strong> — Flexible AI Platform on AWS는 이러한 프로덕션 환경의 현실적 과제를 정면으로 해결하기 위해 설계된 통합 AI 플랫폼 솔루션입니다.</p>
-      <p>AWS의 <strong>핵심 인프라 서비스</strong>(Graviton, GPU/Trainium/Inferentia, EKS, S3 Vectors 등)와 <strong>검증된 오픈소스 기술</strong>(LangGraph, Mem0, LiteLLM, Langfuse, vLLM, Qwen 등)을 유기적으로 결합하여, 고객이 원하는 모델과 프레임워크를 자유롭게 선택하고, 데이터 파이프라인부터 모델 학습·서빙, 에이전틱 애플리케이션까지 아우르는 풀스택 AI 플랫폼을 단일 환경에서 일관되게 구축·운영할 수 있도록 사전 검증된 레퍼런스 아키텍처와 도입 가이던스를 제공합니다.</p>
-      <div class="tech-pills">
-        <span class="pill">LangGraph</span>
-        <span class="pill">LiteLLM</span>
-        <span class="pill">vLLM</span>
-        <span class="pill">Langfuse</span>
-        <span class="pill">Qwen</span>
-        <span class="pill">Mem0</span>
-        <span class="pill">EKS</span>
-        <span class="pill">Graviton</span>
-        <span class="pill">Inferentia/Trainium</span>
-        <span class="pill">S3 Vectors</span>
-      </div>
-    </div>
-    <div class="reveal">
-      <div class="flex-circle">
-        <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#4A9EE7;stop-opacity:0.9"/>
-              <stop offset="100%" style="stop-color:#2563EB;stop-opacity:0.9"/>
-            </linearGradient>
-            <linearGradient id="grad-orange" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#FF9900;stop-opacity:0.9"/>
-              <stop offset="100%" style="stop-color:#E07000;stop-opacity:0.9"/>
-            </linearGradient>
-            <linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:0.9"/>
-              <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:0.9"/>
-            </linearGradient>
-          </defs>
-          <path d="M 200,200 L 200,40 A 160,160 0 0,1 338.56,280 Z" fill="url(#grad-blue)"/>
-          <path d="M 200,200 L 338.56,280 A 160,160 0 0,1 61.44,280 Z" fill="url(#grad-purple)"/>
-          <path d="M 200,200 L 61.44,280 A 160,160 0 0,1 200,40 Z" fill="url(#grad-orange)"/>
-          <circle cx="200" cy="200" r="80" fill="#FFC857"/>
-          <text x="200" y="192" text-anchor="middle" fill="#0D1117" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">AWS AI</text>
-          <text x="200" y="212" text-anchor="middle" fill="#0D1117" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">Infrastructure</text>
-          <text x="200" y="100" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">AWS Services</text>
-          <text x="290" y="240" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="11" font-weight="700">Open-source</text>
-          <text x="290" y="256" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="11" font-weight="700">Frameworks</text>
-          <text x="290" y="272" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="11" font-weight="700">&amp; Models</text>
-          <text x="110" y="248" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="12" font-weight="700">Deployment</text>
-          <text x="110" y="264" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="12" font-weight="700">Options</text>
-        </svg>
-      </div>
-      <div class="flex-tagline">
-        <div class="flex-tagline-main">Run Any Model, <span>Anywhere</span></div>
-        <div class="flex-tagline-sub">with flexibility, sovereignty, and granular control</div>
-      </div>
-    </div>
-  </div>
-</section>
+<div class="overview-layout">
+<div class="overview-text reveal">
+<div class="section-label">OVERVIEW</div>
+<p>AI를 프로덕션에서 운영하는 기업들은 공통된 과제에 직면하고 있습니다. <strong>"새로운 모델들이 빠르게 출시되는데, 기존 파이프라인에 적용하려면 매번 재작업이 필요하다"</strong>, <strong>"사업부·팀마다 GPU를 따로 쓰고 모델을 개별 배포하다 보니, 전사 차원의 비용 가시성과 통합 관리가 불가능하다"</strong>, <strong>"API 기반 모델 호출 비용이 통제 불가능한 속도로 증가하고 있다"</strong>, <strong>"클라우드로 확장하고 싶지만, 그동안 투자해 온 온프레미스 GPU 자산도 함께 활용해야 한다"<br></strong> — <strong style="color:var(--accent-blue)">Flexible AI Solution on AWS는 이러한 프로덕션 환경의 현실적 과제를 해결하기 위해 설계되었습니다.</strong></p>
+<p>AWS의 <strong>핵심 인프라 및 서비스(GPU/Trainium, Amazon EKS, S3 등)</strong>와 <strong>검증된 오픈소스 기술(LangGraph, Mem0, LiteLLM, Langfuse, vLLM, Qwen 등)</strong>을 유기적으로 결합하여, 고객이 원하는 모델과 프레임워크를 자유롭게 선택하고, 데이터 파이프라인부터 모델 학습·서빙, 에이전틱 애플리케이션까지 아우르는 풀스택 AI 플랫폼을 단일 환경에서 일관되게 구축·운영할 수 있도록 사전 검증된 레퍼런스 아키텍처와 도입 가이던스를 제공합니다.</p>
+</div>
+<div class="reveal">
+<div class="flex-circle">
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" style="stop-color:#4A9EE7;stop-opacity:0.9"/>
+<stop offset="100%" style="stop-color:#2563EB;stop-opacity:0.9"/>
+</linearGradient>
+<linearGradient id="grad-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" style="stop-color:#FF9900;stop-opacity:0.9"/>
+<stop offset="100%" style="stop-color:#E07000;stop-opacity:0.9"/>
+</linearGradient>
+<linearGradient id="grad-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+<stop offset="0%" style="stop-color:#A78BFA;stop-opacity:0.9"/>
+<stop offset="100%" style="stop-color:#7C3AED;stop-opacity:0.9"/>
+</linearGradient>
+</defs>
+<path d="M 200,200 L 200,40 A 160,160 0 0,1 338.56,280 Z" fill="url(#grad-blue)"/>
+<path d="M 200,200 L 338.56,280 A 160,160 0 0,1 61.44,280 Z" fill="url(#grad-purple)"/>
+<path d="M 200,200 L 61.44,280 A 160,160 0 0,1 200,40 Z" fill="url(#grad-orange)"/>
+<circle cx="200" cy="200" r="80" fill="#FFC857"/>
+<text x="200" y="192" text-anchor="middle" fill="#0D1117" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">AWS AI</text>
+<text x="200" y="212" text-anchor="middle" fill="#0D1117" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">Infrastructure</text>
+<!-- AWS Services (주황색 도형 중앙) -->
+<text x="80" y="170" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="13" font-weight="700">AWS Services</text>
 
-<!-- 2. VALUE PROPOSITION -->
+<!-- Open-source frameworks, open-weight and 3P models (파란색 도형 중앙) -->
+<text x="305" y="154" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="10" font-weight="700">Open-source frameworks,</text>
+<text x="305" y="170" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="10" font-weight="700">open-weight and</text>
+<text x="305" y="186" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="10" font-weight="700">3P models</text>
+
+<!-- Deployment Options (보라색 도형 중앙) -->
+<text x="200" y="308" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="12" font-weight="700">Deployment</text>
+<text x="200" y="322" text-anchor="middle" fill="#FFFFFF" font-family="Noto Sans KR, sans-serif" font-size="12" font-weight="700">Options</text>
+
+
+
+</svg>
+</div>
+</div>
+</div>
+</section>
 <section id="value">
-  <div class="reveal">
-    <div class="section-label">VALUE PROPOSITION</div>
-  </div>
-  <div class="value-grid">
-    <div class="value-card reveal">
-      <div class="value-icon">🎛️</div>
-      <h3>Customization & Flexibility</h3>
-      <p>AI 스택의 모든 레이어를 비즈니스 요구에 맞춰 자유롭게 선택하고 제어할 수 있습니다. 오픈소스와 프로프라이어터리 모델을 자유롭게 조합하고, 선호하는 프레임워크를 mix and match하며, 모델 가중치부터 데이터 흐름, 인프라 구성까지 완전한 가시성과 제어권을 확보하세요. 신규 모델이 출시되면 라우팅 추가만으로 즉시 도입할 수 있어 AI 혁신 사이클이 가속됩니다.</p>
-    </div>
-    <div class="value-card reveal">
-      <div class="value-icon">🛡️</div>
-      <h3>Sovereignty & Compliance</h3>
-      <p>데이터 레지던시 및 컴플라이언스를 충족합니다. 민감 정보가 외부로 노출되거나 타 고객 GPU 리소스와 공유될 우려 없이, 데이터 주권을 유지하면서 최신 AI 기술을 도입할 수 있습니다.</p>
-    </div>
-    <div class="value-card reveal">
-      <div class="value-icon">💰</div>
-      <h3>Cost Efficiency</h3>
-      <p>워크로드별로 최적의 컴퓨트 — GPU, Trainium, Inferentia, Graviton — 를 자유롭게 조합하여 동급 EC2 대비 최대 40-60% 비용을 절감합니다. 토큰 기반 가격과 GPUaaS 모델 사이를 유연하게 전환하여 인프라 지출을 실제 비즈니스 가치에 직접 연동할 수 있습니다.</p>
-    </div>
-    <div class="value-card reveal">
-      <div class="value-icon">🔍</div>
-      <h3>E2E Observability</h3>
-      <p>인프라, 모델, 에이전트 동작, 비용까지 — AI 워크로드의 모든 계층을 단일 화면에서 모니터링합니다. GPU 활용률과 시스템 성능부터 프롬프트별 응답 품질, 모델·팀·프로젝트 단위 세분화된 비용 추적까지, 운영에 필요한 모든 신호를 코드 레벨로 확보합니다.</p>
-    </div>
-    <div class="value-card reveal">
-      <div class="value-icon">🚀</div>
-      <h3>Faster Time-to-Value</h3>
-      <p>사전 검증된 레퍼런스 아키텍처와 도입 가이던스를 통해 PoC에서 프로덕션까지의 여정을 수개월에서 수주로 단축합니다. 처음부터 다시 설계할 필요 없이, AWS와 검증된 오픈소스 생태계 위에서 즉시 구축을 시작할 수 있습니다.</p>
-    </div>
-  </div>
+<div class="reveal">
+<div class="section-label">VALUE PROPOSITION</div>
+</div>
+<div class="value-grid">
+<div class="value-card reveal">
+<div class="value-icon">🎛️</div>
+<h3>Customization & Flexibility</h3>
+<p>오픈소스와 프로프라이어터리 모델, 선호하는 프레임워크를 자유롭게 조합하여 AI 스택의 모든 레이어를 비즈니스 요구에 맞춰 제어할 수 있습니다. 모델 가중치부터 데이터 흐름까지 완전한 가시성을 확보하고 신규 모델을 즉각 도입하세요.</p>
+</div>
+<div class="value-card reveal">
+<div class="value-icon">🔍</div>
+<h3>E2E Observability</h3>
+<p>인프라, 모델, 에이전트 동작, 비용까지 AI 워크로드의 모든 계층을 모니터링합니다. GPU 활용률부터 프롬프트 품질, 팀별 비용 추적까지 운영에 필요한 모든 신호를 코드 레벨로 확보합니다.</p>
+</div>
+<div class="value-card reveal">
+<div class="value-icon">💰</div>
+<h3>Cost Efficiency</h3>
+<p>워크로드별 최적 컴퓨트를 조합하여 동급 대비 최대 40-60% 비용을 절감합니다. 토큰 기반 과금과 시간당 GPU 과금 사이를 유연하게 전환하여 인프라 지출을 비즈니스 가치에 연동할 수 있습니다.</p>
+</div>
+<div class="value-card reveal">
+<div class="value-icon">🛡️</div>
+<h3>Sovereignty & Compliance</h3>
+<p>데이터 레지던시 및 컴플라이언스를 충족합니다. 민감 정보 노출 우려 없이 데이터 주권을 유지하면서 최신 AI 기술을 도입할 수 있도록 설계되었습니다.</p>
+</div>
+<div class="value-card reveal">
+<div class="value-icon">🚀</div>
+<h3>Faster Time-to-Value</h3>
+<p>사전 검증된 레퍼런스 아키텍처를 통해 PoC에서 프로덕션까지의 여정을 수개월에서 수주로 단축합니다. 검증된 오픈소스 생태계 위에서 즉시 구축을 시작할 수 있습니다.</p>
+</div>
+</div>
 </section>
-
-<!-- 3. FIVE DIMENSIONS OF FLEXIBILITY -->
 <section id="flexibility">
-  <div class="reveal">
-    <div class="section-label">FLEXIBLE FROM ALL ANGLES</div>
-    <h2 class="section-title">5가지 차원의 유연성</h2>
-    <p class="section-desc">AI 인프라의 모든 측면에서 유연성을 제공합니다. 비용·성능·거버넌스 요구가 변화할 때 전체 아키텍처를 다시 설계할 필요 없이, 각 차원에서 자유롭게 전환할 수 있습니다.</p>
-  </div>
-  <div class="flex-grid">
-    <div class="flex-card reveal">
-      <div class="flex-icon">🖥️</div>
-      <h4>이기종 컴퓨트 선택</h4>
-      <div class="flex-en">Heterogeneous Compute Choice</div>
-      <div class="flex-key">어떤 실리콘을 사용할 것인가?</div>
-      <p>GPU, AWS Inferentia/Trainium, Graviton 중 워크로드 특성에 맞는 최적의 컴퓨팅을 자유롭게 선택. 단일 칩이나 인스턴스 유형에 종속되지 않음</p>
-    </div>
-    <div class="flex-card reveal">
-      <div class="flex-icon">🔧</div>
-      <h4>Self-Hosted 완전 제어</h4>
-      <div class="flex-en">Self-Hosted Control</div>
-      <div class="flex-key">어떻게 배포할 것인가?</div>
-      <p>오픈소스 프레임워크를 직접 배포·운영하여 모델 가중치, 데이터 흐름, 인프라 구성에 대한 완전한 가시성과 통제권 확보</p>
-    </div>
-    <div class="flex-card reveal">
-      <div class="flex-icon">💰</div>
-      <h4>유연한 소비 모델</h4>
-      <div class="flex-en">Flexible Consumption Models</div>
-      <div class="flex-key">어떻게 비용을 지불할 것인가?</div>
-      <p>토큰 기반 과금과 시간당 GPU 과금 사이를 자유롭게 전환. 인프라 비용을 비즈니스 가치와 직접 연동</p>
-    </div>
-    <div class="flex-card reveal">
-      <div class="flex-icon">🌐</div>
-      <h4>하이브리드 배포 민첩성</h4>
-      <div class="flex-en">Hybrid Deployment Agility</div>
-      <div class="flex-key">어디에 배포할 것인가?</div>
-      <p>온프레미스, EC2 기반 Self-hosted, Amazon Bedrock, 외부 LLM을 재설계 없이 유동적으로 이동</p>
-    </div>
-    <div class="flex-card reveal">
-      <div class="flex-icon">🗺️</div>
-      <h4>통합 풀스택 가이던스</h4>
-      <div class="flex-en">Integrated Full-Stack Guidance</div>
-      <div class="flex-key">어디서부터 시작할 것인가?</div>
-      <p>모델 최적화부터 스토리지, 플랫폼 엔지니어링, 에이전틱 애플리케이션까지 전체를 아우르는 통합 아키텍처 패턴 제공으로, 고객의 현황과 비즈니스 요구사항에 맞게 점진적 도입 가능</p>
-    </div>
-  </div>
+<div class="reveal">
+<div class="section-label">FLEXIBLE FROM ALL ANGLES</div>
+<h2 class="section-title">AI 인프라 모든 측면에서의 유연성</h2>
+<p class="section-desc">비용·성능·거버넌스 요구가 변화할 때 전체 아키텍처를 다시 설계할 필요 없이, 각 차원에서 자유롭게 전환할 수 있습니다.</p>
+</div>
+<div class="flex-grid">
+<div class="flex-card reveal">
+<div class="flex-icon">🖥️</div>
+<h4>이기종 컴퓨트 선택</h4>
+<div class="flex-key">어떤 칩을 사용할 것인가?</div>
+<p>GPU, AWS Trainium, Graviton 중 워크로드 특성에 맞는 최적의 컴퓨팅을 자유롭게 선택</p>
+</div>
+<div class="flex-card reveal">
+<div class="flex-icon">🔧</div>
+<h4>Self-Hosted 완전 제어</h4>
+<div class="flex-key">어떻게 배포할 것인가?</div>
+<p>인프라를 직접 제어하여 모델 가중치와 데이터 흐름에 대한 완전한 통제권 확보</p>
+</div>
+<div class="flex-card reveal">
+<div class="flex-icon">💰</div>
+<h4>유연한 소비 모델</h4>
+<div class="flex-key">어떻게 비용을 지불할 것인가?</div>
+<p>토큰 기반 과금과 시간당 GPU 과금 사이를 자유롭게 전환하여 비용 효율 극대화</p>
+</div>
+<div class="flex-card reveal">
+<div class="flex-icon">🌐</div>
+<h4>하이브리드 배포 민첩성</h4>
+<div class="flex-key">어디에 배포할 것인가?</div>
+<p>온프레미스, EC2, Bedrock, 외부 LLM을 재설계 없이 유동적으로 이동하며 운영</p>
+</div>
+<div class="flex-card reveal">
+<div class="flex-icon">🗺️</div>
+<h4>통합 풀스택 가이던스</h4>
+<div class="flex-key">어디서부터 시작할 것인가?</div>
+<p>모델 최적화부터 에이전틱 애플리케이션까지 전체를 아우르는 아키텍처 패턴 제공</p>
+</div>
+</div>
 </section>
 
-<!-- 4. FUNCTIONAL VIEW & BUILDING BLOCKS -->
+
+
 <section id="functional">
-  <div class="reveal">
-    <div class="section-label">FUNCTIONAL VIEW & BUILDING BLOCKS</div>
-    <h2 class="section-title">기능 구성 & 빌딩 블록</h2>
-    <p class="section-desc">Application 레이어부터 Cloud·On-prem·Edge 인프라까지 전 계층을 포괄하는 구조. 환경에 맞춰 필요한 컴포넌트부터 점진적으로 확장하거나, 통합 플랫폼으로 한 번에 구축할 수 있습니다.</p>
-  </div>
-  <div class="arch-diagram reveal">
-    <svg viewBox="0 0 1400 940" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Flexible AI 레이어 아키텍처 다이어그램">
+<div class="reveal">
+<div class="section-label">FUNCTIONAL VIEW & BUILDING BLOCKS</div>
+<h2 class="section-title">기능 구성 & 빌딩 블록</h2>
+<p class="section-desc">Application 레이어부터 Cloud·On-prem·Edge 인프라까지 전 계층을 포괄하는 구조로,<br>환경에 맞춰 필요한 컴포넌트부터 점진적으로 확장하거나, 통합 플랫폼으로 한 번에 구축할 수 있습니다.</p>
+</div>
+  <svg viewBox="0 0 1400 940" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Flexible AI 레이어 아키텍처 다이어그램">
       <defs>
         <linearGradient id="layerOrange" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="#FF9900" stop-opacity="0.08"/>
@@ -816,9 +739,9 @@
       <g transform="translate(420,805)">
         <rect class="node-rect blue" width="300" height="100"/>
         <text x="20" y="24" class="node-title">Heterogeneous Compute</text>
-        <text x="20" y="42" class="node-sub">GPU (g6e · g6 · g5g)</text>
-        <text x="20" y="58" class="node-sub">Trainium / Inferentia (inf2 · trn1)</text>
-        <text x="20" y="78" class="node-sub">Graviton (planning · CPU)</text>
+        <text x="20" y="42" class="node-sub">GPU (P6e · P6 · G7e · G6e)</text>
+        <text x="20" y="58" class="node-sub">Trainium (Trn3 UltraServer · Trn2)</text>
+        <text x="20" y="78" class="node-sub">Graviton</text>
       </g>
       <g transform="translate(760,805)">
         <rect class="node-rect blue" width="280" height="100"/>
@@ -846,149 +769,113 @@
   </div>
 </section>
 
-<!-- 5. KEY BENEFITS -->
-<section id="benefits">
-  <div class="reveal">
-    <div class="section-label">KEY BENEFITS</div>
-    <h2 class="section-title">Benefits</h2>
-  </div>
-  <div class="benefits-grid">
-    <div class="benefit-card b1 reveal">
-      <div class="benefit-icon">🚀</div>
-      <h3>Run Any Model Anywhere</h3>
-      <ul>
-        <li>통합 액세스 제어 (Unified access control)</li>
-        <li>벤더 락인 제거</li>
-        <li>데이터 레지던시 및 규제 준수</li>
-        <li>Self-hosted 모델, Amazon 관리형 서비스(Bedrock), 외부 LLM 호출까지 유연하게 이용</li>
-        <li>Self-service portal</li>
-      </ul>
-    </div>
-    <div class="benefit-card b2 reveal">
-      <div class="benefit-icon">💵</div>
-      <h3>Optimize Costs</h3>
-      <ul>
-        <li>모델 및 GPU 활용 최적화</li>
-        <li>이기종 컴퓨팅(GPU/Trainium/Graviton)을 워크로드별로 적용·오케스트레이션</li>
-        <li>Amazon Bedrock에서 Self-hosted로의 매끄러운 마이그레이션 지원</li>
-      </ul>
-    </div>
-    <div class="benefit-card b3 reveal">
-      <div class="benefit-icon">🛡️</div>
-      <h3>Protect Existing AI Investment</h3>
-      <ul>
-        <li>온프레미스 환경에 Bolt-on 방식으로 적용 가능</li>
-        <li>재설계(Re-architecting) 없이 하이브리드 배포</li>
-        <li>온프레미스·클라우드 GPU 통합 관리</li>
-      </ul>
-    </div>
-    <div class="benefit-card b4 reveal">
-      <div class="benefit-icon">🤖</div>
-      <h3>Agentic AI & Compute Modernization</h3>
-      <ul>
-        <li>자율 에이전트 운영을 위한 통합 환경</li>
-        <li>인프라·에이전트 행동·아웃풋에 대한 E2E Observability</li>
-        <li>워크플로우 코드 레벨 완전 제어</li>
-      </ul>
-    </div>
-  </div>
-</section>
 
-<!-- 6. KEY USE CASES -->
+<!-- 7. KEY USE CASES -->
 <section id="usecases">
-  <div class="reveal">
-    <div class="section-label">KEY USE CASES</div>
-    <h2 class="section-title">Key Use Cases</h2>
-    <p class="section-desc">GPU 기반 모델 서빙, AI Gateway, Observability 등 공통 컴포넌트 위에 use case별 컴포넌트를 조합하여 다양한 시나리오를 구현할 수 있습니다.</p>
-  </div>
-  <div class="usecase-grid">
-    <div class="usecase-card reveal">
-      <div class="usecase-num">01</div>
-      <h3>Self-hosted Model Serving on AWS</h3>
-      <p>EKS 위에 self-hosted 모델 서빙 환경을 구축하고 AI Gateway(LiteLLM·Kong), Inference Engines(Ray·SGLang·vLLM), Observability(Langfuse·mlflow), Vector DB를 통합. HuggingFace 네이티브 연동으로 신규 모델에 빠르게 접근하며, 데이터 주권과 시스템부터 AI 레벨까지의 Enhanced Observability를 확보합니다.</p>
-    </div>
-    <div class="usecase-card reveal">
-      <div class="usecase-num">02</div>
-      <h3>Hybrid Model Serving</h3>
-      <p>Self-hosted, AWS-managed(Bedrock·Nova·SageMaker), 외부 모델(OpenAI·Gemini·Anthropic)을 단일 플랫폼에서 통합 운영. AI Gateway가 workload-optimized routing을 수행해 워크로드별 최적 모델로 코드 변경 없이 라우팅하고, centralized policy management로 거버넌스를 유지합니다.</p>
-    </div>
-    <div class="usecase-card reveal">
-      <div class="usecase-num">03</div>
-      <h3>Agentic AI</h3>
-      <p>AWS Native(Bedrock·Strands·AgentCore)로 시작해 EKS 기반 Self-hosted로 확장. Custom Agent workflow(LangGraph·MCP/A2A)와 도메인 특화 SLM을 자유롭게 결합하며, Heterogeneous Compute Allocation(Graviton for planning, GPU for reasoning, Trn/Inf for inference)으로 비용을 최적화합니다.</p>
-    </div>
-    <div class="usecase-card reveal">
-      <div class="usecase-num">04</div>
-      <h3>Hybrid Cluster</h3>
-      <p>AWS Cloud와 On-prem을 EKS Hybrid Node로 연결하는 단일 클러스터. 규제·민감 워크로드는 온프레미스, 나머지는 AWS에서 처리하며, 장애 시 AWS로 자동 fallback. 온프렘 학습 + AWS 글로벌 추론 시나리오도 재설계 없이 구현됩니다.</p>
-    </div>
-    <div class="usecase-card reveal">
-      <div class="usecase-num">05</div>
-      <h3>Cost Optimization with Trainium/Inferentia</h3>
-      <p>AWS 자체 AI 칩으로 동급 EC2 대비 최대 40-60% 비용 절감과 업계 최고 수준의 OTPS 달성. PyTorch 네이티브 지원과 Neuron Kernel Interface를 통한 fine-grained 튜닝, Neuron Explorer를 통한 실행 흐름 추적을 제공합니다.</p>
-    </div>
-  </div>
-</section>
+<div class="reveal">
+<div class="section-label">KEY USE CASES</div>
+<h2 class="section-title">Key Use Cases</h2>
+</div>
+<div class="usecase-row usecase-row-3">
+<div class="usecase-card reveal">
+<div class="usecase-num">01</div>
+<h3>자체 호스팅 모델 서빙</h3>
+<h4>Self-hosted Model Serving</h4>
+<ul>
+<li>HuggingFace 네이티브 연동으로 최신 오픈소스 모델을 빠르게 도입</li>
+<li>프레임워크, 인스턴스, 최적화 전략 등을 유연하게 적용</li>
+<li>데이터 레지던시 및 컴플라이언스 요건 충족</li>
+<li>시스템부터 AI 레벨까지 통합 모니터링 가시성 확보</li>
+</ul>
+</div>
+<div class="usecase-card reveal">
+<div class="usecase-num">02</div>
+<h3>하이브리드 모델 서빙</h3>
+<h4>Hybrid Model Serving</h4>
+<ul>
+<li>자체 호스팅, AWS 관리형, 외부 모델을 단일 플랫폼에서 통합 운영</li>
+<li>워크로드별 최적 모델과 배포 방식을 코드 변경 없이 라우팅</li>
+<li>퍼블릭 AI 사용이 제한된 규제 환경 지원</li>
+<li>셀프서비스 포털과 중앙 정책 관리로 거버넌스 유지</li>
+</ul>
+</div>
+<div class="usecase-card reveal">
+<div class="usecase-num">03</div>
+<h3>에이전틱 AI</h3>
+<h4>Agentic AI</h4>
+<ul>
+<li>Bedrock·Strands SDK에서 EKS 기반 자체 호스팅으로 확장</li>
+<li>LangGraph·MCP 기반 커스텀 워크플로우 및 특화 경량 모델 활용</li>
+<li>태스크별 최적 컴퓨팅 할당 (Graviton 계획, GPU 추론 가속)</li>
+<li>엔드투엔드 추적 및 비용 최적화 라우팅</li>
+</ul>
+</div>
+</div>
+<div class="usecase-row usecase-row-2">
+<div class="usecase-card reveal">
+<div class="usecase-num">04</div>
+<h3>하이브리드 클러스터</h3>
+<h4>Hybrid Cluster</h4>
+<ul>
+<li>EKS Hybrid Node로 AWS와 온프레미스를 단일 클러스터로 통합</li>
+<li>기존 온프레미스 AI 자산을 재설계 없이 그대로 활용</li>
+<li>장애 시 AWS로 자동 페일오버 및 탄력적 오토스케일링</li>
+<li>민감 워크로드의 물리적 분리 및 전략적 배치</li>
+</ul>
+</div>
+<div class="usecase-card reveal">
+<div class="usecase-num">05</div>
+<h3>AWS 칩 기반 비용 최적화</h3>
+<h4>Cost Optimization with AWS Chips</h4>
+<ul>
+<li>동급 인스턴스 대비 40~60% 비용 절감</li>
+<li>Sonnet 모델 기준 업계 최고 수준의 추론 처리량 달성</li>
+<li>Neuron Kernel Interface를 통한 하드웨어 수준 정밀 성능 튜닝</li>
+<li>Neuron Explorer로 실행 흐름 및 연산 추적</li>
+</ul>
+</div>
+</div>
 
-<!-- 7. OFFERINGS -->
+</section>
 <section id="offerings">
-  <div class="reveal">
-    <div class="section-label">OFFERINGS</div>
-    <h2 class="section-title">Offerings</h2>
-    <p class="section-desc">아키텍처를 처음부터 구축하는 환경부터 이미 갖추고 있지만 고도화를 원하는 환경까지, 모든 단계에 맞춘 아키텍처와 지원 체계, 스타터 킷을 제공합니다.</p>
-  </div>
-  <div class="offering-grid">
-    <div class="offering-card reveal">
-      <div class="offering-icon">🏗️</div>
-      <h3>Baseline for Building Full-stack AI Platform</h3>
-      <ul>
-        <li>GPU + 오픈소스 프레임워크 + AWS 서비스 조합 사전 검증된 레퍼런스 아키텍처</li>
-        <li>다양한 use case와 배포 옵션을 위한 유연·확장 가능 디자인 패턴</li>
-        <li>모델·에이전트에 대한 통합 액세스 셀프 서비스 포털</li>
-      </ul>
-    </div>
-    <div class="offering-card reveal">
-      <div class="offering-icon">🤝</div>
-      <h3>White-glove Support</h3>
-      <ul>
-        <li>AWS Specialist 기술 가이던스: Compute, K8S, Storage 등 전 영역</li>
-        <li>프로덕션 환경에서 GPU 가치 극대화 위한 베스트 프랙티스</li>
-        <li>AWS, 온프레미스, 엣지 전반의 배포 지원</li>
-      </ul>
-    </div>
-    <div class="offering-card reveal">
-      <div class="offering-icon">🛍️</div>
-      <h3>Open-source via AWS Marketplace</h3>
-      <ul>
-        <li>OSS 전문가가 사전 구성·최적화한 스택</li>
-        <li>1-Click Launch로 AMI 즉시 배포 (이종 소스 통합 코드 작성 스킵)</li>
-        <li>보안·거버넌스 강화 Enterprise Edition 또는 BYOL 옵션</li>
-      </ul>
-    </div>
-    <div class="offering-card reveal">
-      <div class="offering-icon">🚀</div>
-      <h3>Production-ready Starter Kit</h3>
-      <ul>
-        <li>엔터프라이즈 AI 배포를 가속하는 GenAI 인프라 툴킷</li>
-        <li>AI Gateway, LLM Serving, Vector DB, Embedding Models, E2E Observability 포함</li>
-        <li>박스 오픈 즉시 프로덕션 환경에 적용 가능</li>
-      </ul>
-    </div>
-  </div>
+<div class="reveal">
+<div class="section-label">OFFERINGS</div>
+<h2 class="section-title">Offerings</h2>
+<p class="section-desc">아키텍처를 처음부터 구축하는 환경부터 기존에 구축된 환경을 고도화하는 것까지,<br>모든 단계에 맞춘 아키텍처와 지원 체계, 스타터 킷을 제공합니다.</p>
+</div>
+<div class="offering-grid">
+<div class="offering-card reveal"><div class="offering-icon">🏗️</div><h3>Full-stack AI Baseline</h3><ul><li>사전 검증된 레퍼런스 아키텍처</li><li>유연·확장 가능한 디자인 패턴</li><li>통합 셀프 서비스 포털</li></ul></div>
+<div class="offering-card reveal"><div class="offering-icon">🤝</div><h3>White-glove Support</h3><ul><li>AWS Specialist 기술 가이던스</li><li>GPU 가치 극대화 베스트 프랙티스</li><li>글로벌 배포 지원</li></ul></div>
+<div class="offering-card reveal"><div class="offering-icon">🛍️</div><h3>Marketplace Solutions</h3><ul><li>OSS 사전 구성 스택</li><li>1-Click Launch 최적화 AMI</li><li>Enterprise Edition 옵션</li></ul></div>
+<div class="offering-card reveal"><div class="offering-icon">🚀</div><h3>Starter Kit</h3><ul><li>GenAI 인프라 통합 툴킷</li><li>E2E Observability 기본 포함</li></ul></div>
+</div>
+
+
+<!-- 8. GETSTARTED -->
+</section>
+<section id="getstarted">
+<div class="reveal">
+<div class="section-label">GET STARTED</div>
+<h2 class="section-title">지금 바로 시작하세요</h2>
+<p class="section-desc">사전 검증된 스타터 킷과 실습 워크숍을 통해 AI 플랫폼 구축의 첫 걸음을 떼어보세요.</p>
+</div>
+<div class="gs-grid reveal">
+<div class="gs-card">
+<h3>GenAI Starter Kit</h3>
+<p>엔터프라이즈 AI 배포를 가속하는 GenAI 인프라 툴킷입니다. AI 게이트웨이, 서빙 엔진, 벡터 데이터베이스, 임베딩 모델, 가시성 도구 등이 모두 포함되어 있습니다.</p>
+<a href="https://github.com/aws-samples/sample-genai-on-eks-starter-kit" class="gs-link" target="_blank">GitHub Repository 탐색하기 →</a>
+</div>
+<div class="gs-card">
+<h3>Hands-on Workshops</h3>
+<p>단계별 가이드를 통해 에이전틱 플랫폼과 인프라 최적화 기법을 직접 실습해 볼 수 있는 기술 워크숍입니다.</p>
+<div style="display:flex; flex-direction:column; gap:12px;">
+<a href="https://catalog.workshops.aws/k8sagenticplatform/" class="gs-link" target="_blank">K8s Agentic Platform Workshop →</a>
+<a href="https://catalog.workshops.aws/genaifsxeks" class="gs-link" target="_blank">GenAI on EKS with FSx Workshop →</a>
+</div>
+</div>
+</div>
 </section>
 
-<!-- 8. CUSTOMER STORIES - PLACEHOLDER -->
-<section id="customers">
-  <div class="reveal">
-    <div class="section-label">CUSTOMER STORIES</div>
-    <h2 class="section-title">고객 사례</h2>
-    <p class="section-desc">Flexible AI 접근법을 통해 AI 인프라 전략을 재정의하고 있는 고객들의 이야기를 곧 만나보실 수 있습니다.</p>
-  </div>
-  <div class="customers-placeholder reveal">
-    <div class="image-placeholder-icon">📋</div>
-    <div class="image-placeholder-text">[ Customer Stories - 추후 추가 예정 ]</div>
-  </div>
-</section>
 
 <!-- 9. CONTACT -->
 <section id="contact">
@@ -1015,7 +902,7 @@
 
 <footer>
   <div class="footer-logo">© 2026 Amazon Web Services, Inc.</div>
-  <div>Architecting Flexible AI Platform on AWS</div>
+  <div>Architecting Flexible AI Solution on AWS</div>
   <div>Run Any Model, Anywhere.</div>
 </footer>
 
