@@ -232,7 +232,7 @@
   }
   .flex-card p { font-size: 12px; color: var(--aws-muted); line-height: 1.6; }
 
-  /* FUNCTIONAL VIEW - placeholder */
+  /* FUNCTIONAL VIEW */
   #functional { background: var(--aws-dark); }
   .image-placeholder {
     background: var(--aws-navy);
@@ -245,6 +245,19 @@
   }
   .image-placeholder-icon { font-size: 48px; opacity: 0.5; }
   .image-placeholder-text { font-size: 14px; font-family: var(--font-display); letter-spacing: 0.05em; }
+  .arch-diagram {
+    background: var(--aws-navy);
+    border: 1px solid var(--aws-border);
+    border-radius: 12px;
+    padding: 24px;
+    overflow: hidden;
+  }
+  .arch-diagram svg { width: 100%; height: auto; display: block; }
+  .arch-caption {
+    margin-top: 16px; text-align: center;
+    font-family: var(--font-display); font-size: 11px; letter-spacing: 0.08em;
+    color: var(--aws-muted); text-transform: uppercase;
+  }
 
   /* BENEFITS */
   #benefits {
@@ -636,10 +649,200 @@
     <h2 class="section-title">Functional View & Building Blocks</h2>
     <p class="section-desc">From the application layer down to cloud, on-premises, and edge infrastructure — Flexible AI spans every layer. Adopt the components you need today and grow into the rest, or stand up the integrated platform in one pass.</p>
   </div>
-  <div class="image-placeholder reveal">
-    <div class="image-placeholder-icon">🖼️</div>
-    <div class="image-placeholder-text">[ Diagram placeholder ]</div>
-    <div class="image-placeholder-text" style="font-size: 12px; opacity: 0.6;">A reference architecture image will live here</div>
+  <div class="arch-diagram reveal">
+    <svg viewBox="0 0 1400 940" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Flexible AI layered architecture diagram">
+      <defs>
+        <linearGradient id="layerOrange" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#FF9900" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="#FF9900" stop-opacity="0.02"/>
+        </linearGradient>
+        <linearGradient id="layerBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#4A9EE7" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="#4A9EE7" stop-opacity="0.02"/>
+        </linearGradient>
+        <linearGradient id="layerPurple" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#A78BFA" stop-opacity="0.10"/>
+          <stop offset="100%" stop-color="#A78BFA" stop-opacity="0.02"/>
+        </linearGradient>
+        <linearGradient id="layerGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#34D399" stop-opacity="0.08"/>
+          <stop offset="100%" stop-color="#34D399" stop-opacity="0.02"/>
+        </linearGradient>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#8BA3BE"/>
+        </marker>
+      </defs>
+
+      <style>
+        .layer-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+        .node-title { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; fill: #E8EFF7; }
+        .node-sub { font-family: 'Inter', sans-serif; font-size: 10px; fill: #8BA3BE; }
+        .node-rect { fill: #1A2B45; stroke: rgba(255,255,255,0.12); stroke-width: 1; rx: 8; ry: 8; }
+        .node-rect.orange { stroke: rgba(255,153,0,0.45); }
+        .node-rect.blue { stroke: rgba(74,158,231,0.45); }
+        .node-rect.purple { stroke: rgba(167,139,250,0.45); }
+        .node-rect.green { stroke: rgba(52,211,153,0.45); }
+        .flow { stroke: #8BA3BE; stroke-width: 1.2; fill: none; opacity: 0.55; }
+      </style>
+
+      <!-- Layer 1 - Users & Clients (top) -->
+      <rect x="40" y="30" width="1320" height="110" fill="url(#layerOrange)" rx="12" ry="12"/>
+      <text x="60" y="55" class="layer-label" fill="#FF9900">USERS &amp; CLIENTS</text>
+      <g transform="translate(80,75)">
+        <rect class="node-rect orange" width="240" height="50"/>
+        <text x="20" y="22" class="node-title">Open WebUI</text>
+        <text x="20" y="38" class="node-sub">Self-service portal · Chat UI</text>
+      </g>
+      <g transform="translate(360,75)">
+        <rect class="node-rect orange" width="280" height="50"/>
+        <text x="20" y="22" class="node-title">Custom Apps &amp; Agents</text>
+        <text x="20" y="38" class="node-sub">SDK / API consumers</text>
+      </g>
+      <g transform="translate(680,75)">
+        <rect class="node-rect orange" width="220" height="50"/>
+        <text x="20" y="22" class="node-title">Workflow Automation</text>
+        <text x="20" y="38" class="node-sub">n8n</text>
+      </g>
+      <g transform="translate(940,75)">
+        <rect class="node-rect orange" width="380" height="50"/>
+        <text x="20" y="22" class="node-title">Workshop / Reference</text>
+        <text x="20" y="38" class="node-sub">eks-genai-workshop · Loan Buddy</text>
+      </g>
+
+      <!-- Layer 2 - Gateway & Guardrails -->
+      <rect x="40" y="170" width="1320" height="110" fill="url(#layerBlue)" rx="12" ry="12"/>
+      <text x="60" y="195" class="layer-label" fill="#4A9EE7">GATEWAY &amp; GUARDRAILS</text>
+      <g transform="translate(80,215)">
+        <rect class="node-rect blue" width="380" height="50"/>
+        <text x="20" y="22" class="node-title">AI Gateway</text>
+        <text x="20" y="38" class="node-sub">LiteLLM · Kong AI Gateway OSS</text>
+      </g>
+      <g transform="translate(500,215)">
+        <rect class="node-rect blue" width="260" height="50"/>
+        <text x="20" y="22" class="node-title">Guardrails</text>
+        <text x="20" y="38" class="node-sub">Guardrails AI</text>
+      </g>
+      <g transform="translate(800,215)">
+        <rect class="node-rect blue" width="520" height="50"/>
+        <text x="20" y="22" class="node-title">Routing &amp; Policy</text>
+        <text x="20" y="38" class="node-sub">Workload-optimized routing · Centralized policy management</text>
+      </g>
+
+      <!-- Layer 3 - Agentic Layer -->
+      <rect x="40" y="310" width="1320" height="140" fill="url(#layerPurple)" rx="12" ry="12"/>
+      <text x="60" y="335" class="layer-label" fill="#A78BFA">AGENTIC LAYER</text>
+      <g transform="translate(80,355)">
+        <rect class="node-rect purple" width="320" height="80"/>
+        <text x="20" y="24" class="node-title">Agent Frameworks</text>
+        <text x="20" y="42" class="node-sub">LangGraph · Strands · Agno</text>
+        <text x="20" y="58" class="node-sub">OpenClaw · Bedrock AgentCore</text>
+      </g>
+      <g transform="translate(440,355)">
+        <rect class="node-rect purple" width="240" height="80"/>
+        <text x="20" y="24" class="node-title">MCP / A2A</text>
+        <text x="20" y="42" class="node-sub">FastMCP 2.0</text>
+        <text x="20" y="58" class="node-sub">Tool servers · Agent-to-agent</text>
+      </g>
+      <g transform="translate(720,355)">
+        <rect class="node-rect purple" width="320" height="80"/>
+        <text x="20" y="24" class="node-title">Retrieval &amp; Memory</text>
+        <text x="20" y="42" class="node-sub">Qdrant · Chroma · Milvus</text>
+        <text x="20" y="58" class="node-sub">S3 Vectors · Mem0</text>
+      </g>
+      <g transform="translate(1080,355)">
+        <rect class="node-rect purple" width="240" height="80"/>
+        <text x="20" y="24" class="node-title">Reference Apps</text>
+        <text x="20" y="42" class="node-sub">Calculator agents</text>
+        <text x="20" y="58" class="node-sub">DevOps / Doc Writer</text>
+      </g>
+
+      <!-- Layer 4 - Model Serving -->
+      <rect x="40" y="480" width="1320" height="140" fill="url(#layerOrange)" rx="12" ry="12"/>
+      <text x="60" y="505" class="layer-label" fill="#FF9900">MODEL SERVING</text>
+      <g transform="translate(80,525)">
+        <rect class="node-rect orange" width="340" height="80"/>
+        <text x="20" y="24" class="node-title">Self-hosted LLM</text>
+        <text x="20" y="42" class="node-sub">vLLM · SGLang · TGI · Ollama</text>
+        <text x="20" y="58" class="node-sub">Ray · NVIDIA Dynamo Platform</text>
+      </g>
+      <g transform="translate(460,525)">
+        <rect class="node-rect orange" width="240" height="80"/>
+        <text x="20" y="24" class="node-title">Embedding</text>
+        <text x="20" y="42" class="node-sub">Text Embedding Inference</text>
+        <text x="20" y="58" class="node-sub">(TEI)</text>
+      </g>
+      <g transform="translate(740,525)">
+        <rect class="node-rect orange" width="280" height="80"/>
+        <text x="20" y="24" class="node-title">AWS Managed</text>
+        <text x="20" y="42" class="node-sub">Amazon Bedrock</text>
+        <text x="20" y="58" class="node-sub">Nova · SageMaker</text>
+      </g>
+      <g transform="translate(1060,525)">
+        <rect class="node-rect orange" width="260" height="80"/>
+        <text x="20" y="24" class="node-title">External LLM</text>
+        <text x="20" y="42" class="node-sub">OpenAI · Anthropic</text>
+        <text x="20" y="58" class="node-sub">Gemini · others</text>
+      </g>
+
+      <!-- Layer 5 - Observability -->
+      <rect x="40" y="650" width="1320" height="80" fill="url(#layerGreen)" rx="12" ry="12"/>
+      <text x="60" y="675" class="layer-label" fill="#34D399">OBSERVABILITY</text>
+      <g transform="translate(80,690)">
+        <rect class="node-rect green" width="380" height="30"/>
+        <text x="20" y="20" class="node-title">Langfuse</text>
+        <text x="160" y="20" class="node-sub">tracing · session/tag</text>
+      </g>
+      <g transform="translate(500,690)">
+        <rect class="node-rect green" width="380" height="30"/>
+        <text x="20" y="20" class="node-title">Phoenix</text>
+        <text x="160" y="20" class="node-sub">evaluation · monitoring</text>
+      </g>
+      <g transform="translate(920,690)">
+        <rect class="node-rect green" width="400" height="30"/>
+        <text x="20" y="20" class="node-title">MLflow</text>
+        <text x="160" y="20" class="node-sub">experiment tracking</text>
+      </g>
+
+      <!-- Layer 6 - Compute & Infrastructure -->
+      <rect x="40" y="760" width="1320" height="160" fill="url(#layerBlue)" rx="12" ry="12"/>
+      <text x="60" y="785" class="layer-label" fill="#4A9EE7">COMPUTE &amp; INFRASTRUCTURE</text>
+      <g transform="translate(80,805)">
+        <rect class="node-rect blue" width="300" height="100"/>
+        <text x="20" y="24" class="node-title">Amazon EKS</text>
+        <text x="20" y="42" class="node-sub">Auto Mode · Standard</text>
+        <text x="20" y="58" class="node-sub">EKS Hybrid Node (on-prem)</text>
+        <text x="20" y="78" class="node-sub">Karpenter · NodePool</text>
+      </g>
+      <g transform="translate(420,805)">
+        <rect class="node-rect blue" width="300" height="100"/>
+        <text x="20" y="24" class="node-title">Heterogeneous Compute</text>
+        <text x="20" y="42" class="node-sub">GPU (g6e · g6 · g5g)</text>
+        <text x="20" y="58" class="node-sub">Trainium / Inferentia (inf2 · trn1)</text>
+        <text x="20" y="78" class="node-sub">Graviton (planning · CPU)</text>
+      </g>
+      <g transform="translate(760,805)">
+        <rect class="node-rect blue" width="280" height="100"/>
+        <text x="20" y="24" class="node-title">Storage &amp; Networking</text>
+        <text x="20" y="42" class="node-sub">EFS model cache · S3 Vectors</text>
+        <text x="20" y="58" class="node-sub">ALB Ingress + ACM</text>
+        <text x="20" y="78" class="node-sub">VPC · Private subnets</text>
+      </g>
+      <g transform="translate(1080,805)">
+        <rect class="node-rect blue" width="240" height="100"/>
+        <text x="20" y="24" class="node-title">Identity &amp; Secrets</text>
+        <text x="20" y="42" class="node-sub">IAM Roles for SA (IRSA)</text>
+        <text x="20" y="58" class="node-sub">AWS Secrets Manager</text>
+        <text x="20" y="78" class="node-sub">ECR + pull-through cache</text>
+      </g>
+
+      <!-- Vertical flow lines between layers -->
+      <line x1="700" y1="140" x2="700" y2="170" class="flow" marker-end="url(#arrow)"/>
+      <line x1="700" y1="280" x2="700" y2="310" class="flow" marker-end="url(#arrow)"/>
+      <line x1="700" y1="450" x2="700" y2="480" class="flow" marker-end="url(#arrow)"/>
+      <line x1="700" y1="620" x2="700" y2="650" class="flow" marker-end="url(#arrow)" stroke-dasharray="4 4"/>
+      <line x1="700" y1="730" x2="700" y2="760" class="flow" stroke-dasharray="4 4"/>
+    </svg>
+    <div class="arch-caption">Built from the components in this repository · pick one or compose per category</div>
   </div>
 </section>
 
