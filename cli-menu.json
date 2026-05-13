@@ -43,7 +43,8 @@
         { "dir": "langfuse", "name": "Langfuse" },
         { "dir": "mlflow", "name": "MLflow" },
         { "dir": "phoenix", "name": "Phoenix" },
-        { "dir": "arize", "name": "Arize AX (SaaS) — workshop companion" }
+        { "dir": "arize", "name": "Arize AX (SaaS) — workshop companion" },
+        { "dir": "amp-amg", "name": "Amazon Managed Prometheus & Grafana (AMP/AMG)" }
       ]
     },
     { "dir": "gui-app", "name": "GUI App", "components": [{ "dir": "openwebui", "name": "Open WebUI" }] },
