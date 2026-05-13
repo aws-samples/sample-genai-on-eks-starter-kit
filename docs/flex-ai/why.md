@@ -1,12 +1,12 @@
 ---
-title: Why Flex AI
+title: Why Flexible AI
 ---
 
 [한국어](why.ko.md){ .md-button } [English](why.md){ .md-button .md-button--primary }
 
 # Value Proposition
 
-Flex AI is built around five value pillars.
+Flexible AI is built around five value pillars.
 
 <div class="grid cards" markdown>
 
@@ -44,7 +44,7 @@ Flex AI is built around five value pillars.
 
 # Five Dimensions of Flexibility
 
-Flex AI delivers flexibility on every axis. When cost, performance, or governance requirements shift, you switch on the relevant axis instead of redesigning the whole architecture.
+Flexible AI delivers flexibility on every axis. When cost, performance, or governance requirements shift, you switch on the relevant axis instead of redesigning the whole architecture.
 
 ## 1. Heterogeneous Compute Choice
 

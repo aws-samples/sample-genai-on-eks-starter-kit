@@ -74,18 +74,18 @@ extra:
 
 nav:
   - Home: index.md
-  - Flex AI:
+  - Flexible AI:
     - Landing (KO): flex-ai/landing.html
     - Landing (EN): flex-ai/landing.en.html
     - Docs (English):
       - Overview: flex-ai/index.md
-      - Why Flex AI: flex-ai/why.md
+      - Why Flexible AI: flex-ai/why.md
       - Architecture: flex-ai/architecture.md
       - Use Cases: flex-ai/use-cases.md
       - Get Started: flex-ai/get-started.md
     - Docs (한국어):
       - 개요: flex-ai/index.ko.md
-      - Why Flex AI: flex-ai/why.ko.md
+      - Why Flexible AI: flex-ai/why.ko.md
       - 아키텍처: flex-ai/architecture.ko.md
       - 활용 사례: flex-ai/use-cases.ko.md
       - 시작하기: flex-ai/get-started.ko.md

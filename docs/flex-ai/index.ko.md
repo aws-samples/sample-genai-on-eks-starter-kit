@@ -1,5 +1,5 @@
 ---
-title: Flex AI 개요
+title: Flexible AI 개요
 ---
 
 [한국어](index.ko.md){ .md-button .md-button--primary } [English](index.md){ .md-button }
@@ -25,7 +25,7 @@ AWS의 **핵심 인프라 서비스**(Graviton, GPU/Trainium/Inferentia, EKS, S3
 
 ## Run Any Model, Anywhere
 
-세 축의 결합이 Flex AI의 정체성입니다.
+세 축의 결합이 Flexible AI의 정체성입니다.
 
 <div class="grid cards" markdown>
 
@@ -53,7 +53,7 @@ AWS의 **핵심 인프라 서비스**(Graviton, GPU/Trainium/Inferentia, EKS, S3
 
 <div class="grid cards" markdown>
 
--   :material-help-circle-outline:{ .lg .middle } **Why Flex AI**
+-   :material-help-circle-outline:{ .lg .middle } **Why Flexible AI**
 
     ---
 

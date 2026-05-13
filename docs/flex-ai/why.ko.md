@@ -1,12 +1,12 @@
 ---
-title: Why Flex AI
+title: Why Flexible AI
 ---
 
 [한국어](why.ko.md){ .md-button .md-button--primary } [English](why.md){ .md-button }
 
 # Value Proposition
 
-Flex AI는 다섯 가지 가치 축으로 구성된 통합 AI 플랫폼입니다.
+Flexible AI는 다섯 가지 가치 축으로 구성된 통합 AI 플랫폼입니다.
 
 <div class="grid cards" markdown>
 

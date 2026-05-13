@@ -6,7 +6,7 @@ title: Architecture
 
 # Functional View & Building Blocks
 
-Flex AI spans every layer from the application surface down to cloud, on-premises, and edge infrastructure. Adopt the components you need today and grow into the rest, or stand up the integrated platform in one pass.
+Flexible AI spans every layer from the application surface down to cloud, on-premises, and edge infrastructure. Adopt the components you need today and grow into the rest, or stand up the integrated platform in one pass.
 
 ## Layered stack
 

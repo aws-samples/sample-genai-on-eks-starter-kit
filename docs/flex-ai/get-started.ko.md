@@ -52,7 +52,7 @@ title: Get Started
 
 먼저 톤과 범위를 확인하고 싶다면:
 
-1. [Why Flex AI](why.ko.md) — 가치 제안과 5가지 유연성.
+1. [Why Flexible AI](why.ko.md) — 가치 제안과 5가지 유연성.
 2. [Architecture](architecture.ko.md) — 빌딩 블록과 계층 구조.
 3. [Components Overview](../components/index.md) — 25+ 컴포넌트 카탈로그.
 4. [Use Cases](use-cases.ko.md) — 5가지 시나리오와 베네핏.
@@ -96,7 +96,7 @@ npm install
 # Customer Stories
 
 !!! info "곧 공개 예정"
-    Flex AI 접근법을 통해 AI 인프라 전략을 재정의하고 있는 고객들의 이야기를 곧 만나보실 수 있습니다.
+    Flexible AI 접근법을 통해 AI 인프라 전략을 재정의하고 있는 고객들의 이야기를 곧 만나보실 수 있습니다.
 
 # 문의하기
 

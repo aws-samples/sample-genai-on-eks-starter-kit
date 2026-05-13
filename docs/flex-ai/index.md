@@ -1,5 +1,5 @@
 ---
-title: Flex AI Overview
+title: Flexible AI Overview
 ---
 
 [한국어](index.ko.md){ .md-button } [English](index.md){ .md-button .md-button--primary }
@@ -15,7 +15,7 @@ Teams running AI in production keep hitting the same wall:
 - "API-based model spend is growing faster than we can control."
 - "We want to scale into the cloud, but we also need to keep getting value out of the on-prem GPUs we already paid for."
 
-**Flexible AI Platform on AWS** — Flex AI for short — is the integrated answer to those production realities.
+**Flexible AI Platform on AWS** — Flexible AI for short — is the integrated answer to those production realities.
 
 It composes AWS's **core infrastructure** (Graviton, GPU, Trainium / Inferentia, EKS, S3 Vectors) with **proven open-source components** (LangGraph, Mem0, LiteLLM, Langfuse, vLLM, Qwen, …) so customers can pick the models and frameworks they want and run a full-stack AI platform — data pipelines, training, serving, agentic applications — coherently in one environment, on top of pre-validated reference architectures and adoption guidance.
 
@@ -25,7 +25,7 @@ It composes AWS's **core infrastructure** (Graviton, GPU, Trainium / Inferentia,
 
 ## Run Any Model, Anywhere
 
-Three axes meet in Flex AI:
+Three axes meet in Flexible AI:
 
 <div class="grid cards" markdown>
 
@@ -33,7 +33,7 @@ Three axes meet in Flex AI:
 
     ---
 
-    Graviton, GPU, Trainium / Inferentia, EKS, S3 Vectors — the AWS infrastructure surface Flex AI runs on.
+    Graviton, GPU, Trainium / Inferentia, EKS, S3 Vectors — the AWS infrastructure surface Flexible AI runs on.
 
 -   :material-source-branch:{ .lg .middle } **Open-source Frameworks & Models**
 
@@ -53,7 +53,7 @@ Three axes meet in Flex AI:
 
 <div class="grid cards" markdown>
 
--   :material-help-circle-outline:{ .lg .middle } **Why Flex AI**
+-   :material-help-circle-outline:{ .lg .middle } **Why Flexible AI**
 
     ---
 

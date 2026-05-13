@@ -6,7 +6,7 @@ title: Get Started
 
 # Offerings
 
-Whether you are building from scratch or hardening an existing environment, Flex AI offers an architecture, support model, and starter kit for every stage.
+Whether you are building from scratch or hardening an existing environment, Flexible AI offers an architecture, support model, and starter kit for every stage.
 
 <div class="grid cards" markdown>
 
@@ -52,7 +52,7 @@ The starter kit is ready to use directly from this repository. Three on-ramps:
 
 Skim before installing anything:
 
-1. [Why Flex AI](why.md) — value proposition and the five flexibility dimensions.
+1. [Why Flexible AI](why.md) — value proposition and the five flexibility dimensions.
 2. [Architecture](architecture.md) — building blocks and the layered stack.
 3. [Components Overview](../components/index.md) — 25+ component catalog.
 4. [Use Cases](use-cases.md) — five scenarios and benefits.
@@ -96,7 +96,7 @@ Delivery instructions live in [`workshops/eks-genai-workshop/README.md`](https:/
 # Customer Stories
 
 !!! info "Coming soon"
-    Stories from customers redefining their AI infrastructure strategy with the Flex AI approach will land here shortly.
+    Stories from customers redefining their AI infrastructure strategy with the Flexible AI approach will land here shortly.
 
 # Get in touch
 
