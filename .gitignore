@@ -14,6 +14,11 @@ __pycache__/
 # Project
 .DS_Store
 .backup/
+.playwright-mcp/
+
+# Secrets (never commit)
+oidc-credentials.json
+*-credentials.json
 
 # AI Agent Tools
 .kiro/
