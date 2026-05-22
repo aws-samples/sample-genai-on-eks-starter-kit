@@ -25,7 +25,7 @@ fsspec==2026.3.0
 googleapis-common-protos==1.74.0
 greenlet==3.4.0
 grpcio==1.80.0
-guardrails-ai==0.9.2
+guardrails-ai @ git+https://github.com/guardrails-ai/guardrails.git@2f2f04b5e05010d2baae41390244e12361b4c582
 guardrails-api==0.3.2
 guardrails-api-client==0.4.0
 guardrails-hub-types==0.0.4

@@ -12,8 +12,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install some utilities; you may not need all of these
-RUN apt-get update
-RUN apt-get install -y git
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file
 COPY requirements*.txt .

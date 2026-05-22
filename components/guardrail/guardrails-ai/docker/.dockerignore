@@ -1,0 +1,4 @@
+build-image.sh
+__pycache__/
+*.pyc
+.git/
