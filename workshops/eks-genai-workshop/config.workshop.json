@@ -11,7 +11,7 @@
   "llm-model": {
     "vllm": {
       "models": [
-        { "name": "qwen3-8b-neuron", "deploy": true, "neuron": true, "compile": false },
+        { "name": "qwen3-8b-neuron-trn1", "deploy": true, "neuron": true, "compile": false },
         { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": true, "neuron": true, "compile": false }
       ]
     },
