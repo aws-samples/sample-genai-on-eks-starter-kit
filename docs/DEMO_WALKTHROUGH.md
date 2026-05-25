@@ -20,9 +20,7 @@ Access Open WebUI at `openwebui.<DOMAIN>` and then:
 
 - **Agent pipe functions are automatically registered** when agents are installed (e.g., `./cli strands-agents calculator-agent install`). The `Strands Agents - Calculator Agent` function will appear in Open WebUI automatically.
 - Optionally, add [Time Token Tracker](https://openwebui.com/f/owndev/time_token_tracker) from the [Open WebUI Functions](https://docs.openwebui.com/features/plugin/functions/#%EF%B8%8F-how-to-use-functions) marketplace
-  ![Open WebUI Functions](../assets/openwebui_functions.png)
 - Change [Open WebUI RAG embedding model](https://docs.openwebui.com/features/rag#rag-embedding-support) to use the deployed Qwen3-Embedding model (check `LITELLM_API_KEY` on `.env.local` for API Key)
-  ![Open WebUI Functions](../assets/openwebui_embedding_model.png)
 
 ### Use Demo
 
@@ -32,8 +30,6 @@ Access Open WebUI at `openwebui.<DOMAIN>` and then:
 
    - Check [Tutorial: Configuring RAG with Open WebUI Documentation](https://docs.openwebui.com/tutorials/tips/rag-tutorial) on how to start using the document RAG feature
    - Select and explore `Strands Agents - Calculator Agent` (code available at `examples/strands-agents/calculator-agent`), this is a basic agent with memory so you can continue the calculation and/or reset the caculator
-
-   ![Open WebUI Functions](../assets/openwebui_embedding_calculator_agent.png)
 
 2. Access LiteLLM dashboard at `litellm.<DOMAIN>/ui` (check `LITELLM_UI_USERNAME` and `LITELLM_UI_PASSWORD` on `.env.local` for Username and Password):
    - Check [LiteLLM Proxy Server (LLM Gateway)](https://docs.litellm.ai/docs/simple_proxy) to explore some of the features
