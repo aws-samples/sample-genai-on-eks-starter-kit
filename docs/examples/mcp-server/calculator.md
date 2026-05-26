@@ -1,3 +1,7 @@
+---
+title: "MCP Server Example"
+description: "Build and deploy a Model Context Protocol server on Amazon EKS with FastMCP 2.0 for tool-calling AI agents and structured tool integration."
+---
 # Calculator MCP Server
 
 A Model Context Protocol (MCP) server that exposes basic arithmetic operations as tools. Built with FastMCP 2.0, this server provides a standardized interface for AI models to perform calculations.

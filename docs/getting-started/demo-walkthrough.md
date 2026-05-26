@@ -1,3 +1,7 @@
+---
+title: "Demo Walkthrough"
+description: "End-to-end demonstration of GenAI on EKS — deploy vLLM for LLM serving, configure LiteLLM gateway, and interact via Open WebUI chat interface."
+---
 # Demo Walkthrough
 
 This guide walks you through the demo environment deployed by `./cli demo-setup`, including setup steps and usage instructions for each component.

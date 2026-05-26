@@ -1,3 +1,7 @@
+---
+title: "n8n on EKS"
+description: "Deploy n8n workflow automation on Amazon EKS for AI-powered workflows connecting LLMs, databases, APIs, and business tools with visual editor."
+---
 # n8n
 
 Open-source workflow automation platform with a visual editor. Build complex AI-powered workflows by connecting LLMs, APIs, databases, and services with a no-code/low-code interface.

@@ -1,3 +1,7 @@
+---
+title: "Open WebUI on EKS"
+description: "Deploy Open WebUI on Amazon EKS as a ChatGPT-like interface for self-hosted LLMs with RAG, multi-model switching, and user management."
+---
 # Open WebUI
 
 Feature-rich, self-hosted web interface for interacting with LLMs. Provides a ChatGPT-like experience with support for multiple models, RAG, tools, and collaborative features.

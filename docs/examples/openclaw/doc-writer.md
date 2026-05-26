@@ -1,3 +1,7 @@
+---
+title: "OpenClaw Document Writer"
+description: "Deploy an OpenClaw document writer agent on Amazon EKS for automated content generation with multi-step planning, research, and tool use."
+---
 # OpenClaw Document Writer Agent
 
 An autonomous AI-powered documentation agent that clones Git repositories, analyzes code, generates comprehensive documentation, and commits changes back to the repository. Built with OpenClaw, this agent demonstrates advanced autonomous task execution.

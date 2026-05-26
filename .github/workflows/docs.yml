@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install system dependencies
+        run: sudo apt-get install -y libcairo2-dev libffi-dev
+
       - name: Install dependencies
         run: pip install -r docs/requirements.txt
 

@@ -1,3 +1,7 @@
+---
+title: "Langfuse on EKS"
+description: "Deploy Langfuse on Amazon EKS for LLM observability — tracing, prompt management, evaluations, cost analytics, and production monitoring."
+---
 # Langfuse
 
 Open-source LLM observability platform for tracing, evaluating, and monitoring AI applications. Provides detailed visibility into LLM calls, token usage, latency, and costs.

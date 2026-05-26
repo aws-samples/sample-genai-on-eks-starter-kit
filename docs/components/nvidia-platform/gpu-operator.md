@@ -1,3 +1,7 @@
+---
+title: "NVIDIA GPU Operator on EKS"
+description: "Install and configure NVIDIA GPU Operator on Amazon EKS for automated GPU driver management, device plugin, and container toolkit setup."
+---
 # NVIDIA GPU Operator
 
 The NVIDIA GPU Operator manages the lifecycle of NVIDIA GPU drivers, device plugins, and monitoring exporters on Kubernetes. It automates the deployment of all necessary components for running GPU workloads.

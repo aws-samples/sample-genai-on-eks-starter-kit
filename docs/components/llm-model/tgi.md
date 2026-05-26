@@ -1,3 +1,7 @@
+---
+title: "TGI on EKS"
+description: "Deploy Hugging Face Text Generation Inference on Amazon EKS for optimized transformer model serving with quantization and speculative decoding."
+---
 # TGI
 
 Text Generation Inference (TGI) is a high-performance inference server from Hugging Face, optimized for serving large language models with features like continuous batching, tensor parallelism, and quantization.

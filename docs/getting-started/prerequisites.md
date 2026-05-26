@@ -1,3 +1,7 @@
+---
+title: "Prerequisites"
+description: "Required tools and AWS setup for GenAI on EKS — AWS CLI, Terraform, Node.js, kubectl, Helm, Docker, and EKS cluster configuration guide."
+---
 # Prerequisites
 
 Before you begin using the GenAI on EKS Starter Kit, ensure you have the following tools and access configured.

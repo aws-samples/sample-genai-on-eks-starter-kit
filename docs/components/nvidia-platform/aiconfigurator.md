@@ -1,3 +1,7 @@
+---
+title: "AIConfigurator on EKS"
+description: "Use NVIDIA AIConfigurator on Amazon EKS to automatically determine optimal tensor and pipeline parallelism for models meeting SLA targets."
+---
 # AIConfigurator
 
 Automatically recommend optimal parallelization (TP/PP) and deployment configuration using NVIDIA AI Configurator simulation. Compares aggregated vs disaggregated serving and generates Pareto frontiers.

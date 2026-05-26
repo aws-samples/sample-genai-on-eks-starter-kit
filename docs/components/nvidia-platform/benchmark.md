@@ -1,3 +1,7 @@
+---
+title: "AIPerf Benchmark on EKS"
+description: "Run AIPerf benchmarks on Amazon EKS to measure LLM serving throughput, latency, and GPU utilization across varying concurrency levels."
+---
 # AIPerf Benchmark
 
 Comprehensive LLM benchmarking suite for measuring throughput, latency, and efficiency across different concurrency levels and workload patterns. Results are automatically pushed to Prometheus Pushgateway and visualized in Grafana.

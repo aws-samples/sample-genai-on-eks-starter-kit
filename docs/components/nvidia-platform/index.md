@@ -1,3 +1,7 @@
+---
+title: "NVIDIA Platform on EKS"
+description: "Deploy NVIDIA Dynamo inference platform on Amazon EKS with GPU Operator, optimized vLLM serving, performance monitoring, and AIConfigurator."
+---
 # NVIDIA Dynamo Platform
 
 Deploy and serve LLM models with NVIDIA Dynamo on Kubernetes (on-premises) and Amazon EKS. The NVIDIA Platform provides a comprehensive suite of components for GPU-accelerated LLM inference with enterprise-grade monitoring, benchmarking, and auto-configuration.

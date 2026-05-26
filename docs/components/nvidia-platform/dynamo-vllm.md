@@ -1,3 +1,7 @@
+---
+title: "Dynamo vLLM Serving on EKS"
+description: "Deploy optimized vLLM with NVIDIA Dynamo on Amazon EKS for aggregated and disaggregated inference with KV cache transfer and routing."
+---
 # Dynamo vLLM Serving
 
 Deploy vLLM models with NVIDIA Dynamo Platform orchestration. Supports aggregated and disaggregated serving modes, KV cache routing, KV cache offloading (KVBM), and advanced parallelism strategies.

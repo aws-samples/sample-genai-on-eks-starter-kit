@@ -1,3 +1,8 @@
+---
+title: "GenAI on EKS Starter Kit"
+description: "Deploy and manage 25+ generative AI components on Amazon EKS. Production-ready Kubernetes configs for vLLM, LiteLLM, Langfuse, NVIDIA Dynamo, and more."
+schema_type: homepage
+---
 # GenAI on EKS Starter Kit
 
 A starter kit for deploying and managing GenAI components and examples on **Amazon EKS** (Elastic Kubernetes Service). This project provides a collection of tools, configurations, components, and examples to help you quickly set up a GenAI project on Kubernetes.
