@@ -1,3 +1,7 @@
+---
+title: "GPU Monitoring on EKS"
+description: "Set up Prometheus and Grafana monitoring for NVIDIA GPUs on Amazon EKS with DCGM metrics, utilization dashboards, and alerting."
+---
 # Monitoring (Prometheus + Grafana)
 
 Comprehensive monitoring stack with Prometheus, Grafana, and pre-configured dashboards for NVIDIA Dynamo Platform, DCGM GPU metrics, KV cache benchmarks, and LLM performance analysis.

@@ -1,3 +1,7 @@
+---
+title: "LiteLLM on EKS"
+description: "Deploy LiteLLM proxy on Amazon EKS as a unified AI gateway with load balancing, rate limiting, fallbacks, and 100+ LLM provider support."
+---
 # LiteLLM
 
 Universal LLM gateway that provides a unified OpenAI-compatible API for 100+ LLM providers. Route requests across vLLM, SGLang, TGI, AWS Bedrock, and more with built-in load balancing, rate limiting, and cost tracking.

@@ -1,3 +1,7 @@
+---
+title: "Security (Legacy)"
+description: "Legacy security documentation for GenAI on EKS Starter Kit covering scan results and hardening recommendations."
+---
 ## Security Considerations
 Our code is continuously scanned using [Checkov](https://www.checkov.io/5.Policy%20Index/kubernetes.html). The following security considerations are documented for transparency:
 

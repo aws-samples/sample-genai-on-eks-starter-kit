@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {% if page %}
+  <link rel="canonical" href="{{ page.canonical_url }}" />
+
+  {% if page.meta.description %}
+  <meta name="description" content="{{ page.meta.description }}" />
+  {% elif config.site_description %}
+  <meta name="description" content="{{ config.site_description }}" />
+  {% endif %}
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{{ page.meta.title | default(page.title) }} - {{ config.site_name }}" />
+  {% if page.meta.description %}
+  <meta property="og:description" content="{{ page.meta.description }}" />
+  {% elif config.site_description %}
+  <meta property="og:description" content="{{ config.site_description }}" />
+  {% endif %}
+  <meta property="og:url" content="{{ page.canonical_url }}" />
+  <meta property="og:site_name" content="{{ config.site_name }}" />
+  <meta property="og:image" content="{{ config.site_url }}assets/images/social-card.svg" />
+  <meta property="article:author" content="AWS Samples" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{ page.meta.title | default(page.title) }} - {{ config.site_name }}" />
+  {% if page.meta.description %}
+  <meta name="twitter:description" content="{{ page.meta.description }}" />
+  {% elif config.site_description %}
+  <meta name="twitter:description" content="{{ config.site_description }}" />
+  {% endif %}
+  <meta name="twitter:image" content="{{ config.site_url }}assets/images/social-card.svg" />
+
+  {% if page.meta.hreflang_en %}
+  <link rel="alternate" hreflang="en" href="{{ page.meta.hreflang_en }}" />
+  {% endif %}
+  {% if page.meta.hreflang_ko %}
+  <link rel="alternate" hreflang="ko" href="{{ page.meta.hreflang_ko }}" />
+  {% endif %}
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "{{ page.meta.title | default(page.title) }}",
+    {% if page.meta.description %}"description": "{{ page.meta.description }}",{% endif %}
+    "url": "{{ page.canonical_url }}",
+    "publisher": {
+      "@type": "Organization",
+      "name": "AWS Samples",
+      "url": "https://github.com/aws-samples",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "{{ config.site_url }}assets/images/logo.svg"
+      }
+    },
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "{{ config.site_name }}",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+
+  {% if page.ancestors %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "{{ config.site_url }}"
+      }
+      {% for nav_item in page.ancestors %}
+      ,{
+        "@type": "ListItem",
+        "position": {{ loop.index + 1 }},
+        "name": "{{ nav_item.title }}",
+        "item": "{{ config.site_url }}{{ nav_item.url }}"
+      }
+      {% endfor %}
+      ,{
+        "@type": "ListItem",
+        "position": {{ page.ancestors | length + 2 }},
+        "name": "{{ page.title }}",
+        "item": "{{ page.canonical_url }}"
+      }
+    ]
+  }
+  </script>
+  {% endif %}
+
+  {% if page.meta.schema_type == "homepage" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "GenAI on EKS Starter Kit",
+    "description": "A starter kit for deploying and managing 25+ generative AI components on Amazon EKS with production-ready Kubernetes configurations.",
+    "url": "https://github.com/aws-samples/sample-genai-on-eks-starter-kit",
+    "codeRepository": "https://github.com/aws-samples/sample-genai-on-eks-starter-kit",
+    "programmingLanguage": ["JavaScript", "Terraform", "Python", "YAML"],
+    "runtimePlatform": "Amazon EKS",
+    "operatingSystem": "Linux",
+    "license": "https://opensource.org/licenses/MIT",
+    "author": {
+      "@type": "Organization",
+      "name": "AWS Samples",
+      "url": "https://github.com/aws-samples"
+    },
+    "about": ["Generative AI", "Amazon EKS", "Kubernetes", "LLM Serving", "MLOps"]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "AWS Samples",
+    "url": "https://github.com/aws-samples",
+    "logo": "{{ config.site_url }}assets/images/logo.svg"
+  }
+  </script>
+  {% endif %}
+
+  {% if page.meta.schema_type == "faq" %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do the config files work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": ".env and config.json are loaded first as defaults. Then merged/overridden with .env.local and config.local.json if they exist."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How can I use this without a Route 53 hosted zone?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "When the DOMAIN field in .env is empty, multiple ALBs with HTTP will be created for each public facing service instead of a single shared ALB with HTTPS."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How can I change the EC2 GPU instance families?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Change values in terraform/0-common.tf and run ./cli terraform apply. Default families are g6e, g6, and g5g with spot and on-demand purchasing options."
+        }
+      }
+    ]
+  }
+  </script>
+  {% endif %}
+  {% endif %}
+{% endblock %}

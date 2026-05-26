@@ -1,3 +1,7 @@
+---
+title: "Qdrant on EKS"
+description: "Deploy Qdrant vector database on Amazon EKS for high-performance similarity search in RAG applications with filtering, sharding, and replication."
+---
 # Qdrant
 
 High-performance vector similarity search engine built in Rust. Provides fast and scalable vector storage with rich filtering, payload indexing, and a gRPC/REST API.

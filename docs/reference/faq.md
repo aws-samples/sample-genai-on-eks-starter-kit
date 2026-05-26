@@ -1,3 +1,8 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about GenAI on EKS — config files, Route 53, LiteLLM models, GPU instance types, Neuron support, and multi-cluster setups."
+schema_type: faq
+---
 # Frequently Asked Questions (FAQ)
 
 Common questions and answers about the GenAI on EKS Starter Kit.

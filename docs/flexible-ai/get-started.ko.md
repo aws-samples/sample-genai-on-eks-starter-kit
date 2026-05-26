@@ -1,7 +1,9 @@
 ---
-title: Get Started
+title: "Flexible AI 시작하기"
+description: "Flexible AI 플랫폼 도입 경로 — 레퍼런스 아키텍처 배포, 스타터 킷 설정, AWS 지원 모델을 안내합니다."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/get-started/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/get-started.ko/
 ---
-
 [한국어](get-started.ko.md){ .md-button .md-button--primary } [English](get-started.md){ .md-button }
 
 # Offerings

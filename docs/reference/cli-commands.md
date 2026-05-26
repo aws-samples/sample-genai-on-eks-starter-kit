@@ -1,3 +1,7 @@
+---
+title: "CLI Commands Reference"
+description: "Complete reference for GenAI on EKS CLI commands — configure, install, uninstall, demo-setup, terraform, and model management operations."
+---
 # CLI Commands Reference
 
 The starter kit provides a unified CLI (`./cli`) for managing infrastructure, components, and examples. This page documents all available commands and their usage.

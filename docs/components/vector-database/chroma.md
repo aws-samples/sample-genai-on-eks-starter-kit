@@ -1,3 +1,7 @@
+---
+title: "ChromaDB on EKS"
+description: "Deploy ChromaDB on Amazon EKS for embedding storage and retrieval in AI applications with simple Python API and multi-tenant support."
+---
 # Chroma
 
 Open-source AI-native embedding database designed for simplicity. Provides an easy-to-use API for storing and querying embeddings with automatic embedding generation support.

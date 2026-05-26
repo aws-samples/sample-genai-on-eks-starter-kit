@@ -1,3 +1,7 @@
+---
+title: "Quick Start Guide"
+description: "Get GenAI on EKS running in minutes. Step-by-step setup for deploying LLM serving, AI gateways, and observability on Amazon EKS with a single CLI command."
+---
 # Quick Start
 
 This guide will help you set up and deploy the GenAI on EKS Starter Kit.

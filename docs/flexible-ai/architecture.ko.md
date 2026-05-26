@@ -1,7 +1,9 @@
 ---
-title: Architecture
+title: "Flexible AI 아키텍처"
+description: "Flexible AI 플랫폼 기능 아키텍처 — 컴퓨팅, 서빙, 게이트웨이, 관측성, 에이전트 오케스트레이션 계층 구조를 설명합니다."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/architecture/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/architecture.ko/
 ---
-
 [한국어](architecture.ko.md){ .md-button .md-button--primary } [English](architecture.md){ .md-button }
 
 # Functional View & Building Blocks

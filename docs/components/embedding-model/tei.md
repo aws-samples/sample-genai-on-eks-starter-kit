@@ -1,3 +1,7 @@
+---
+title: "Text Embedding Inference on EKS"
+description: "Deploy Hugging Face Text Embedding Inference on Amazon EKS for fast, production-grade text embeddings with batching and GPU acceleration."
+---
 # Text Embedding Inference (TEI)
 
 Hugging Face's high-performance inference server for text embedding models. Optimized for production workloads with support for batching, tokenization, and multiple model architectures.

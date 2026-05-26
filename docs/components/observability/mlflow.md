@@ -1,3 +1,7 @@
+---
+title: "MLflow on EKS"
+description: "Deploy MLflow on Amazon EKS for experiment tracking, model registry, artifact storage, and ML lifecycle management in GenAI workflows."
+---
 # MLflow
 
 Open-source platform for managing the end-to-end machine learning lifecycle, including experiment tracking, model registry, and deployment. Provides a centralized tracking server for logging metrics, parameters, and artifacts.

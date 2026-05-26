@@ -1,7 +1,9 @@
 ---
-title: Flexible AI Overview
+title: "Flexible AI Overview"
+description: "Flexible AI Platform on AWS — run any model anywhere with full sovereignty, enterprise governance, and granular cost control on Amazon EKS."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/index.ko/
 ---
-
 [한국어](index.ko.md){ .md-button } [English](index.md){ .md-button .md-button--primary }
 
 # Architecting Flexible AI Platform on AWS

@@ -1,3 +1,7 @@
+---
+title: "Security Considerations"
+description: "Security scan results and hardening guidance for GenAI on EKS — Checkov findings, network policies, IAM, and production security recommendations."
+---
 # Security Considerations
 
 This page documents security considerations for the GenAI on EKS Starter Kit based on Checkov security scans. The project is designed for demonstration and learning purposes, prioritizing ease of experimentation over production-grade security.

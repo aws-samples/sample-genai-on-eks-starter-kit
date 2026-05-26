@@ -1,7 +1,9 @@
 ---
-title: Get Started
+title: "Get Started with Flexible AI"
+description: "Adoption paths for Flexible AI Platform — reference architecture deployment, starter kit setup, and AWS support engagement models."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/get-started/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/get-started.ko/
 ---
-
 [한국어](get-started.ko.md){ .md-button } [English](get-started.md){ .md-button .md-button--primary }
 
 # Offerings

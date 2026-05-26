@@ -1,3 +1,7 @@
+---
+title: "Milvus on EKS"
+description: "Deploy Milvus vector database on Amazon EKS for scalable similarity search with GPU-accelerated indexing, hybrid search, and high availability."
+---
 # Milvus
 
 Cloud-native vector database built for scalable similarity search. Supports billion-scale vector search with GPU acceleration, hybrid search, and multi-tenancy.

@@ -1,3 +1,7 @@
+---
+title: "Arize Phoenix on EKS"
+description: "Deploy Arize Phoenix on Amazon EKS for LLM tracing, evaluation, and debugging with OpenTelemetry-native AI observability and span analysis."
+---
 # Phoenix
 
 Arize Phoenix is an open-source AI observability platform for evaluating, troubleshooting, and fine-tuning LLM applications. Provides real-time tracing, embedding visualization, and evaluation tools.

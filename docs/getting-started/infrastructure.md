@@ -1,3 +1,7 @@
+---
+title: "Infrastructure Setup"
+description: "Provision Amazon EKS infrastructure with Terraform for GenAI workloads. Covers VPC, EKS Auto Mode, GPU node pools, and networking configuration."
+---
 # Infrastructure Setup
 
 The GenAI on EKS Starter Kit provisions AWS infrastructure and Kubernetes components using Terraform. All infrastructure code is located in the `terraform/` directory.
