@@ -329,6 +329,31 @@
     border-top: 1px solid var(--aws-border);
     border-bottom: 1px solid var(--aws-border);
   }
+  /* GET STARTED */
+  #getstarted {
+    background: linear-gradient(135deg, var(--aws-navy) 0%, var(--aws-dark) 100%);
+    border-top: 1px solid var(--aws-border);
+    border-bottom: 1px solid var(--aws-border);
+    padding: 80px 5%;
+  }
+  .gs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
+  .gs-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--aws-border-soft);
+    border-radius: 16px; padding: 40px;
+    display: flex; flex-direction: column; gap: 20px;
+    transition: all 0.3s ease;
+  }
+  .gs-card:hover { background: rgba(255,255,255,0.05); border-color: var(--aws-orange); }
+  .gs-card h3 { font-size: 22px; font-weight: 700; }
+  .gs-card p { color: var(--aws-muted); font-size: 15px; }
+  .gs-link {
+    color: var(--aws-orange); text-decoration: none;
+    font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; gap: 8px;
+    margin-top: auto;
+  }
+  .gs-link:hover { text-decoration: underline; }
   .offering-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
   .offering-card {
     background: var(--aws-mid);
@@ -450,14 +475,14 @@
   @media (max-width: 1100px) {
     .flex-grid { grid-template-columns: repeat(3, 1fr); }
     .usecase-grid { grid-template-columns: repeat(3, 1fr); }
-    .benefits-grid, .offering-grid, .value-grid { grid-template-columns: repeat(2, 1fr); }
+    .benefits-grid, .offering-grid, .value-grid, .gs-grid { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 900px) {
     .overview-layout, .contact-layout { grid-template-columns: 1fr; gap: 40px; }
     nav .nav-links { display: none; }
   }
   @media (max-width: 600px) {
-    .flex-grid, .usecase-grid, .benefits-grid, .offering-grid, .value-grid { grid-template-columns: 1fr; }
+    .flex-grid, .usecase-grid, .benefits-grid, .offering-grid, .value-grid, .gs-grid { grid-template-columns: 1fr; }
     section { padding: 60px 5%; }
   }
 </style>
@@ -482,6 +507,7 @@
     <li><a href="#benefits">Benefits</a></li>
     <li><a href="#usecases">Use Cases</a></li>
     <li><a href="#offerings">Offerings</a></li>
+    <li><a href="#getstarted">Get Started</a></li>
     <li><a href="#customers">Customers</a></li>
     <li><a href="landing.html" title="한국어">KO</a></li>
     <li><a href="../" title="Back to docs site">Docs</a></li>
@@ -977,7 +1003,31 @@
   </div>
 </section>
 
-<!-- 8. CUSTOMER STORIES - PLACEHOLDER -->
+<!-- 8. GET STARTED -->
+<section id="getstarted">
+  <div class="reveal">
+    <div class="section-label">GET STARTED</div>
+    <h2 class="section-title">Get Started Now</h2>
+    <p class="section-desc">Take your first step toward building an AI platform with our pre-validated starter kit and hands-on workshops.</p>
+  </div>
+  <div class="gs-grid reveal">
+    <div class="gs-card">
+      <h3>GenAI Starter Kit</h3>
+      <p>A GenAI infrastructure toolkit that accelerates enterprise AI deployment. Includes AI Gateway, serving engines, vector database, embedding models, and observability tools.</p>
+      <a href="https://github.com/aws-samples/sample-genai-on-eks-starter-kit" class="gs-link" target="_blank">Explore the GitHub Repository →</a>
+    </div>
+    <div class="gs-card">
+      <h3>Hands-on Workshops</h3>
+      <p>Technical workshops with step-by-step guides for hands-on practice with the agentic platform and infrastructure optimization techniques.</p>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <a href="https://catalog.workshops.aws/k8sagenticplatform/" class="gs-link" target="_blank">K8s Agentic Platform Workshop →</a>
+        <a href="https://catalog.workshops.aws/genaifsxeks" class="gs-link" target="_blank">GenAI on EKS with FSx Workshop →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 9. CUSTOMER STORIES - PLACEHOLDER -->
 <section id="customers">
   <div class="reveal">
     <div class="section-label">CUSTOMER STORIES</div>
