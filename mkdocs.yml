@@ -75,8 +75,8 @@ extra:
 nav:
   - Home: index.md
   - Flexible AI:
-    - Landing (EN): flexible-ai/landing.en.html
-    - Landing (KO): flexible-ai/landing.html
+    - Landing: flexible-ai/landing.html
+    - Landing (한국어): flexible-ai/landing.ko.html
     - Docs (English):
       - Overview: flexible-ai/index.md
       - Why Flexible AI: flexible-ai/why.md
