@@ -92,26 +92,36 @@ All models are accessible via LiteLLM using the prefix shown:
 ### Bedrock (managed, no infra needed)
 | Model | LiteLLM name |
 |-------|-------------|
+| Claude Opus 4.8 | `bedrock/claude-opus-4.8` |
+| Claude Opus 4.7 | `bedrock/claude-opus-4.7` |
 | Claude Opus 4.6 | `bedrock/claude-opus-4.6` |
+| Claude Sonnet 4.6 | `bedrock/claude-sonnet-4.6` |
+| Claude Sonnet 4 | `bedrock/claude-sonnet-4` |
 | Claude 4.5 Opus | `bedrock/claude-4.5-opus` |
 | Claude 4.5 Sonnet | `bedrock/claude-4.5-sonnet` |
 | Claude 4.5 Haiku | `bedrock/claude-4.5-haiku` |
-| Claude Sonnet 4 | `bedrock/claude-sonnet-4` |
+| Claude 4.1 Opus | `bedrock/claude-4.1-opus` |
 | Nova Premier | `bedrock/amazon-nova-premier` |
 | Nova Pro | `bedrock/amazon-nova-pro` |
 | Nova Lite | `bedrock/amazon-nova-lite` |
 | Nova Micro | `bedrock/amazon-nova-micro` |
 | Nova 2 Lite | `bedrock/amazon-nova-2-lite` |
+| Nova 2 Sonic | `bedrock/amazon-nova-2-sonic` |
+| DeepSeek R1 | `bedrock/deepseek-r1` |
+| DeepSeek V3.2 | `bedrock/deepseek-v3.2` |
+| DeepSeek V3.1 | `bedrock/deepseek-v3.1` |
 | Llama 4 Maverick | `bedrock/llama4-maverick` |
 | Llama 4 Scout | `bedrock/llama4-scout` |
 | Llama 3.3 70B | `bedrock/llama3.3-70b` |
+| Llama 3.2 90B | `bedrock/llama3.2-90b` |
+| Llama 3.2 11B | `bedrock/llama3.2-11b` |
+| Mistral Large 3 (675B) | `bedrock/mistral-large-3` |
 | Mistral Large 2 | `bedrock/mistral-large-2` |
-| Mistral Small | `bedrock/mistral-small` |
-| DeepSeek R1 | `bedrock/deepseek-r1` |
+| Magistral Small | `bedrock/magistral-small` |
+| Devstral 2 (123B) | `bedrock/devstral-2-123b` |
+| Pixtral Large | `bedrock/pixtral-large` |
 | Cohere Command R+ | `bedrock/cohere-command-r-plus` |
 | Cohere Command R | `bedrock/cohere-command-r` |
-| AI21 Jamba 1.5 Large | `bedrock/ai21-jamba-1.5-large` |
-| AI21 Jamba 1.5 Mini | `bedrock/ai21-jamba-1.5-mini` |
 
 ### Self-hosted on Trainium (deployed on your cluster)
 | Model | LiteLLM name | Instance |
