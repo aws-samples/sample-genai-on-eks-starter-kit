@@ -1,6 +1,8 @@
 # Just the Endpoint
 
-Deploy a minimal GenAI gateway on EKS: one LiteLLM endpoint that aggregates self-hosted models (Trainium) and Bedrock, with Langfuse for observability. No UI, no agents, no extras.
+Deploy a minimal GenAI gateway on EKS: one LiteLLM endpoint that aggregates self-hosted models (Trainium) and Bedrock, with Langfuse for observability.
+
+Following these steps won't deploy any of the agents that are built into the GenAI starter kit — but you can absolutely use agents with the endpoint. It's fully OpenAI-compatible, so point any agentic framework (Claude Code, Cursor, Continue, Strands, LangChain, your own code) at it and go.
 
 ## What you get
 
