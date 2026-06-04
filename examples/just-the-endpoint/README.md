@@ -18,28 +18,36 @@ Deploy a minimal GenAI gateway on EKS: one LiteLLM endpoint that aggregates self
 - Domain name (optional — ALB provides a raw URL if no domain configured)
 - Node.js 18+, Terraform 1.5+, kubectl, Helm 3
 
-## Deploy (5 commands)
+## Deploy
 
 ```bash
 git clone https://github.com/aws-samples/sample-genai-on-eks-starter-kit.git
 cd sample-genai-on-eks-starter-kit
 
-# Use the slim config
+# Use the slim config (deep-merges on top of config.json, arrays are replaced)
 cp examples/just-the-endpoint/config.json config.local.json
 
-# Set your environment
-cp .env .env.local
-# Edit .env.local: set REGION, LITELLM_API_KEY, LANGFUSE keys
+# Interactive env setup — generates .env.local with your region, keys, etc.
+./cli configure
 
-# Deploy everything
-./cli deploy
+# Deploy EKS cluster + all components
+./cli demo-setup
 ```
 
-Deployment takes ~15 minutes. At the end you'll see:
+Deployment takes ~15-20 minutes (EKS cluster creation + Trainium node scheduling).
+
+**Get your endpoint URLs after deploy:**
+
+```bash
+# If you set a DOMAIN in .env.local:
+#   LiteLLM:  https://litellm.<your-domain>
+#   Langfuse: https://langfuse.<your-domain>
+
+# If DOMAIN is empty (no custom domain), get the raw ALB DNS:
+kubectl get ingress -A -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.loadBalancer.ingress[0].hostname}{"\n"}{end}'
 ```
-LiteLLM:  https://<alb-dns>/litellm
-Langfuse: https://<alb-dns>/langfuse
-```
+
+The ALB hostname is your base URL — LiteLLM serves at the root path on its own ingress.
 
 ## Connect your tools
 
@@ -132,8 +140,20 @@ curl -X POST https://<your-alb>/litellm/model/new \
 
 For self-hosted models, use the model management skill (see `.claude/skills/model-manager/`).
 
-## Tear down
+## Other useful commands
 
 ```bash
-./cli destroy
+# Install/reinstall a single component
+./cli ai-gateway litellm install
+
+# Manage models via CLI
+./cli llm-model vllm configure-models   # interactive model selection
+./cli llm-model vllm update-models      # re-deploy model changes
+
+# Terraform only
+./cli terraform plan
+./cli terraform output
+
+# Tear down everything (uninstalls components, then destroys infra)
+./cli cleanup-everything
 ```
