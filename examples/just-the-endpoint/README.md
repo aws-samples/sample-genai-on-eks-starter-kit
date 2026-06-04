@@ -1,0 +1,139 @@
+# Just the Endpoint
+
+Deploy a minimal GenAI gateway on EKS: one LiteLLM endpoint that aggregates self-hosted models (Trainium) and Bedrock, with Langfuse for observability. No UI, no agents, no extras.
+
+## What you get
+
+| Component | Purpose | URL |
+|-----------|---------|-----|
+| LiteLLM | OpenAI-compatible proxy (all models behind one endpoint) | `https://<domain>/litellm` |
+| Langfuse | Observability (traces, costs, evals) | `https://<domain>/langfuse` |
+| vLLM on Trainium | Self-hosted model (qwen3-8b on inf2.xlarge) | Internal (routed via LiteLLM) |
+| Bedrock | 20 managed models (Claude, Nova, Llama, Mistral, etc.) | Via LiteLLM |
+
+## Prerequisites
+
+- AWS account with Bedrock model access enabled in your region
+- `inf2.xlarge` quota (2 Neuron cores) — request via Service Quotas if needed
+- Domain name (optional — ALB provides a raw URL if no domain configured)
+- Node.js 18+, Terraform 1.5+, kubectl, Helm 3
+
+## Deploy (5 commands)
+
+```bash
+git clone https://github.com/aws-samples/sample-genai-on-eks-starter-kit.git
+cd sample-genai-on-eks-starter-kit
+
+# Use the slim config
+cp examples/just-the-endpoint/config.json config.local.json
+
+# Set your environment
+cp .env .env.local
+# Edit .env.local: set REGION, LITELLM_API_KEY, LANGFUSE keys
+
+# Deploy everything
+./cli deploy
+```
+
+Deployment takes ~15 minutes. At the end you'll see:
+```
+LiteLLM:  https://<alb-dns>/litellm
+Langfuse: https://<alb-dns>/langfuse
+```
+
+## Connect your tools
+
+### VS Code (Continue extension)
+
+```json
+{
+  "models": [{
+    "title": "LiteLLM Gateway",
+    "provider": "openai",
+    "model": "bedrock/claude-4.5-sonnet",
+    "apiBase": "https://<your-alb>/litellm",
+    "apiKey": "sk-1234"
+  }]
+}
+```
+
+### LM Studio / Any OpenAI-compatible client
+
+```
+Base URL: https://<your-alb>/litellm
+API Key:  sk-1234  (your LITELLM_API_KEY)
+Model:    bedrock/claude-4.5-sonnet
+```
+
+### curl
+
+```bash
+curl https://<your-alb>/litellm/v1/chat/completions \
+  -H "Authorization: Bearer sk-1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "bedrock/claude-4.5-sonnet",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'
+```
+
+## Available models
+
+All models are accessible via LiteLLM using the prefix shown:
+
+### Bedrock (managed, no infra needed)
+| Model | LiteLLM name |
+|-------|-------------|
+| Claude Opus 4.6 | `bedrock/claude-opus-4.6` |
+| Claude 4.5 Opus | `bedrock/claude-4.5-opus` |
+| Claude 4.5 Sonnet | `bedrock/claude-4.5-sonnet` |
+| Claude 4.5 Haiku | `bedrock/claude-4.5-haiku` |
+| Claude Sonnet 4 | `bedrock/claude-sonnet-4` |
+| Nova Premier | `bedrock/amazon-nova-premier` |
+| Nova Pro | `bedrock/amazon-nova-pro` |
+| Nova Lite | `bedrock/amazon-nova-lite` |
+| Nova Micro | `bedrock/amazon-nova-micro` |
+| Nova 2 Lite | `bedrock/amazon-nova-2-lite` |
+| Llama 4 Maverick | `bedrock/llama4-maverick` |
+| Llama 4 Scout | `bedrock/llama4-scout` |
+| Llama 3.3 70B | `bedrock/llama3.3-70b` |
+| Mistral Large 2 | `bedrock/mistral-large-2` |
+| Mistral Small | `bedrock/mistral-small` |
+| DeepSeek R1 | `bedrock/deepseek-r1` |
+| Cohere Command R+ | `bedrock/cohere-command-r-plus` |
+| Cohere Command R | `bedrock/cohere-command-r` |
+| AI21 Jamba 1.5 Large | `bedrock/ai21-jamba-1.5-large` |
+| AI21 Jamba 1.5 Mini | `bedrock/ai21-jamba-1.5-mini` |
+
+### Self-hosted on Trainium (deployed on your cluster)
+| Model | LiteLLM name | Instance |
+|-------|-------------|----------|
+| Qwen3 8B | `vllm/qwen3-8b-neuron` | inf2.xlarge |
+
+## Add more models at runtime
+
+LiteLLM stores model configs in its database — no redeploy needed.
+
+### Add a Bedrock model
+
+```bash
+curl -X POST https://<your-alb>/litellm/model/new \
+  -H "Authorization: Bearer sk-1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_name": "bedrock/my-new-model",
+    "litellm_params": {
+      "model": "bedrock/us.amazon.nova-pro-v1:0"
+    }
+  }'
+```
+
+### Add a self-hosted model
+
+For self-hosted models, use the model management skill (see `.claude/skills/model-manager/`).
+
+## Tear down
+
+```bash
+./cli destroy
+```
