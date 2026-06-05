@@ -79,8 +79,8 @@ extra:
 nav:
   - Home: index.md
   - Flexible AI:
-    - Landing (KO): flexible-ai/landing.html
-    - Landing (EN): flexible-ai/landing.en.html
+    - Landing: flexible-ai/landing.html
+    - Landing (한국어): flexible-ai/landing.ko.html
     - Docs (English):
       - Overview: flexible-ai/index.md
       - Why Flexible AI: flexible-ai/why.md
@@ -148,5 +148,3 @@ nav:
   - Reference:
     - CLI Commands: reference/cli-commands.md
     - Configuration: reference/configuration.md
-    - FAQ: reference/faq.md
-    - Security: reference/security.md
