@@ -1,0 +1,12 @@
+*.tfstate
+*.tfstate.backup
+.terraform/
+terraform.tfstate.d/
+workspaces/
+main.tf
+index.mjs
+*.yaml
+*.template.yaml
+__pycache__/
+*.pyc
+.git/
