@@ -1,3 +1,7 @@
+---
+title: "Examples Overview"
+description: "Explore GenAI examples on EKS — MCP servers with FastMCP, Strands Agents, Agno framework, and OpenClaw multi-agent patterns with deployment guides."
+---
 # Examples
 
 This section contains ready-to-deploy examples demonstrating various AI frameworks and tools on Amazon EKS. Each example provides practical implementations that you can use as a starting point for your own applications.

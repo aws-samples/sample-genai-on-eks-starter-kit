@@ -1,3 +1,7 @@
+---
+title: "OpenClaw DevOps Agent"
+description: "Deploy an OpenClaw DevOps agent on Amazon EKS for automated Kubernetes operations, monitoring, log analysis, and incident response workflows."
+---
 # OpenClaw DevOps Agent
 
 An interactive AI assistant for Kubernetes cluster management and troubleshooting. The agent has kubectl, helm, and AWS CLI access with read-only RBAC permissions, making it a safe and powerful tool for cluster inspection, diagnostics, and recommendations.

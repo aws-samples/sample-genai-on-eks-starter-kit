@@ -1,0 +1,105 @@
+# GenAI on EKS Starter Kit — Full Documentation
+
+> A production-ready starter kit for deploying and managing generative AI infrastructure on Amazon EKS (Elastic Kubernetes Service).
+
+## Project Overview
+
+GenAI on EKS Starter Kit provides 25+ Kubernetes-native configurations for deploying AI/ML infrastructure on Amazon EKS. It covers the full stack: LLM serving engines, AI gateways, vector databases, observability, GPU platform management, guardrails, and AI agent orchestration.
+
+Key value propositions:
+- Single CLI command deployment of complex AI infrastructure
+- Production-ready Helm charts and Terraform modules
+- Support for EKS Auto Mode and Standard Mode
+- GPU-optimized configurations for NVIDIA A10G, L4, A100, H100 and AWS Inferentia2/Trainium
+- Unified observability across all AI components
+
+## Architecture
+
+Amazon EKS cluster organized into functional layers:
+
+1. **AI Gateway Layer** (LiteLLM, Kong): Unified API routing, load balancing, rate limiting, fallbacks across 100+ LLM providers
+2. **Model Serving Layer** (vLLM, SGLang, TGI, Ollama): GPU-accelerated LLM inference with PagedAttention, continuous batching, tensor parallelism
+3. **NVIDIA Platform** (Dynamo, GPU Operator, AIPerf, AIConfigurator): Disaggregated serving with KV cache routing, automated driver management, benchmarking
+4. **Observability** (Langfuse, Phoenix, MLflow): LLM tracing, prompt management, evaluations, experiment tracking, cost analytics
+5. **Vector Storage** (Qdrant, Chroma, Milvus): Embedding storage for RAG applications with filtering, sharding, GPU-accelerated indexing
+6. **Guardrails** (Guardrails AI): Content safety, PII detection, hallucination prevention, custom policy enforcement
+7. **Applications** (Open WebUI, n8n, OpenClaw): Chat interfaces, workflow automation, multi-agent orchestration
+
+## Components Catalog
+
+### AI Gateway
+- **LiteLLM**: Unified proxy supporting 100+ providers, load balancing, fallbacks, rate limiting, spend tracking
+- **Kong AI Gateway**: Enterprise API management with AI-specific plugins, authentication, and observability
+
+### LLM Serving Engines
+- **vLLM**: High-throughput inference with PagedAttention, continuous batching, FP8/AWQ quantization, multi-LoRA, speculative decoding
+- **SGLang**: Fast serving with RadixAttention, constrained decoding, speculative execution, multi-modal support
+- **TGI**: Hugging Face's optimized serving with flash attention, quantization (GPTQ, AWQ, EETQ), speculative decoding
+- **Ollama**: Simplified deployment with GGUF model support, OpenAI-compatible API, easy model management
+
+### NVIDIA Platform
+- **GPU Operator**: Automated NVIDIA driver, device plugin, container toolkit, and MIG management
+- **Dynamo Platform**: Disaggregated LLM serving with KV cache routing, prefill/decode separation, dynamic scaling
+- **Dynamo vLLM**: Optimized vLLM integration with Dynamo for aggregated and disaggregated inference modes
+- **AIPerf Benchmark**: Performance measurement for throughput, latency, GPU utilization across concurrency levels
+- **AIConfigurator**: Automated tensor/pipeline parallelism selection to meet SLA targets
+
+### Vector Databases
+- **Qdrant**: High-performance similarity search with filtering, sharding, replication, and HNSW indexing
+- **ChromaDB**: Simple Python API for embedding storage with multi-tenant support
+- **Milvus**: Scalable search with GPU-accelerated IVF indexing, hybrid search, and high availability
+
+### Observability
+- **Langfuse**: LLM tracing, prompt management, evaluations, cost analytics, production monitoring
+- **MLflow**: Experiment tracking, model registry, artifact storage, ML lifecycle management
+- **Phoenix (Arize)**: OpenTelemetry-native AI observability with span analysis and evaluation
+
+### Other
+- **Guardrails AI**: Content safety, PII detection, hallucination prevention, custom validators
+- **Open WebUI**: ChatGPT-like interface for self-hosted LLMs with RAG and user management
+- **n8n**: Visual workflow automation connecting LLMs, databases, APIs, and business tools
+- **OpenClaw**: Multi-agent orchestration with tool calling, task routing, and MCP integration
+- **TEI**: Hugging Face Text Embedding Inference for production-grade text embeddings
+
+## Getting Started
+
+### Prerequisites
+- AWS CLI v2, Terraform >= 1.5, Node.js >= 18, kubectl, Helm 3, Docker with Buildx
+- Amazon EKS cluster (Auto Mode recommended for GPU workloads)
+- GPU instances: g6e (NVIDIA L40S), g6 (L4), g5g (Graviton+GPU), p5 (H100), trn1 (Trainium)
+
+### Quick Start
+```bash
+git clone https://github.com/aws-samples/sample-genai-on-eks-starter-kit.git
+cd sample-genai-on-eks-starter-kit
+npm install
+./cli configure    # Set AWS region, cluster name, domain
+./cli demo-setup   # Deploy full stack (LiteLLM + vLLM + Open WebUI + Langfuse)
+```
+
+### Infrastructure
+```bash
+./cli terraform init
+./cli terraform apply   # Creates VPC, EKS cluster, node groups, IAM roles
+```
+
+## FAQ
+
+**How do config files work?**
+.env and config.json are loaded as defaults, then merged/overridden with .env.local and config.local.json if they exist.
+
+**Can I use this without Route 53?**
+Yes. When DOMAIN is empty, individual ALBs with HTTP are created for each service instead of a shared HTTPS ALB.
+
+**Which GPU instances are supported?**
+Default: g6e, g6, g5g families. Configurable in terraform/0-common.tf. Also supports p5 (H100), trn1/inf2 (Trainium/Inferentia).
+
+**Does it support multi-cluster?**
+The CLI targets one cluster at a time, but you can run multiple instances with different .env.local files.
+
+## Links
+
+- Documentation: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/
+- Repository: https://github.com/aws-samples/sample-genai-on-eks-starter-kit
+- Issues: https://github.com/aws-samples/sample-genai-on-eks-starter-kit/issues
+- License: MIT

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#1a1a2e"/>
+
+  <!-- Amber accent line -->
+  <rect x="450" y="280" width="300" height="3" fill="#f5a623" rx="1.5"/>
+
+  <!-- Main title -->
+  <text x="600" y="240" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="bold" fill="#ffffff" text-anchor="middle">GenAI on EKS</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="330" font-family="Arial, Helvetica, sans-serif" font-size="48" fill="#ffffff" text-anchor="middle">Starter Kit</text>
+
+  <!-- Description -->
+  <text x="600" y="410" font-family="Arial, Helvetica, sans-serif" font-size="24" fill="#b0b0cc" text-anchor="middle">Deploy AI infrastructure on Amazon EKS</text>
+
+  <!-- Bottom accent line -->
+  <rect x="400" y="460" width="400" height="2" fill="#f5a623" opacity="0.5" rx="1"/>
+</svg>

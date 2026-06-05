@@ -1,3 +1,7 @@
+---
+title: "Components Overview"
+description: "Browse 25+ deployable GenAI components across 10 categories — LLM serving, AI gateways, vector databases, observability, NVIDIA platform, and agents on EKS."
+---
 # Components Overview
 
 The GenAI on EKS Starter Kit provides a curated collection of production-ready components for building and deploying GenAI applications on Kubernetes. All components are installed via the CLI: `./cli <category> <component> install`.

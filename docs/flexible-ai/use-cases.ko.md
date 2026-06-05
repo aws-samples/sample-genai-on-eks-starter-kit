@@ -1,7 +1,9 @@
 ---
-title: Use Cases
+title: "Flexible AI 활용 사례"
+description: "Flexible AI 프로덕션 활용 사례 — 자체 호스팅 LLM, 에이전트 워크플로, 하이브리드 GPU, 멀티리전, RAG 파이프라인을 AWS에서 구현합니다."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/use-cases/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/use-cases.ko/
 ---
-
 [한국어](use-cases.ko.md){ .md-button .md-button--primary } [English](use-cases.md){ .md-button }
 
 # Key Use Cases

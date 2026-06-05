@@ -1,2 +1,4 @@
 mkdocs-material>=9.5
 mkdocs-minify-plugin>=0.8
+pillow>=10.0
+cairosvg>=2.7

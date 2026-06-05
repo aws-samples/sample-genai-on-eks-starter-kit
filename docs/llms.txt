@@ -1,0 +1,43 @@
+# GenAI on EKS Starter Kit
+
+> A production-ready starter kit for deploying and managing generative AI components on Amazon EKS (Elastic Kubernetes Service).
+
+This project provides Kubernetes-native configurations for deploying AI/ML infrastructure including LLM serving engines (vLLM, SGLang, TGI, Ollama), AI gateways (LiteLLM, Kong), vector databases (Qdrant, Chroma, Milvus), observability (Langfuse, MLflow, Phoenix), NVIDIA Dynamo platform, and AI agent frameworks (Strands Agents, Agno, OpenClaw).
+
+## Key Links
+
+- Documentation: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/
+- Repository: https://github.com/aws-samples/sample-genai-on-eks-starter-kit
+- Quick Start: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/getting-started/quick-start/
+- Components: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/components/
+- Examples: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/examples/
+
+## Components (25+)
+
+- AI Gateway: LiteLLM, Kong AI Gateway
+- LLM Serving: vLLM, SGLang, TGI, Ollama
+- Embedding: Text Embedding Inference (TEI)
+- Vector Databases: Qdrant, Chroma, Milvus
+- Observability: Langfuse, MLflow, Phoenix
+- NVIDIA Platform: GPU Operator, Dynamo Platform, Dynamo vLLM, AIPerf Benchmark, AIConfigurator
+- Guardrails: Guardrails AI
+- AI Agents: OpenClaw, Strands Agents, Agno
+- Workflow Automation: n8n
+- GUI: Open WebUI
+
+## Prerequisites
+
+- AWS CLI, Terraform, Node.js, kubectl, Helm, Docker
+- Amazon EKS cluster (Auto Mode or Standard)
+- GPU instances (g6e, g6, g5g, p5, trn1 families)
+
+## Quick Start
+
+1. Clone: git clone https://github.com/aws-samples/sample-genai-on-eks-starter-kit.git
+2. Install: npm install
+3. Configure: ./cli configure
+4. Deploy: ./cli demo-setup
+
+## Architecture
+
+Amazon EKS cluster with: AI Gateway layer (LiteLLM/Kong for routing, load balancing, rate limiting), Model Serving layer (vLLM/SGLang/TGI for GPU-accelerated inference), Observability (Langfuse/Phoenix for tracing and evaluation), Vector Storage (Qdrant/Chroma/Milvus for RAG), NVIDIA Platform (Dynamo for disaggregated serving, GPU Operator for driver management), and Application layer (Open WebUI, n8n, OpenClaw agents).

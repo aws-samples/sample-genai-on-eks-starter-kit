@@ -1,3 +1,7 @@
+---
+title: "NVIDIA Dynamo Platform on EKS"
+description: "Deploy NVIDIA Dynamo on Amazon EKS for disaggregated LLM serving with KV cache routing, prefill/decode separation, and dynamic scaling."
+---
 # Dynamo Platform
 
 NVIDIA Dynamo Platform provides orchestration, scheduling, and lifecycle management for LLM serving workloads. It includes CRDs, Operator, etcd, NATS, Grove KV Router, and KAI Scheduler.

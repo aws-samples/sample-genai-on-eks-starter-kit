@@ -1,3 +1,7 @@
+---
+title: "OpenClaw on EKS"
+description: "Deploy OpenClaw AI agent platform on Amazon EKS for multi-agent orchestration, tool calling, autonomous task routing, and MCP integration."
+---
 # OpenClaw
 
 Lightweight bridge server that orchestrates AI coding agents on Kubernetes. Provides a stateless, Git-native workflow where agents clone repositories, make changes, commit, and push within ephemeral containers.

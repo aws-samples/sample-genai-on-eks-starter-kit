@@ -1,3 +1,7 @@
+---
+title: "vLLM on EKS"
+description: "Deploy vLLM on Amazon EKS for high-throughput LLM inference with PagedAttention, continuous batching, FP8 quantization, and multi-GPU tensor parallelism."
+---
 # vLLM
 
 High-throughput LLM serving engine with PagedAttention for efficient memory management. Supports continuous batching, prefix caching, multi-LoRA, and quantization (FP8, GPTQ, AWQ).

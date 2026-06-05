@@ -1,3 +1,7 @@
+---
+title: "Kong AI Gateway on EKS"
+description: "Deploy Kong AI Gateway on Amazon EKS for enterprise API management with AI-specific plugins, rate limiting, authentication, and observability."
+---
 # Kong AI Gateway
 
 Enterprise-grade API gateway with advanced rate limiting, authentication, and AI-specific plugins for LLM applications.

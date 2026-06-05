@@ -1,3 +1,7 @@
+---
+title: "Configuration Guide"
+description: "Configure GenAI on EKS — environment variables, config.json hierarchy, EKS mode selection, domain setup, and model deployment settings."
+---
 # Configuration Guide
 
 This guide explains how to configure the GenAI on EKS Starter Kit, including environment variables, configuration files, and advanced settings.

@@ -1,3 +1,7 @@
+---
+title: "Infrastructure Setup (Legacy)"
+description: "Legacy infrastructure setup guide for provisioning Amazon EKS and supporting resources for GenAI workloads."
+---
 ## Infrastructure Setup
 
 Several AWS services and Kubernetes components are being provisioned by the main Terraform code under the `terraform` folder.

@@ -1,3 +1,7 @@
+---
+title: "Strands Agents Example"
+description: "Deploy a Strands Agents calculator agent on Amazon EKS with tool use, MCP server integration, and Amazon Bedrock model access."
+---
 # Strands Agents Calculator Agent
 
 An AI agent built with the Strands framework that performs arithmetic calculations using either MCP tools or native Python tools. The agent demonstrates integration with LiteLLM, Bedrock, and optional observability with Langfuse.

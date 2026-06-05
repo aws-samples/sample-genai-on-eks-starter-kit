@@ -1,3 +1,7 @@
+---
+title: "Ollama on EKS"
+description: "Run Ollama on Amazon EKS for simplified LLM deployment with GGUF model support, OpenAI-compatible API, and easy model management."
+---
 # Ollama
 
 Run open-source LLMs locally with a simple API. Ollama bundles model weights, configurations, and runtime into a single package, making it easy to deploy and manage models on Kubernetes.

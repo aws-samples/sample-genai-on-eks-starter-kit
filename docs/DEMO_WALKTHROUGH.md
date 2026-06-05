@@ -1,3 +1,7 @@
+---
+title: "Demo Walkthrough (Legacy)"
+description: "Legacy demo walkthrough for GenAI on EKS Starter Kit deployment and usage demonstration."
+---
 ## Demo Walkthrough
 
 These components and examples will be deployed:

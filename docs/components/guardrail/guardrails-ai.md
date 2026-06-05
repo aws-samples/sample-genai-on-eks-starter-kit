@@ -1,3 +1,7 @@
+---
+title: "Guardrails AI on EKS"
+description: "Deploy Guardrails AI on Amazon EKS for LLM content safety, PII detection, hallucination prevention, and custom validation policy enforcement."
+---
 # Guardrails AI
 
 Input/output validation framework for LLMs. Detects and filters PII, toxic content, and other policy violations in real-time, integrating with LiteLLM as a guardrail middleware.

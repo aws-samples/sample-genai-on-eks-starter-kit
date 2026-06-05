@@ -1,3 +1,7 @@
+---
+title: "Agno Agent Example"
+description: "Deploy an Agno framework calculator agent on Amazon EKS with structured outputs, tool calling, multi-model support, and LiteLLM gateway routing."
+---
 # Agno Calculator Agent
 
 An AI agent built with the Agno framework that performs arithmetic calculations using MCP tools. The agent features memory management, session persistence, and conversation history tracking, demonstrating advanced agentic capabilities.

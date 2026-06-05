@@ -1,7 +1,9 @@
 ---
-title: Why Flexible AI
+title: "Why Flexible AI"
+description: "Five value pillars of Flexible AI — model freedom, infrastructure sovereignty, unified governance, cost optimization, and operational simplicity on AWS."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/why/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/why.ko/
 ---
-
 [한국어](why.ko.md){ .md-button } [English](why.md){ .md-button .md-button--primary }
 
 # Value Proposition

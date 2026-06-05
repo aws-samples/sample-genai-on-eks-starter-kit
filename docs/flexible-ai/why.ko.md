@@ -1,7 +1,9 @@
 ---
-title: Why Flexible AI
+title: "Why Flexible AI"
+description: "Flexible AI의 5가지 가치 — 모델 자유, 인프라 주권, 통합 거버넌스, 비용 최적화, 운영 단순화를 AWS에서 실현합니다."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/why/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/why.ko/
 ---
-
 [한국어](why.ko.md){ .md-button .md-button--primary } [English](why.md){ .md-button }
 
 # Value Proposition

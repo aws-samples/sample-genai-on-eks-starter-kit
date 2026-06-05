@@ -1,6 +1,9 @@
 # GenAI on EKS Starter Kit
 
-A starter kit for deploying and managing GenAI components and examples on Amazon EKS (Elastic Kubernetes Service). This project provides a collection of tools, configurations, components and examples to help you quickly set up a GenAI project on Kubernetes.
+[![Documentation](https://img.shields.io/badge/docs-live-blue)](https://aws-samples.github.io/sample-genai-on-eks-starter-kit/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A production-ready starter kit for deploying **generative AI infrastructure** on **Amazon EKS** (Elastic Kubernetes Service). Deploy LLM serving engines (vLLM, SGLang, TGI), AI gateways, vector databases, GPU-accelerated inference platforms, and AI agent frameworks on **Kubernetes** with a single CLI command. Built for teams running self-hosted LLMs and AI workloads on AWS.
 
 The starter kit includes the configurable components and examples from several categories:
 

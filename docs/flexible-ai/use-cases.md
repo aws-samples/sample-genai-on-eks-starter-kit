@@ -1,7 +1,9 @@
 ---
-title: Use Cases
+title: "Flexible AI Use Cases"
+description: "Production use cases for Flexible AI — self-hosted LLM serving, agentic workflows, hybrid GPU inference, multi-region, and RAG pipelines on AWS."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/use-cases/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/use-cases.ko/
 ---
-
 [한국어](use-cases.ko.md){ .md-button } [English](use-cases.md){ .md-button .md-button--primary }
 
 # Key Use Cases

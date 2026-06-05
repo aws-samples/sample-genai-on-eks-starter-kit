@@ -1,7 +1,9 @@
 ---
-title: Architecture
+title: "Flexible AI Architecture"
+description: "Functional architecture of Flexible AI Platform — compute layer, serving layer, gateway, observability, and agent orchestration on AWS EKS."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/architecture/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/architecture.ko/
 ---
-
 [한국어](architecture.ko.md){ .md-button } [English](architecture.md){ .md-button .md-button--primary }
 
 # Functional View & Building Blocks

@@ -1,7 +1,9 @@
 ---
-title: Flexible AI 개요
+title: "Flexible AI 개요"
+description: "AWS 기반 Flexible AI 플랫폼 — Amazon EKS에서 모든 모델을 유연하게 실행하고 주권, 거버넌스, 비용 관리를 제공합니다."
+hreflang_en: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/
+hreflang_ko: https://aws-samples.github.io/sample-genai-on-eks-starter-kit/flexible-ai/index.ko/
 ---
-
 [한국어](index.ko.md){ .md-button .md-button--primary } [English](index.md){ .md-button }
 
 # Architecting Flexible AI Platform on AWS
