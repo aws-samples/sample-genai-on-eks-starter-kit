@@ -70,7 +70,7 @@ async def startup_event():
             # Only need one of these 2 headers
             headers = {
                 "Authorization": f"Bearer {os.environ.get("LITELLM_API_KEY")}",
-                "x-litellm-api-key": f"Bearer {os.environ.get("LITELLM_API_KEY")}",
+                "x-litellm-api-key": os.environ.get("LITELLM_API_KEY"),
             }
             mcp_client = MCPClient(
                 lambda: streamablehttp_client(
