@@ -329,7 +329,7 @@ async function addTerraformCommands() {
     .description("Manage the infrastructure by using Terraform")
     .addHelpCommand(false);
   const commands = [
-    { name: "set-workspace", description: "Create and select Terraform workspace", action: "setWorkspace" },
+    { name: "set-workspace", description: "Create and select Terraform workspace", action: "setupWorkspace" },
     { name: "plan", description: "Run terraform plan on the selected workspace", action: "plan" },
     { name: "apply", description: "Run terraform apply on the selected workspace", action: "apply" },
     { name: "destroy", description: "Run terraform destroy on the selected workspace", action: "destroy" },
