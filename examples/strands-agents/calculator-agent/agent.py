@@ -67,10 +67,11 @@ async def startup_event():
         print("Using MCP tools...")
         if os.environ.get("USE_MCP_GATEWAY", "").lower() == "true":
             print(f"Using MCP gateway...")
-            # Only need one of these 2 headers
+            # LiteLLM's /mcp route requires the "Bearer " prefix even in
+            # x-litellm-api-key, so a single standard Authorization header
+            # is sufficient and avoids sending the key twice
             headers = {
                 "Authorization": f"Bearer {os.environ.get("LITELLM_API_KEY")}",
-                "x-litellm-api-key": os.environ.get("LITELLM_API_KEY"),
             }
             mcp_client = MCPClient(
                 lambda: streamablehttp_client(
