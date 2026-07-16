@@ -10,7 +10,7 @@
   "llm-model": {
     "vllm": {
       "models": [
-        { "name": "qwen3-8b-neuron", "deploy": true },
+        { "name": "qwen3-8b-neuron-32k", "deploy": true },
         { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": false }
       ]
     }
@@ -27,37 +27,37 @@
         { "name": "claude-4.5-opus", "model": "global.anthropic.claude-opus-4-5-20251101-v1:0" },
         { "name": "claude-4.5-sonnet", "model": "global.anthropic.claude-sonnet-4-5-20250929-v1:0" },
         { "name": "claude-4.5-haiku", "model": "global.anthropic.claude-haiku-4-5-20251001-v1:0" },
-        { "name": "claude-4.1-opus", "model": "global.anthropic.claude-opus-4-1-20250805-v1:0" },
+        { "name": "claude-4.1-opus", "model": "us.anthropic.claude-opus-4-1-20250805-v1:0" },
         { "name": "amazon-nova-premier", "model": "us.amazon.nova-premier-v1:0" },
         { "name": "amazon-nova-pro", "model": "us.amazon.nova-pro-v1:0" },
         { "name": "amazon-nova-lite", "model": "us.amazon.nova-lite-v1:0" },
         { "name": "amazon-nova-micro", "model": "us.amazon.nova-micro-v1:0" },
         { "name": "amazon-nova-2-lite", "model": "global.amazon.nova-2-lite-v1:0" },
-        { "name": "amazon-nova-2-sonic", "model": "us.amazon.nova-2-sonic-v1:0" },
+        { "name": "amazon-nova-2-sonic", "model": "amazon.nova-2-sonic-v1:0" },
         { "name": "deepseek-r1", "model": "us.deepseek.r1-v1:0" },
-        { "name": "deepseek-v3.2", "model": "us.deepseek.v3.2" },
-        { "name": "deepseek-v3.1", "model": "us.deepseek.v3-v1:0" },
+        { "name": "deepseek-v3.2", "model": "deepseek.v3.2" },
+        { "name": "deepseek-v3.1", "model": "deepseek.v3-v1:0" },
         { "name": "llama4-maverick", "model": "us.meta.llama4-maverick-17b-instruct-v1:0" },
         { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0" },
         { "name": "llama3.3-70b", "model": "us.meta.llama3-3-70b-instruct-v1:0" },
         { "name": "llama3.2-90b", "model": "us.meta.llama3-2-90b-instruct-v1:0" },
         { "name": "llama3.2-11b", "model": "us.meta.llama3-2-11b-instruct-v1:0" },
-        { "name": "mistral-large-3", "model": "us.mistral.mistral-large-3-675b-instruct" },
-        { "name": "mistral-large-2", "model": "us.mistral.mistral-large-2407-v1:0" },
-        { "name": "magistral-small", "model": "us.mistral.magistral-small-2509" },
-        { "name": "devstral-2-123b", "model": "us.mistral.devstral-2-123b" },
+        { "name": "mistral-large-3", "model": "mistral.mistral-large-3-675b-instruct" },
+        { "name": "mistral-large-2", "model": "mistral.mistral-large-2407-v1:0" },
+        { "name": "magistral-small", "model": "mistral.magistral-small-2509" },
+        { "name": "devstral-2-123b", "model": "mistral.devstral-2-123b" },
         { "name": "pixtral-large", "model": "us.mistral.pixtral-large-2502-v1:0" },
-        { "name": "cohere-command-r-plus", "model": "us.cohere.command-r-plus-v1:0" },
-        { "name": "cohere-command-r", "model": "us.cohere.command-r-v1:0" }
+        { "name": "cohere-command-r-plus", "model": "cohere.command-r-plus-v1:0" },
+        { "name": "cohere-command-r", "model": "cohere.command-r-v1:0" }
       ]
     },
     "embedding": {
       "models": [
         { "name": "cohere-embed-v4", "model": "us.cohere.embed-v4:0" },
-        { "name": "cohere-embed-english-v3", "model": "us.cohere.embed-english-v3" },
-        { "name": "cohere-embed-multilingual-v3", "model": "us.cohere.embed-multilingual-v3" },
-        { "name": "titan-embed-text-v2", "model": "us.amazon.titan-embed-text-v2:0" },
-        { "name": "titan-embed-multimodal", "model": "us.amazon.titan-embed-image-v1" }
+        { "name": "cohere-embed-english-v3", "model": "cohere.embed-english-v3" },
+        { "name": "cohere-embed-multilingual-v3", "model": "cohere.embed-multilingual-v3" },
+        { "name": "titan-embed-text-v2", "model": "amazon.titan-embed-text-v2:0" },
+        { "name": "titan-embed-multimodal", "model": "amazon.titan-embed-image-v1" }
       ]
     }
   },

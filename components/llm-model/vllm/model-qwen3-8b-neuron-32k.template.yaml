@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-8b-neuron-32k
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-8b-neuron-32k
+  template:
+    metadata:
+      labels:
+        app: qwen3-8b-neuron-32k
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        node.kubernetes.io/instance-type: inf2.8xlarge
+      containers:
+        - name: vllm
+          image: public.ecr.aws/agentic-ai-platforms-on-k8s/vllm-neuron:qwen3-8b-optimum-neuron-32k
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - /root/.cache/neuron/Qwen/Qwen3-8B
+            - --served-model-name=qwen3-8b-neuron-32k
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.90
+            - --max-model-len=32768
+            # Qwen3 specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+            - --reasoning-parser=qwen3
+            # Neuron specific
+            - --tensor-parallel-size=2
+            # 32k context fits one Inferentia2 chip only at batch 1; the
+            # compiled artifact is batch_size=1, so --max-num-seqs must be 1.
+            - --max-num-seqs=1
+          env:
+            - name: HF_HOME
+              value: /root/.cache/huggingface
+            - name: HF_HUB_CACHE
+              value: /root/.cache/huggingface/hub
+            - name: NEURON_RT_NUM_CORES
+              value: "2"
+            - name: NEURON_RT_VISIBLE_CORES
+              value: "0-1"
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 3 #75%
+              memory: 12Gi #75%
+              aws.amazon.com/neuroncore: 2
+            limits:
+              aws.amazon.com/neuroncore: 2
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen3-8b-neuron-32k
+  namespace: vllm
+spec:
+  selector:
+    app: qwen3-8b-neuron-32k
+  ports:
+    - name: http
+      port: 8000

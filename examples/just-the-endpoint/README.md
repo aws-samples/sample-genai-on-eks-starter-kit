@@ -10,13 +10,13 @@ Following these steps won't deploy any of the agents that are built into the Gen
 |-----------|---------|-----|
 | LiteLLM | OpenAI-compatible proxy (all models behind one endpoint) | `https://<domain>/litellm` |
 | Langfuse | Observability (traces, costs, evals) | `https://<domain>/langfuse` |
-| vLLM on Trainium | Self-hosted model (qwen3-8b on inf2.xlarge) | Internal (routed via LiteLLM) |
+| vLLM on Trainium | Self-hosted model (qwen3-8b, 32k context, on inf2.8xlarge) | Internal (routed via LiteLLM) |
 | Bedrock | 20 managed models (Claude, Nova, Llama, Mistral, etc.) | Via LiteLLM |
 
 ## Prerequisites
 
 - AWS account with Bedrock model access enabled in your region
-- `inf2.xlarge` quota (2 Neuron cores) — request via Service Quotas if needed
+- `inf2.8xlarge` quota (2 Neuron cores) — request via Service Quotas if needed
 - Domain name (optional — ALB provides a raw URL if no domain configured)
 - Node.js 18+, Terraform 1.5+, kubectl, Helm 3
 
@@ -25,6 +25,12 @@ Following these steps won't deploy any of the agents that are built into the Gen
 ```bash
 git clone https://github.com/aws-samples/sample-genai-on-eks-starter-kit.git
 cd sample-genai-on-eks-starter-kit
+
+# This example lives on its own branch, not main
+git checkout example/just-the-endpoint
+
+# Install CLI dependencies (needed before any ./cli command)
+npm install
 
 # Use the slim config (deep-merges on top of config.json, arrays are replaced)
 cp examples/just-the-endpoint/config.json config.local.json
@@ -52,6 +58,74 @@ kubectl get ingress -A -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.sta
 The ALB hostname is your base URL — LiteLLM serves at the root path on its own ingress.
 
 ## Connect your tools
+
+### opencode (AI coding agent)
+
+[opencode](https://opencode.ai) is a terminal coding agent. It works against this endpoint over the OpenAI-compatible API — both the managed Bedrock models and the self-hosted Qwen3.
+
+**1. Install:**
+
+```bash
+curl -fsSL https://opencode.ai/install | bash
+```
+
+**2. Export your LiteLLM key** (the value of `LITELLM_API_KEY` from your `.env.local`):
+
+```bash
+export LITELLM_API_KEY=<your-litellm-key>   # add to ~/.bashrc to persist
+```
+
+**3. Create `~/.config/opencode/opencode.json`:**
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "litellm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "GenAI-on-EKS LiteLLM",
+      "options": {
+        "baseURL": "https://litellm.<your-domain>/v1",
+        "apiKey": "{env:LITELLM_API_KEY}"
+      },
+      "models": {
+        "bedrock/claude-sonnet-4.6": { "name": "Claude Sonnet 4.6 (Bedrock)", "limit": { "context": 200000, "output": 16384 }, "tool_call": true },
+        "bedrock/claude-opus-4.8":  { "name": "Claude Opus 4.8 (Bedrock)",  "limit": { "context": 200000, "output": 16384 }, "tool_call": true },
+        "vllm/qwen3-8b-neuron-32k":     { "name": "Qwen3-8B (self-hosted Neuron)", "limit": { "context": 32768, "output": 8192 }, "tool_call": true, "reasoning": true }
+      }
+    }
+  },
+  "model": "litellm/bedrock/claude-sonnet-4.6"
+}
+```
+
+Two things that will break it if you skip them:
+- **Model keys must include the `bedrock/` or `vllm/` prefix** — they must match the LiteLLM model names exactly (the ones in the tables above). `litellm/claude-sonnet-4.6` is wrong; `litellm/bedrock/claude-sonnet-4.6` is right.
+- **Set `limit.output` on the self-hosted model.** Without it opencode requests a huge `max_tokens` and every call fails with `ContextWindowExceededError`. 8192 leaves room for input inside the 32k window.
+
+**4. Run:**
+
+```bash
+opencode run -m litellm/bedrock/claude-sonnet-4.6 "explain this repo"   # managed, 200k context
+opencode run -m litellm/vllm/qwen3-8b-neuron-32k "add a docstring to main.py"  # self-hosted, 32k context
+```
+
+#### Context management: how long a session lasts
+
+opencode is stateless per request — every turn it re-sends the **entire** conversation (its system prompt, all tool schemas, every prior message, and every tool result, which includes file contents) as one prompt. The model's context window has to hold that whole growing transcript, not just your latest message. That has direct consequences for the self-hosted Qwen3:
+
+- **Fixed overhead is real.** opencode's system prompt plus tool definitions is on the order of ~8–12k tokens before you type anything.
+- **Qwen3 is a reasoning model** — its thinking traces add ~1–3k tokens per turn on top of the visible answer.
+- **File reads dominate.** One moderate source file is 2–5k tokens, and each read stays in history.
+
+**On `vllm/qwen3-8b-neuron-32k` (32k context), expect roughly 3–6 substantive rounds, or a few file reads, before you approach the limit.** When you hit it, the request returns a clean `ContextWindowExceededError` (HTTP 400) rather than crashing the model, and opencode automatically compacts older turns (summarizing them) so the session can continue with less detail.
+
+To get more room:
+- **Use a Bedrock model for anything long or multi-file** — Claude Sonnet/Opus on this same endpoint have a 200k context window (~6× more headroom) and stronger tool-calling.
+- **Start focused sessions.** Point the agent at specific files rather than asking it to explore the whole repo; clear the session (`/new` in the TUI) between unrelated tasks.
+- **Treat the self-hosted Qwen3 as the cheap, always-on option for bounded tasks** (single-file edits, quick questions), not for long open-ended agent runs.
+
+> The self-hosted Qwen3 serves **one request at a time** (`--max-num-seqs=1`, required to fit 32k on a single Inferentia2 chip — see below). It's sized for a single developer, not a shared team endpoint.
 
 ### VS Code (Continue extension)
 
@@ -126,9 +200,9 @@ All models are accessible via LiteLLM using the prefix shown:
 | Cohere Command R | `bedrock/cohere-command-r` |
 
 ### Self-hosted on Trainium (deployed on your cluster)
-| Model | LiteLLM name | Instance |
-|-------|-------------|----------|
-| Qwen3 8B | `vllm/qwen3-8b-neuron` | inf2.xlarge |
+| Model | LiteLLM name | Context | Instance |
+|-------|-------------|---------|----------|
+| Qwen3 8B (32k) | `vllm/qwen3-8b-neuron-32k` | 32k | inf2.8xlarge |
 
 ## Add more models at runtime
 
