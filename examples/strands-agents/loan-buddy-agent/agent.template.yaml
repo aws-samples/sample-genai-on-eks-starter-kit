@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loan-buddy-agent
+  namespace: strands-agents
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loan-buddy-agent
+  template:
+    metadata:
+      labels:
+        app: loan-buddy-agent
+    spec:
+      serviceAccountName: loan-buddy-agent
+      {{#unless useBuildx}}
+      nodeSelector:
+        kubernetes.io/arch: {{{arch}}}
+      {{/unless}}
+      containers:
+        - name: agent
+          image: {{{IMAGE}}}
+          env:
+            # --- LLM via Kong /loan-strands -> Bedrock ---
+            - name: KONG_BASE_URL
+              value: "{{{KONG_BASE_URL}}}"
+            - name: KONG_API_KEY
+              value: "{{{KONG_API_KEY}}}"
+            - name: KONG_MODEL_ID
+              value: "{{{KONG_MODEL_ID}}}"
+            # --- MCP tool servers (SSE) ---
+            - name: MCP_IMAGE_PROCESSOR
+              value: "{{{MCP_IMAGE_PROCESSOR}}}"
+            - name: MCP_ADDRESS_VALIDATOR
+              value: "{{{MCP_ADDRESS_VALIDATOR}}}"
+            - name: MCP_EMPLOYMENT_VALIDATOR
+              value: "{{{MCP_EMPLOYMENT_VALIDATOR}}}"
+            # --- S3 image storage ---
+            - name: S3_BUCKET_NAME
+              value: "{{{S3_BUCKET_NAME}}}"
+            - name: AWS_REGION
+              value: "{{{AWS_REGION}}}"
+            # --- Arize AX (SaaS) tracing: from the arize-credentials Secret ---
+            {{#if ARIZE_ENABLED}}
+            - name: ARIZE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: arize-credentials
+                  key: ARIZE_API_KEY
+            - name: ARIZE_SPACE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: arize-credentials
+                  key: ARIZE_SPACE_ID
+            - name: ARIZE_PROJECT_NAME
+              value: "{{{ARIZE_PROJECT_NAME}}}"
+            {{/if}}
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loan-buddy-agent
+  namespace: strands-agents
+spec:
+  selector:
+    app: loan-buddy-agent
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: loan-buddy-agent
+  namespace: strands-agents

@@ -123,6 +123,12 @@
           "USE_MCP_TOOLS": true,
           "USE_MCP_GATEWAY": true
         }
+      },
+      "loan-buddy-agent": {
+        "env": {
+          "KONG_MODEL_ID": "openai/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+          "ARIZE_PROJECT_NAME": "loan-strands"
+        }
       }
     },
     "openclaw": {
