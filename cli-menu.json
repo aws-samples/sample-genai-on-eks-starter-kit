@@ -42,7 +42,8 @@
       "components": [
         { "dir": "langfuse", "name": "Langfuse" },
         { "dir": "mlflow", "name": "MLflow" },
-        { "dir": "phoenix", "name": "Phoenix" }
+        { "dir": "phoenix", "name": "Phoenix" },
+        { "dir": "arize", "name": "Arize AX (SaaS)" }
       ]
     },
     { "dir": "gui-app", "name": "GUI App", "components": [{ "dir": "openwebui", "name": "Open WebUI" }] },
