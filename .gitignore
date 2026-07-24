@@ -40,3 +40,4 @@ docs/external-images.md
 examples/openclaw/shared/dist/
 PLAN.md
 .cache/
+workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.configured.yaml

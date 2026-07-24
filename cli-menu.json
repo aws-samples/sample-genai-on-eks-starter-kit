@@ -42,7 +42,8 @@
       "components": [
         { "dir": "langfuse", "name": "Langfuse" },
         { "dir": "mlflow", "name": "MLflow" },
-        { "dir": "phoenix", "name": "Phoenix" }
+        { "dir": "phoenix", "name": "Phoenix" },
+        { "dir": "arize", "name": "Arize AX (SaaS)" }
       ]
     },
     { "dir": "gui-app", "name": "GUI App", "components": [{ "dir": "openwebui", "name": "Open WebUI" }] },
@@ -63,7 +64,10 @@
     {
       "dir": "strands-agents",
       "name": "Strands Agents",
-      "examples": [{ "dir": "calculator-agent", "name": "Calculator Agent" }]
+      "examples": [
+        { "dir": "calculator-agent", "name": "Calculator Agent" },
+        { "dir": "loan-buddy-agent", "name": "Loan Buddy Agent (Kong+Arize)" }
+      ]
     },
     {
       "dir": "agno",

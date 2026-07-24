@@ -1,0 +1,38 @@
+# Loan Buddy (Strands) - Alternative Stack dependencies
+# Versions below are the exact set verified end-to-end against the live Kong ->
+# Bedrock route + Arize AX (Strands 1.x native OTEL spans rewritten to OpenInference).
+# Do NOT downgrade strands-agents to 0.1.x: the agent relies on the 1.x model API
+# (LiteLLMModel.format_request override, StrandsTelemetry) and the OpenInference
+# processor requires strands-agents>=1.19.
+
+# Strands Agents SDK + tools
+strands-agents==1.47.0
+strands-agents-tools==0.8.3
+
+# LLM client (talks to Kong as an OpenAI-compatible endpoint) + MCP (SSE tools)
+litellm==1.92.0
+mcp==1.28.1
+# litellm imports orjson opportunistically for fast JSON (raises "No module named
+# 'orjson'" at request time if absent). It is NOT a hard litellm dep, so pin it here
+# or the clean container image fails on the first completion call.
+orjson==3.11.9
+
+# Arize AX (SaaS) tracing: OTLP exporter + the processor that converts Strands'
+# native gen_ai.* spans into the OpenInference layout Arize needs for proper span
+# kinds (AGENT/CHAIN/LLM/TOOL) and populated Input/Output.
+arize-otel==0.13.0
+openinference-instrumentation-strands-agents==0.1.3
+openinference-instrumentation==0.1.54
+openinference-semantic-conventions==0.1.30
+opentelemetry-exporter-otlp==1.43.0
+opentelemetry-sdk==1.43.0
+
+# Web framework
+fastapi[standard]==0.139.0
+uvicorn[standard]==0.51.0
+pydantic==2.13.4
+
+# Image processing + AWS S3 (image storage)
+Pillow==12.3.0
+boto3==1.43.47
+botocore==1.43.47
