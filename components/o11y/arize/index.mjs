@@ -36,8 +36,27 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["ARIZE_API_KEY", "ARIZE_SPACE_ID"];
-  utils.checkRequiredEnvVars(requiredEnvVars);
+  // Preflight: this is a WORKSHOP COMPANION component. It expects the Arize AX
+  // (SaaS) Space + Service key that the EKS Agentic AI workshop's alternative-stack
+  // module walks you through creating. If those aren't set, fail fast with guidance
+  // instead of a half-created Secret.
+  const missing = ["ARIZE_API_KEY", "ARIZE_SPACE_ID"].filter((v) => !process.env[v]);
+  if (missing.length) {
+    console.error("\n❌ Arize AX is a workshop-companion component and its prerequisites are not set.");
+    console.error(`   Missing: ${missing.join(", ")}`);
+    console.error("\n   This component provisions the in-cluster credentials that agents use to send");
+    console.error("   OpenInference traces to Arize AX (SaaS). It expects an Arize AX Space + *Service*");
+    console.error("   API key, which the EKS Agentic AI workshop's alternative-stack track walks you");
+    console.error("   through creating.");
+    console.error("\n   To use it standalone:");
+    console.error("     1. Create a free Space at https://app.arize.com and copy the Service API key + Space ID");
+    console.error("     2. Set them in .env / .env.local:");
+    console.error("          ARIZE_API_KEY=ak-...      # 72-char Service key (NOT the 40-char user key)");
+    console.error("          ARIZE_SPACE_ID=...        # from Space Settings");
+    console.error("     3. Re-run this component.");
+    console.error("\n   Workshop setup: https://github.com/aws-samples/sample-genai-on-eks-starter-kit (see the EKS Agentic AI workshop, Track B / alternative stack).\n");
+    process.exit(1);
+  }
   const {
     ARIZE_API_KEY,
     ARIZE_SPACE_ID,
