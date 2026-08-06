@@ -11,6 +11,7 @@
     "vllm": {
       "models": [
         { "name": "qwen3-8b-neuron-32k", "deploy": true },
+        { "name": "qwen3-6-27b-neuron", "deploy": false },
         { "name": "deepseek-r1-qwen3-8b-neuron", "deploy": false }
       ]
     }

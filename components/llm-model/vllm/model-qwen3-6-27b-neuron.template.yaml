@@ -1,0 +1,170 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen3-6-27b-neuron
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qwen3-6-27b-neuron
+  template:
+    metadata:
+      labels:
+        app: qwen3-6-27b-neuron
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        node.kubernetes.io/instance-type: trn2.3xlarge
+      containers:
+        - name: vllm
+          image: public.ecr.aws/agentic-ai-platforms-on-k8s/vllm-neuron:qwen3-6-27b-trn2-working
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          # Serving the AWShtokoyo qwen3_5_dense port (baked into the -working
+          # image via `pip install -e`). This is the port VERIFIED coherent on
+          # trn2.3xlarge (TP=4) where the earlier Armin-Neuron qwen3_6 adapter
+          # produced corrupt logits past the first token. We override
+          # command/args to pass the exact validated invocation (the baked
+          # entrypoint expects a local /root/models path that doesn't exist in
+          # this pod; serving the HF id reuses the huggingface-cache PVC).
+          env:
+            # Load-bearing flags for this port at TP=4 (verified on box):
+            # VLLM_QWEN_QKV_MATMUL is the TP=4 fused-QKV SBUF workaround.
+            - name: VLLM_GDN_SEQ_NKI
+              value: "1"
+            - name: VLLM_UNIFIED_KV_GATHER
+              value: "1"
+            - name: VLLM_QWEN_QKV_MATMUL
+              value: "1"
+            - name: NEURON_SKIP_EFA_AFFINITY
+              value: "1"
+            # Serialize NKI compile/trace. Parallel workers race on the
+            # /var/tmp intermediate kernel cache and drop the GDN seq-prefill
+            # kernel .json (NCC_EVRF059 -> neuronx-cc exit 70 crash loop).
+            # These were in the validated bare-box serve script; required.
+            - name: VLLM_NEURON_PARALLEL_COMPILE_WORKERS
+              value: "1"
+            - name: VLLM_NEURON_PARALLEL_TRACE_WORKERS
+              value: "1"
+            - name: VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS
+              value: "1200"
+            - name: VLLM_NEURON_COMPILATION_TIMEOUT
+              value: "1200"
+            # Reuse weights already pulled to the huggingface-cache PVC.
+            - name: HF_HOME
+              value: /root/.cache/huggingface
+            - name: HF_HUB_CACHE
+              value: /root/.cache/huggingface/hub
+          # Exact validated invocation (bare-box serve64k.sh). Prefill buckets
+          # MUST stay <=512 (scheduler chunks long prefill) or the GDN kernel
+          # trips a scatter/gather NaN. 64k is the proven max on one trn2 chip
+          # (128k OOMs at warmup); long-context recall verified to ~56k tokens.
+          command: ["vllm"]
+          args:
+            - "serve"
+            - "Qwen/Qwen3.6-27B"
+            - "--served-model-name"
+            - "qwen3-6-27b-neuron"
+            - "--tensor-parallel-size"
+            - "4"
+            - "--max-model-len"
+            - "65536"
+            - "--max-num-batched-tokens"
+            - "512"
+            - "--max-num-seqs"
+            - "1"
+            - "--limit-mm-per-prompt"
+            - '{"image":0,"video":0}'
+            - "--hf-overrides"
+            - '{"architectures":["Qwen3_5ForCausalLM"]}'
+            # NO on_device_sampling_config -> on_device_sampling=False -> raw
+            # logits are gathered to host and vLLM's stock Sampler runs on CPU.
+            # This is REQUIRED to fix the reasoning loop: the on-device sampler
+            # does ONLY temp/top_k/top_p and SILENTLY DROPS presence_penalty /
+            # repetition_penalty (grep of the port: zero penalty support), so
+            # the documented Qwen anti-repetition lever never executed on-device.
+            # Host sampler applies penalties. Tradeoff: full-logit CPU gather +
+            # async scheduling disabled -> lower throughput. Untested on this
+            # port (author validated on-device greedy only) -> validate live.
+            - "--additional-config"
+            - '{"neuron_config":{"quantization":"bf16","num_batched_tokens_buckets":[512],"kv_segment_size_buckets":[512],"num_seqs_buckets":[1]}}'
+            # Tool calling for agentic clients (opencode Build mode). These are
+            # API-server-layer flags — they do NOT change the neuron_config /
+            # compiled NEFF, so applying is a cache-valid restart, not a
+            # ~40min recompile. Use qwen3_xml parser — this model emits Qwen
+            # XML tool calls (<function=...>); hermes silently returns empty
+            # tool_calls (accepts the request but parses nothing).
+            - "--enable-auto-tool-choice"
+            - "--tool-call-parser"
+            - "qwen3_xml"
+            # Splits <think>...</think> into reasoning_content vs content (was
+            # empty before because no parser was registered). Cosmetic for the
+            # loop, but correct output shape for reasoning clients.
+            - "--reasoning-parser"
+            - "qwen3"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8000"
+          ports:
+            - name: http
+              containerPort: 8000
+          # First boot compiles the model graphs (~40 min). Give the probe
+          # room; the deployment is Ready only once /health responds.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 30
+            failureThreshold: 120
+          resources:
+            requests:
+              cpu: 9 #75%
+              memory: 96Gi #75%
+              # Whole Trainium2 device (all 4 logical cores). Requesting
+              # `neuroncore` instead makes the device plugin inject
+              # NEURON_RT_VISIBLE_CORES, which vLLM rejects under TP>1
+              # multiprocessing ("Set NEURON_VISIBLE_DEVICES instead").
+              aws.amazon.com/neuron: 1
+            limits:
+              aws.amazon.com/neuron: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            # vllm-neuron writes compiled NEFF graphs here; persisting it makes
+            # every boot after the first start in minutes instead of ~40.
+            - name: neuron-cache
+              mountPath: /root/.cache/vllm
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: neuron-cache
+          persistentVolumeClaim:
+            claimName: neuron-cache
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen3-6-27b-neuron
+  namespace: vllm
+spec:
+  selector:
+    app: qwen3-6-27b-neuron
+  ports:
+    - name: http
+      port: 8000
