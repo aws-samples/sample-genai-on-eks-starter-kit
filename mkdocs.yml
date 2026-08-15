@@ -148,3 +148,5 @@ nav:
   - Reference:
     - CLI Commands: reference/cli-commands.md
     - Configuration: reference/configuration.md
+    - FAQ: reference/faq.md
+    - Security: reference/security.md
