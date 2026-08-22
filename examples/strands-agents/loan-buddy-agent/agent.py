@@ -100,7 +100,7 @@ from strands.tools.mcp.mcp_client import MCPClient
 from mcp.client.sse import sse_client
 
 import uvicorn
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form, Request
 from utils import store_object, encode_image, generate_256_bit_hex_key
 
 # --- 3. Model: Bedrock via Kong /loan-strands --------------------------------
@@ -151,39 +151,85 @@ def _sanitize_for_kong(messages):
     return out
 
 
+def _split_parallel_tool_calls(messages):
+    """Split any PARALLEL tool-call turn into sequential single-tool turns.
+
+    Kong's ai-proxy (Operator 2.x / kong-gateway 3.x) does not correctly translate an
+    assistant turn that carries MULTIPLE ``tool_calls`` (it fails to group the parallel
+    tool-results into a single Bedrock Converse ``user`` turn) → Bedrock rejects the
+    request with "request body doesn't contain valid inputs". Claude Sonnet 4.5 emits
+    parallel tool calls and ignores ``parallel_tool_calls: false`` through the gateway,
+    so we normalize the request instead::
+
+        assistant[text, tcA, tcB] + tool(A) + tool(B)
+          ->  assistant[text, tcA] + tool(A) + assistant[tcB] + tool(B)
+
+    Every assistant turn then has exactly one ``toolUse`` immediately followed by its
+    ``toolResult`` — an alternating sequence Kong translates cleanly. Single-tool turns
+    (and turns with no tool calls) pass through untouched.
+    """
+    result_by_id = {m.get("tool_call_id"): m for m in messages
+                    if m.get("role") == "tool" and m.get("tool_call_id")}
+    consumed, out = set(), []
+    for m in messages:
+        if m.get("role") == "tool":
+            if id(m) not in consumed:
+                out.append(m)
+            continue
+        tcs = m.get("tool_calls") or []
+        if m.get("role") == "assistant" and len(tcs) > 1:
+            for i, tc in enumerate(tcs):
+                turn = {"role": "assistant", "tool_calls": [tc]}
+                if i == 0 and m.get("content"):
+                    turn["content"] = m["content"]
+                out.append(turn)
+                res = result_by_id.get(tc.get("id"))
+                if res is not None:
+                    out.append(res)
+                    consumed.add(id(res))
+        else:
+            out.append(m)
+    return out
+
+
 class KongLiteLLMModel(LiteLLMModel):
     """LiteLLMModel that post-processes the request so Kong's ai-proxy accepts it.
 
-    See ``_sanitize_for_kong`` for the two Strands-vs-Kong incompatibilities this fixes.
-    Verified end-to-end (streaming + multi-tool round-trips) against the live gateway.
+    See ``_sanitize_for_kong`` (system-message / empty-text fixes) and
+    ``_split_parallel_tool_calls`` (parallel tool-call fix) for the Strands-vs-Kong
+    incompatibilities this handles. Verified end-to-end against the live gateway.
     """
 
     def format_request(self, *args, **kwargs):
         request = super().format_request(*args, **kwargs)
-        request["messages"] = _sanitize_for_kong(request["messages"])
+        request["messages"] = _split_parallel_tool_calls(_sanitize_for_kong(request["messages"]))
         return request
 
 
-model = KongLiteLLMModel(
-    client_args={
-        "base_url": f"{KONG_BASE_URL}/v1",
-        "api_key": "unused",   # Kong injects Bedrock auth via IAM; a value is required by the client
-    },
-    # IMPORTANT (two Kong-specific requirements, both verified against the live gateway):
-    # 1. AUTH HEADER: Kong's key-auth needs the 'apikey' header. On the openai/ provider,
-    #    litellm forwards headers passed as the *completion param* `extra_headers` (NOT the
-    #    client-init `default_headers`, which does not reach the upstream). So put it in params.
-    # 2. MODEL NAME: the route's ai-proxy has allow_override=false and PINS the model, so the
-    #    client must send the EXACT pinned Bedrock model id — sending 'bedrock-claude' (or any
-    #    other) returns: "cannot use own model - must be: global.anthropic...". KONG_MODEL_ID
-    #    must therefore be the openai/-prefixed exact id.
-    model_id=KONG_MODEL_ID,
-    params={
-        "max_tokens": 5000,
-        "temperature": 0,
-        "extra_headers": {"apikey": KONG_API_KEY},
-    },
-)
+def _build_model(api_key: str = KONG_API_KEY) -> KongLiteLLMModel:
+    """Build a KongLiteLLMModel with the given API key for per-request consumer identity."""
+    return KongLiteLLMModel(
+        client_args={
+            "base_url": f"{KONG_BASE_URL}/v1",
+            "api_key": "unused",
+        },
+        model_id=KONG_MODEL_ID,
+        params={
+            "max_tokens": 5000,
+            "temperature": 0,
+            # Force ONE tool call per turn. Kong's ai-proxy (Operator 2.x / kong-gateway
+            # 3.x) does not correctly group the tool-results of a PARALLEL tool-call turn
+            # into a single Bedrock Converse user turn, so a multi-tool assistant turn ->
+            # "request body doesn't contain valid inputs". Sequential calls (1 toolUse ->
+            # 1 toolResult per turn) translate cleanly.
+            "parallel_tool_calls": False,
+            "extra_headers": {"apikey": api_key},
+        },
+    )
+
+
+# Default model (backward compatible — uses KONG_API_KEY env var)
+model = _build_model()
 
 # --- 4. MCP tool servers (same 3 services as the default agent, over SSE) -----
 # MCP servers are deployed by the default Loan Buddy (Module 3) in the `workshop`
@@ -237,11 +283,45 @@ def _open_mcp_clients():
 
 
 @app.post("/api/process_credit_application_with_upload")
-async def process_credit_application_with_upload(image_file: UploadFile = File(...)):
-    """Upload a loan-application image to S3, then process it with the Strands agent."""
+async def process_credit_application_with_upload(
+    request: Request,
+    image_file: UploadFile = File(...),
+    consumer_id: str = Form(default=None),
+    consumer_apikey: str = Form(default=None),
+):
+    """Upload a loan-application image to S3, then process it with the Strands agent.
+
+    Multi-tenant identity (sent as HTTP headers OR form fields):
+      X-Consumer-ID / consumer_id: Identity for Arize user.id (e.g., "fraud-detection-team")
+      X-Consumer-ApiKey / consumer_apikey: Kong API key (e.g., "fraud-team-key-456")
+    If not provided, falls back to deployment-level env vars (KONG_API_KEY, SERVICE_CONSUMER_ID).
+    """
     try:
-        logger.info("🔄 Starting credit application processing (Strands)...")
+        resolved_consumer = (
+            request.headers.get("x-consumer-id")
+            or consumer_id
+            or os.environ.get("SERVICE_CONSUMER_ID", "loan-strands-agent")
+        )
+        resolved_apikey = (
+            request.headers.get("x-consumer-apikey")
+            or consumer_apikey
+            or KONG_API_KEY
+        )
+        logger.info("🔄 Starting credit application processing (consumer=%s)...", resolved_consumer)
+
         image_bytes = await image_file.read()
+        # Normalize the upload to JPEG so it matches the image-processor MCP's
+        # `data:image/jpeg` content type. Bedrock's vision API rejects an image whose
+        # declared media type does not match the actual bytes (e.g. a PNG labeled as
+        # JPEG) with "request body doesn't contain valid inputs".
+        try:
+            from io import BytesIO
+            from PIL import Image
+            _buf = BytesIO()
+            Image.open(BytesIO(image_bytes)).convert("RGB").save(_buf, format="JPEG", quality=90)
+            image_bytes = _buf.getvalue()
+        except Exception as _e:  # pragma: no cover - fall back to original bytes
+            logger.warning("Could not normalize image to JPEG (%s); storing original bytes", _e)
         credit_app_image = encode_image(image_bytes)
         image_id = generate_256_bit_hex_key()
 
@@ -253,14 +333,16 @@ async def process_credit_application_with_upload(image_file: UploadFile = File(.
         clients, tools = _open_mcp_clients()
         logger.info("Available tools: %s", [getattr(t, "tool_name", getattr(t, "name", "?")) for t in tools])
 
+        request_model = _build_model(resolved_apikey) if resolved_apikey != KONG_API_KEY else model
+
         agent = Agent(
-            model=model,
+            model=request_model,
             system_prompt=SYSTEM_PROMPT,
             tools=tools,
-            # trace_attributes surface in Arize for filtering/sessions
             trace_attributes={
-                "session.id": "loan-buddy",
-                "tag.tags": ["loan-processing", "agent", "strands"],
+                "session.id": f"loan-application-{image_id}",
+                "user.id": resolved_consumer,
+                "tag.tags": ["loan-processing", "credit-underwriting", "strands", "production"],
             },
         )
 
@@ -307,6 +389,7 @@ Return a structured assessment with your recommendation."""
         return {
             "status": "COMPLETED",
             "image_id": image_id,
+            "consumer": resolved_consumer,
             "credit_assessment": assessment,
             "processing_note": "Strands agent via Kong->Bedrock; traced in Arize AX",
         }

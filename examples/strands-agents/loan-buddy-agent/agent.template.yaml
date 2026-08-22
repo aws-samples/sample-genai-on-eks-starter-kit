@@ -14,7 +14,7 @@ spec:
         app: loan-buddy-agent
     spec:
       serviceAccountName: loan-buddy-agent
-      {{#unless useBuildx}}
+      {{#unless multiArch}}
       nodeSelector:
         kubernetes.io/arch: {{{arch}}}
       {{/unless}}

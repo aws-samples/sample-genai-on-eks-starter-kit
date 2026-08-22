@@ -109,13 +109,18 @@ export async function install() {
     throw new Error("terraform did not return ecr_repository_url as a string — check the apply output above");
   }
 
-  // 2. Build + push a MULTI-ARCH image (amd64 + arm64) so the pod runs on any node.
-  //    The v2 cluster has mixed-arch nodes (Graviton arm64 + x86 amd64). A single-arch
-  //    image causes "no match for platform in manifest" -> ImagePullBackOff when the
-  //    pod lands on the other arch. buildx builds both and pushes a manifest list.
+  // 2. Build + push a NATIVE single-arch image (matches the build host's own arch).
+  //    The workshop cluster has mixed-arch nodes (Graviton arm64 + x86 amd64). Building a
+  //    multi-arch manifest on the Code Editor would require QEMU emulation of the FOREIGN
+  //    arch (the Code Editor is arm64) — which is slow and fragile for the ML deps and
+  //    fails outright without binfmt registered. Instead we build ONLY the host's native
+  //    arch (fast, no emulation) and pin the pod to matching-arch nodes via a nodeSelector
+  //    (rendered below), which avoids "no match for platform in manifest" ImagePullBackOff.
+  const unameM = (await $`uname -m`).stdout.trim();
+  const arch = unameM === "aarch64" || unameM === "arm64" ? "arm64" : "amd64";
   const registry = ecrUrl.substring(0, ecrUrl.indexOf("/"));
   await $`aws ecr get-login-password --region ${REGION} | docker login --username AWS --password-stdin ${registry}`;
-  await $`docker buildx build --platform linux/amd64,linux/arm64 -t ${ecrUrl}:latest --push ${DIR}`;
+  await $`docker buildx build --platform linux/${arch} -t ${ecrUrl}:latest --push ${DIR}`;
 
   // 3. Ensure namespace (idempotent).
   await $`kubectl create namespace strands-agents --dry-run=client -o yaml | kubectl apply -f -`;
@@ -171,11 +176,12 @@ export async function install() {
   const agentTemplate = handlebars.compile(fs.readFileSync(agentTemplatePath, "utf8"));
   const envCfg = config.examples["strands-agents"]["loan-buddy-agent"].env;
   const agentVars = {
-    // We build a MULTI-ARCH image, so the pod must NOT be pinned to one arch.
-    // The template renders the arch nodeSelector only under {{#unless useBuildx}},
-    // so useBuildx:true => no nodeSelector => schedules on amd64 OR arm64 nodes.
-    useBuildx: true,
-    arch: "multi",
+    // We build a NATIVE single-arch image (see step 2), so the pod MUST be pinned to
+    // matching-arch nodes. The template renders the arch nodeSelector under
+    // {{#unless multiArch}}, so multiArch:false => nodeSelector kubernetes.io/arch=<arch>
+    // => the pod only schedules onto nodes of the arch we actually built.
+    multiArch: false,
+    arch,
     IMAGE: `${ecrUrl}:latest`,
     KONG_BASE_URL,
     KONG_API_KEY: process.env.LOAN_STRANDS_KONG_KEY || "loan-strands-key-123",
