@@ -146,7 +146,11 @@ async def extract_credit_application_data(image_id: str) -> str:
 
         # Vision call via Kong AI Gateway -> Bedrock Converse (native pass-through)
         extracted_content = _kong_vision(extraction_system_prompt, user_prompt, base64_image)
-        logger.info(f"Extracted credit application data: {extracted_content}")
+        # Do NOT log the extracted content at INFO — it contains applicant PII
+        # (name, email, SSN last-4, income, address). Log only a safe summary; the
+        # full content stays at DEBUG for troubleshooting.
+        logger.info(f"Extracted credit application data ({len(extracted_content)} chars)")
+        logger.debug(f"Extracted credit application data: {extracted_content}")
 
         # Validate JSON response
         try:
@@ -244,7 +248,9 @@ async def validate_document_authenticity(image_id: str) -> str:
 
         # Vision call via Kong AI Gateway -> Bedrock Converse (native pass-through)
         validation_content = _kong_vision(validation_system_prompt, user_prompt, base64_image)
-        logger.info(f"Document validation results: {validation_content}")
+        # Summary only at INFO (the content may echo applicant details); full at DEBUG.
+        logger.info(f"Document validation complete ({len(validation_content)} chars)")
+        logger.debug(f"Document validation results: {validation_content}")
 
         # Validate JSON response
         try:
