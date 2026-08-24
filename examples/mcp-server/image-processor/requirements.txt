@@ -1,0 +1,9 @@
+# Track B image-processor MCP — Kong-native vision (no openai/langchain/litellm)
+mcp==1.28.1
+fastapi
+uvicorn[standard]
+pydantic
+Pillow
+boto3
+botocore
+python-multipart

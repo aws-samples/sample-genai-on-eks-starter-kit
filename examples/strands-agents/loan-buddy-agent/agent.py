@@ -197,7 +197,13 @@ class KongLiteLLMModel(LiteLLMModel):
 
     See ``_sanitize_for_kong`` (system-message / empty-text fixes) and
     ``_split_parallel_tool_calls`` (parallel tool-call fix) for the Strands-vs-Kong
-    incompatibilities this handles. Verified end-to-end against the live gateway.
+    incompatibilities this handles.
+
+    Validation: the ``_sanitize_for_kong`` (header/JPEG/system-message) path was
+    confirmed live earlier. The ``_split_parallel_tool_calls`` path was
+    additionally exercised end-to-end against the live Kong -> Bedrock gateway on a
+    fresh event (2026-08-24): loan applications processed to completion through
+    multi-tool cycles that include parallel tool calls in a single assistant turn.
     """
 
     def format_request(self, *args, **kwargs):

@@ -22,22 +22,10 @@ locals {
   namespace = "strands-agents"
   full_name = "${var.name}-${local.namespace}-${local.app}"
 }
-resource "aws_ecr_repository" "this" {
-  name                 = local.full_name
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  encryption_configuration {
-    encryption_type = "KMS"
-  }
-}
-output "ecr_repository_url" {
-  value = aws_ecr_repository.this.repository_url
-}
+# NOTE: No per-participant ECR repo. The agent image is pre-built multi-arch and
+# published to the shared public registry (public.ecr.aws/agentic-ai-platforms-on-k8s),
+# then pulled at deploy time — matching the calculator-agent / calculator examples.
+# This terraform now only provisions the S3 Pod Identity the agent needs.
 
 # The Strands Loan Buddy agent reaches Bedrock THROUGH Kong (ai-proxy), so it
 # does NOT need Bedrock IAM. It DOES need S3 (to store/read the uploaded loan

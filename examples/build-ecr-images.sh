@@ -17,7 +17,9 @@ GIT_SHA=$(git -C "$SCRIPT_DIR" rev-parse --short=8 HEAD)
 # while build_context provides the files (useful for shared source code).
 EXAMPLES=(
     "mcp-server/calculator:mcp-server-calculator"
+    "mcp-server/image-processor:mcp-server-image-processor"
     "strands-agents/calculator-agent:strands-agents-calculator-agent"
+    "strands-agents/loan-buddy-agent:strands-agents-loan-buddy-agent"
     "agno/calculator-agent:agno-calculator-agent"
     "openclaw/shared:openclaw-bridge-server"
     "openclaw/shared:openclaw-devops-agent:openclaw/devops-agent"
