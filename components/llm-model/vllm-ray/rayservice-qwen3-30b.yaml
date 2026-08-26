@@ -1,0 +1,154 @@
+# RayService: qwen3-30b-instruct-fp8 served via Ray Serve LLM (build_openai_app) with autoscaling.
+# Runs side-by-side with the fixed-replica vLLM Deployment of the same model.
+# Image is pre-built on public ECR (ray[llm] + vllm baked in) so cold starts are fast.
+# Requires: KubeRay operator, GPU Karpenter nodepool (g6e), EFS RWX PVC "huggingface-cache", secret "hf-token".
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: qwen3-ray
+  namespace: vllm
+spec:
+  serveConfigV2: |
+    applications:
+      - name: qwen3
+        import_path: ray.serve.llm:build_openai_app
+        route_prefix: "/"
+        args:
+          llm_configs:
+            - model_loading_config:
+                model_id: qwen3-30b-instruct-fp8-ray
+                model_source: Qwen/Qwen3-30B-A3B-Instruct-2507-FP8
+              engine_kwargs:
+                max_model_len: 32768
+                gpu_memory_utilization: 0.90
+                trust_remote_code: true
+                enable_chunked_prefill: true
+                enable_auto_tool_choice: true
+                tool_call_parser: hermes
+              deployment_config:
+                autoscaling_config:
+                  min_replicas: 1
+                  max_replicas: 2
+                  target_ongoing_requests: 2
+                max_ongoing_requests: 5
+  rayClusterConfig:
+    rayVersion: '2.56.1'
+    enableInTreeAutoscaling: true
+    headGroupSpec:
+      rayStartParams: {}
+      template:
+        metadata:
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+        spec:
+          enableServiceLinks: false
+          # CUDA image is amd64-only; keep the head off arm64 CPU nodes (r7g) to avoid exec-format errors.
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          containers:
+          - name: ray-head
+            image: public.ecr.aws/jalawala/ray-vllm:2.56.1-vllm-qwen3
+            imagePullPolicy: Always
+            command: ["/bin/bash", "-c"]
+            args:
+            - |
+              ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 --num-cpus=1 --num-gpus=0 --metrics-export-port=8080 --block --dashboard-agent-listen-port=52365 --no-monitor
+            lifecycle:
+              preStop:
+                exec: { command: ["/bin/sh", "-c", "ray stop"] }
+            ports:
+            - { containerPort: 6379, name: gcs }
+            - { containerPort: 8265, name: dashboard }
+            - { containerPort: 10001, name: client }
+            - { containerPort: 8000, name: serve }
+            - { containerPort: 52365, name: dashboard-agent }
+            - { containerPort: 8080, name: metrics }
+            - { containerPort: 44217, name: as-metrics }    # autoscaler metrics (for the Ray PodMonitor)
+            - { containerPort: 44227, name: dash-metrics }  # dashboard metrics (for the Ray PodMonitor)
+            resources:
+              # Head runs GCS + raylet + dashboard + autoscaler sidecar; on a 2-vCPU node the raylet
+              # times out reaching GCS during startup ("Deadline Exceeded"). Request enough to land on >=4 vCPU.
+              requests: { cpu: 3, memory: 8Gi }
+              limits: { cpu: 4, memory: 12Gi }
+            env:
+            - { name: RAY_SERVE_HTTP_HOST, value: "0.0.0.0" }
+            - { name: HF_HOME, value: "/home/ray/.cache/huggingface" }
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom: { secretKeyRef: { name: hf-token, key: token } }
+            # Liveness checks the RAYLET only (via the dashboard-agent healthz), NOT the dashboard UI on
+            # 8265 — the Ray dashboard can be flaky (NodeHead module) and must not trigger head restarts.
+            # timeoutSeconds must be generous: `ray health-check`/curl can take >3s on a busy head, and a
+            # 3s timeout caused a probe-timeout -> liveness-kill -> GCS-churn restart cascade.
+            livenessProbe:
+              exec:
+                command: ["bash", "-c", "curl -sf http://localhost:52365/api/local_raylet_healthz | grep -q success"]
+              initialDelaySeconds: 60
+              periodSeconds: 15
+              timeoutSeconds: 10
+              failureThreshold: 10
+            readinessProbe:
+              exec:
+                command: ["bash", "-c", "ray health-check --address 127.0.0.1:6379 > /dev/null 2>&1"]
+              initialDelaySeconds: 30
+              periodSeconds: 15
+              timeoutSeconds: 10
+              failureThreshold: 10
+          # Head runs the Serve controller/ingress/autoscaler only — the model weights load in the
+          # worker replica, so the head does NOT mount the EFS weight cache.
+    workerGroupSpecs:
+    - replicas: 1
+      minReplicas: 1
+      maxReplicas: 2
+      groupName: gpu-group
+      rayStartParams: {}
+      template:
+        metadata:
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+        spec:
+          enableServiceLinks: false
+          containers:
+          - name: ray-worker
+            image: public.ecr.aws/jalawala/ray-vllm:2.56.1-vllm-qwen3
+            imagePullPolicy: Always
+            command: ["/bin/bash", "-c"]
+            args:
+            - |
+              ray start --address=${RAY_ADDRESS:-${FQ_RAY_IP}:6379} --metrics-export-port=8080 --block --num-cpus=2 --num-gpus=1 --no-monitor
+            lifecycle:
+              preStop:
+                exec: { command: ["/bin/sh", "-c", "ray stop"] }
+            resources:
+              requests: { cpu: 2, memory: 20Gi, nvidia.com/gpu: 1 }
+              limits: { cpu: 3, memory: 22Gi, nvidia.com/gpu: 1 }
+            env:
+            - { name: CC, value: "/usr/bin/gcc" }   # Triton JIT needs a C compiler
+            - { name: VLLM_USE_FLASHINFER_SAMPLER, value: "0" }
+            - { name: HF_HOME, value: "/home/ray/.cache/huggingface" }
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom: { secretKeyRef: { name: hf-token, key: token } }
+            livenessProbe:
+              exec: { command: ["bash", "-c", "ray status > /dev/null 2>&1"] }
+              initialDelaySeconds: 60
+              periodSeconds: 15
+              timeoutSeconds: 10
+              failureThreshold: 10
+            readinessProbe:
+              exec: { command: ["bash", "-c", "ray status > /dev/null 2>&1"] }
+              initialDelaySeconds: 30
+              periodSeconds: 15
+              timeoutSeconds: 10
+              failureThreshold: 10
+            volumeMounts:
+            - { name: hf-cache, mountPath: /home/ray/.cache/huggingface }
+            - { name: shm, mountPath: /dev/shm }
+          nodeSelector:
+            kubernetes.io/arch: amd64
+            eks.amazonaws.com/instance-family: g6e
+          tolerations:
+          - { key: "nvidia.com/gpu", operator: "Exists", effect: "NoSchedule" }
+          volumes:
+          - name: hf-cache
+            persistentVolumeClaim: { claimName: huggingface-cache }
+          - name: shm
+            emptyDir: { medium: Memory, sizeLimit: 10Gi }
