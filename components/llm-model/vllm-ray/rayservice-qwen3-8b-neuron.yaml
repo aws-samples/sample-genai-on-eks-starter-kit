@@ -24,8 +24,8 @@ spec:
             kubernetes.io/arch: amd64
           containers:
           - name: ray-head
-            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-neuron:latest
-            imagePullPolicy: Always
+            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-neuron:sha-b66faee
+            imagePullPolicy: IfNotPresent
             command: ["/bin/bash","-lc"]
             args:
             - |
@@ -85,8 +85,8 @@ spec:
           - { key: "aws.amazon.com/neuron", operator: "Exists", effect: "NoSchedule" }
           containers:
           - name: ray-worker
-            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-neuron:latest
-            imagePullPolicy: Always
+            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-neuron:sha-b66faee
+            imagePullPolicy: IfNotPresent
             command: ["/bin/bash","-lc"]
             args:
             - |
@@ -99,7 +99,11 @@ spec:
             - { name: HF_HUB_CACHE, value: "/root/.cache/huggingface/hub" }
             resources:
               requests: { cpu: 3, memory: 12Gi, aws.amazon.com/neuroncore: 2 }
-              limits: { memory: 20Gi, aws.amazon.com/neuroncore: 2 }
+              # inf2.xlarge has 16 GiB total (allocatable is lower after system reservation),
+              # and the shm emptyDir below (medium: Memory) also counts toward pod memory, so a
+              # 20Gi limit could not fit / was OOM-fragile. Right-sized to 12Gi to match the request
+              # and fit the node. NOTE: validate under sustained load before merging to main.
+              limits: { memory: 12Gi, aws.amazon.com/neuroncore: 2 }
             livenessProbe:
               exec:
                 command: ["bash","-c","python3 -c \"import urllib.request,sys; sys.exit(0 if b'success' in urllib.request.urlopen('http://localhost:52365/api/local_raylet_healthz',timeout=8).read() else 1)\""]
