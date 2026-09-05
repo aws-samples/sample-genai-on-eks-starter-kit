@@ -28,7 +28,7 @@ ENV NLTK_DATA=/opt/nltk_data
 RUN python -m nltk.downloader -d /opt/nltk_data punkt
 
 # Copy the rest over (including entrypoint script)
-# We use a .dockerignore to keep unwanted files exluded
+# We use a .dockerignore to keep unwanted files excluded
 COPY . .
 
 # Make entrypoint script executable

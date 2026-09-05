@@ -33,7 +33,7 @@ Access Open WebUI at `openwebui.<DOMAIN>` and then:
    - Check [Chat Features Overview](https://docs.openwebui.com/features/chat-features) on how to start using the chat features
 
    - Check [Tutorial: Configuring RAG with Open WebUI Documentation](https://docs.openwebui.com/tutorials/tips/rag-tutorial) on how to start using the document RAG feature
-   - Select and explore `Strands Agents - Calculator Agent` (code available at `examples/strands-agents/calculator-agent`), this is a basic agent with memory so you can continue the calculation and/or reset the caculator
+   - Select and explore `Strands Agents - Calculator Agent` (code available at `examples/strands-agents/calculator-agent`), this is a basic agent with memory so you can continue the calculation and/or reset the calculator
 
 2. Access LiteLLM dashboard at `litellm.<DOMAIN>/ui` (check `LITELLM_UI_USERNAME` and `LITELLM_UI_PASSWORD` on `.env.local` for Username and Password):
    - Check [LiteLLM Proxy Server (LLM Gateway)](https://docs.litellm.ai/docs/simple_proxy) to explore some of the features
