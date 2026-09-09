@@ -240,13 +240,13 @@ This command will:
 
 ### How the config files work?
 
-`.env` and `config.json` will be loaded first. Then, the configs will be merged/overriden with the values from `.env.local` and `config.local.json` if exist.
+`.env` and `config.json` will be loaded first. Then, the configs will be merged/overridden with the values from `.env.local` and `config.local.json` if exist.
 
 ### How can I use this starter kit without having a Route 53 hosted zone?
 
 With a domain name already configured with a Route 53 hosted zone, a single shared ALB with HTTPS is used together with a wildcard ACM cert and Route 53 DNS records to expose all public facing services e.g. litellm.<DOMAIN> and openwebui.<DOMAIN>.
 
-Alternatively, when the `DOMAIN` filed on `.env` (or `.env.local`) is empty, mulitple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
+Alternatively, when the `DOMAIN` field on `.env` (or `.env.local`) is empty, multiple ALBs with HTTP will be created for each public facing service. In this case, only one service requiring the Nginx Ingress basic auth (e.g. Milvus and Qdrant) can be exposed.
 
 ### How can I configure and update the LiteLLM proxy model list?
 

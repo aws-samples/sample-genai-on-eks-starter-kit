@@ -11,9 +11,9 @@ Several AWS services and Kubernetes components are being provisioned by the main
 - One VPC with private/public subnets and single NAT gateway
 - One EKS Auto Mode cluster
 - One EFS file system for caching Hugging Face models and etc
-- One ACM wildcard certificate for the provided domin
+- One ACM wildcard certificate for the provided domain
 
-### Kubenertes Components
+### Kubernetes Components
 
 - Setup Ingress to provision the shared ALB
 - Setup ExternalDNS to manage the DNS records for the public facing services
