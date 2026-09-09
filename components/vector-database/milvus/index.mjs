@@ -26,6 +26,9 @@ export async function install() {
   const tfOutput = await utils.terraform.output(DIR, {});
   const milvusBucketName = tfOutput.milvus_bucket_name.value;
 
+  await $`helm repo add milvus https://zilliztech.github.io/milvus-helm`;
+  await $`helm repo update`;
+
   const valuesTemplatePath = path.join(DIR, "values.template.yaml");
   const valuesRenderedPath = path.join(DIR, "values.rendered.yaml");
   const valuesTemplateString = fs.readFileSync(valuesTemplatePath, "utf8");
@@ -33,7 +36,7 @@ export async function install() {
   const valuesVars = {
     DOMAIN: process.env.DOMAIN,
     MILVUS_BUCKET_NAME: milvusBucketName,
-    AWS_REGION: process.env.AWS_REGION,
+    AWS_REGION: process.env.AWS_REGION || process.env.REGION,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install milvus milvus/milvus --namespace milvus --create-namespace -f ${valuesRenderedPath}`;
