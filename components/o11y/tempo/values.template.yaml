@@ -1,0 +1,232 @@
+# Grafana Tempo (tempo-distributed) — trace store for the unified dashboard.
+#
+# Receives OTLP spans from Beyla, stores blocks in S3, and runs the
+# metrics-generator to emit service-graph + span (RED) metrics into the
+# kube-prometheus-stack Prometheus via remote_write. Grafana registers Tempo as
+# a datasource and uses trace_id data links to jump from a slow TTFT span to the
+# Langfuse LLM observation.
+
+# Single shared ServiceAccount so the Pod Identity association in main.tf grants
+# every Tempo component S3 access (no static keys).
+serviceAccount:
+  create: true
+  name: tempo
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: "{{TEMPO_BUCKET_NAME}}"
+      region: "{{AWS_REGION}}"
+      endpoint: "s3.{{AWS_REGION}}.amazonaws.com"
+      # access_key/secret_key intentionally omitted — credentials come from the
+      # EKS Pod Identity association (see main.tf).
+
+# OTLP receivers (Beyla exports OTLP/HTTP on 4318; gRPC 4317 kept for SDKs).
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true
+
+# metrics-generator: turns Beyla's spans into service-graph metrics and
+# remote-writes them to the kube-prometheus-stack Prometheus. Beyla already
+# exports the span RED family (traces_spanmetrics_*) and a service-level service
+# graph on its own, so the generator is kept for the one thing Beyla cannot do:
+# pair the client span and the server span of the same request and emit the
+# edge with BOTH endpoints' identity (client_k8s_pod_name → server_k8s_pod_name,
+# and the node pair behind it). The traffic-dashboard's pod-level drill-down and
+# its cross-AZ share are built on those edges.
+metricsGenerator:
+  enabled: true
+  resources:
+    requests:
+      cpu: 200m
+      # 1.0 GiB RSS with the 10s / 10k-item edge store; ~2.3 GiB steady with
+      # ~60k live items in the store (2026-09-03) plus the pod-dimension series.
+      # The request has to say so or the pod lands on a 4 GiB spot node.
+      memory: 2Gi
+    limits:
+      memory: 4Gi
+  config:
+    # Spans whose start time is further than this in the past are not counted
+    # at all (metric "spans_discarded_total{reason=outside_metrics_ingestion_slack}").
+    # A Beyla span carries the request's start time and is exported after the
+    # request ends, so with the 30s default every request longer than ~25s —
+    # a reasoning-pool completion, a queued Neuron request — was dropped before
+    # pairing, and so was anything a busy node's Beyla exported late: 380 of
+    # 1,620 spans/s on 2026-09-03 (24%). 5m covers the longest completions plus
+    # export lag; the counts are stamped at processing time regardless.
+    metrics_ingestion_time_range_slack: 5m
+    registry:
+      # Beyla stamps source="beyla" on everything it exports. Without a source of
+      # our own the generator's traces_service_graph_* series would be
+      # indistinguishable from Beyla's, and every unqualified sum() over the
+      # family would double-count. All consumers (traffic-dashboard queries.ts,
+      # the Grafana dashboards) select on source explicitly.
+      external_labels:
+        source: tempo
+    storage:
+      remote_write:
+        # kube-prometheus-stack serves this Prometheus under the /prometheus
+        # route prefix (routePrefix in components/nvidia-platform/monitoring).
+        # Without it every push was answered 404 and nothing the generator
+        # produced ever reached Prometheus (found 2026-09-03).
+        - url: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/prometheus/api/v1/write
+          send_exemplars: true
+    processor:
+      service_graphs:
+        # Resource attributes Beyla sets on every span. With the client/server
+        # prefix each becomes two labels (client_k8s_pod_name /
+        # server_k8s_pod_name, …), so one series names the exact pod pair and
+        # the node pair — the node pair is what the dashboard resolves to AZs.
+        dimensions:
+          - k8s.namespace.name
+          - k8s.pod.name
+          - k8s.node.name
+        enable_client_server_prefix: true
+        # Edge pairing window. The edge is created when the first of the two
+        # spans (client or server) arrives and completed when its partner
+        # arrives; an edge still incomplete after `wait` expires and counts for
+        # neither side. Beyla closes both spans of a request within
+        # milliseconds of each other — the two ends see the same bytes — so the
+        # gap to bridge is export skew: the two spans come from two different
+        # nodes' Beyla pods, each batching on its own schedule (seconds), plus
+        # queueing on a busy GPU node. 60s is an order of magnitude above that
+        # and was verified on Kong → gpt-oss-120b pairs (same start second,
+        # 1.1s spans). A longer window costs store size linearly (below) and
+        # bought nothing measurable at 120s.
+        wait: 60s
+        # The store holds every incomplete edge for up to `wait`, and the
+        # incomplete stream here is large and structural, not a timing matter:
+        # ~1,100 edges/s expire unpaired (2026-09-03, once ingestion was fixed)
+        # — the inference-extension EPP's ~17/s per-pod /metrics polls, kubelet
+        # probes, calls to uninstrumented or external peers, and hops where the
+        # traceparent Beyla injects is not the span id it reports. With the 10k
+        # default the store overflowed continuously and real request pairs were
+        # dropped along with the noise; 200k still overflowed at wait=120s.
+        # Size: 1,100/s × 60s ≈ 66k live → 300k (4.5x headroom). Memory scales
+        # with live items (~2 GiB RSS at ~60k live), see resources above.
+        max_items: 300000
+        workers: 10
+        # The default buckets stop at 12.8s; LLM completions here run 5-30s.
+        histogram_buckets: [0.1, 0.25, 0.5, 1, 2, 4, 8, 16, 32, 64]
+
+# Generator processors for the (single) default tenant. Only service-graphs:
+# Beyla already exports traces_spanmetrics_* itself, and with remote_write now
+# actually reaching Prometheus a second span-metrics producer would duplicate
+# that family under the same metric names.
+overrides:
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+    ingestion:
+      # Live (still-assembling) traces the ingesters hold per tenant. Beyla makes
+      # a one-span trace out of every scrape and probe it sees — the
+      # inference-extension EPP alone polls each Neuron pod's /metrics ~17
+      # times a second — so with the 10k default the OTLP receiver was refusing
+      # more spans than it accepted (1,900 vs 1,700 per second, reason
+      # live_traces_exceeded, 2026-09-03), Beyla retried the refused batches
+      # and the metrics-generator never saw one span of most request pairs.
+      # ~2 KiB per live trace: 50k ≈ 100 MiB per ingester.
+      max_traces_per_user: 50000
+
+# gRPC message ceiling between Tempo components. The chart pins the server-side
+# receive limit to 4 MiB (Tempo's own default is 16 MiB), and a distributor →
+# ingester push of one Beyla batch — spans carry request headers and LLM routes
+# — regularly exceeds that: the distributor logged "received message after
+# decompression larger than max 4194304" and the OTLP receiver refused ~2,000
+# spans/s while accepting ~1,300 (2026-09-03). 32 MiB clears the 16 MiB the
+# gRPC client is allowed to send.
+server:
+  grpc_server_max_recv_msg_size: 33554432
+  grpc_server_max_send_msg_size: 33554432
+
+# The chart puts one liveness probe (/ready, 60s delay, 3 failures) on every
+# component, but the compactor answers 503 on /ready until its ring has been
+# stable for 1-5 minutes after start. After any ring churn (a crash loop, a
+# lost node) the probe killed it at ~90s and it never caught up (2026-09-02).
+# Tolerate 5 minutes before a liveness kill; readiness is untouched.
+tempo:
+  livenessProbe:
+    httpGet:
+      path: /ready
+      port: http-metrics
+    initialDelaySeconds: 60
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+# ------------------------------------------------------------------------------
+# Resources. The chart defaults are empty, so every Tempo pod was scheduled as if
+# it used nothing while the ingesters held ~2.8 GiB, compactor ~2 GiB and the
+# distributor / metrics-generator ~1.3 GiB each (12h peaks, 2026-09-02). That is
+# how they ended up co-located on 2 vCPU / 4 GiB spot nodes, thrashing on EBS
+# IOPS and failing probes. Requests ≈ steady state, limits ≈ 1.5-2x peak.
+# ------------------------------------------------------------------------------
+ingester:
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 4Gi
+
+distributor:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+compactor:
+  # Peaks at ~3.0 GiB per compaction cycle (4 x 270k-object vParquet4 blocks at
+  # once, 2026-09-02 evening traffic); a 3 GiB limit OOM-killed it 21 times in
+  # 2.5 h. Same 2x-peak rule as the others.
+  resources:
+    requests:
+      cpu: 300m
+      memory: 2Gi
+    limits:
+      memory: 6Gi
+
+querier:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+queryFrontend:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+memcached:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# Scrape Tempo's own metrics (distributor tempo_receiver_*_spans,
+# tempo_discarded_spans_total, metrics-generator processor edges / expired /
+# dropped_spans / spans_discarded_total). Without this the only way to see that
+# the service-graph pipeline is refusing or dropping spans is to exec into a pod
+# and read /metrics by hand (how the 2026-09-03 4 MiB gRPC / slack / store
+# overflow chain was found). kube-prometheus-stack picks up any ServiceMonitor
+# (serviceMonitorSelectorNilUsesHelmValues: false); the label is for clarity.
+metaMonitoring:
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+    interval: 30s

@@ -1,0 +1,79 @@
+# gpt-oss-120b (vLLM TP=4 on g6e L40S) behind Kong Konnect: /ai/gpt-oss-120b
+#
+# Same shape as /ai/glm-52 and the Neuron routes: one KongService per vLLM
+# pool, one KongRoute, and the single-upstream ai-proxy plugin pinning the
+# model so callers may omit "model" in the body. Added so the traffic
+# generator's load lane can push the same per-pool rate through Kong as it
+# does through LiteLLM (LOAD_GATEWAYS in traffic-generator.yaml); before this
+# the pool was reachable only through LiteLLM and vLLM-direct.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongService
+metadata:
+  name: gpt-oss-120b-service
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  name: gpt-oss-120b-service
+  host: gpt-oss-120b.vllm
+  port: 8000
+  protocol: http
+  # The pool queues under load (the load lane deliberately pushes it to the
+  # point where KEDA adds a replica); Kong's 60 s default would 504 first.
+  read_timeout: 180000
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongRoute
+metadata:
+  name: gpt-oss-120b-route
+  namespace: kong
+spec:
+  name: gpt-oss-120b-route
+  paths:
+    - /ai/gpt-oss-120b
+  serviceRef:
+    type: namespacedRef
+    namespacedRef:
+      name: gpt-oss-120b-service
+  strip_path: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ai-proxy-gpt-oss-120b
+  namespace: kong
+plugin: ai-proxy
+config:
+  route_type: llm/v1/chat
+  auth:
+    header_name: Authorization
+    header_value: Bearer fake-key
+  model:
+    provider: openai
+    name: gpt-oss-120b
+    options:
+      upstream_url: http://gpt-oss-120b.vllm:8000/v1/chat/completions
+  logging:
+    log_statistics: true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongPluginBinding
+metadata:
+  name: ai-proxy-gpt-oss-120b-binding
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  pluginRef:
+    kind: KongPlugin
+    name: ai-proxy-gpt-oss-120b
+  scope: OnlyTargets
+  targets:
+    routeRef:
+      group: configuration.konghq.com
+      kind: KongRoute
+      name: gpt-oss-120b-route

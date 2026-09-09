@@ -5,6 +5,11 @@ metadata:
   namespace: vllm
 spec:
   replicas: 1
+  # Recreate, not RollingUpdate: a surge replica of a multi-GPU pool needs a
+  # second multi-GPU node that Karpenter may not (and should not) provision;
+  # with RollingUpdate the new pod sits Pending while the old one keeps the GPUs.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: gpt-oss-120b
@@ -18,12 +23,17 @@ spec:
           type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
-        # {{{KARPENTER_PREFIX}}}/instance-family: g6e
-        {{{KARPENTER_PREFIX}}}/instance-category: p
-        {{{KARPENTER_PREFIX}}}/instance-generation: "5"
+        # MXFP4 weights are ~63GB: 4x L40S 48GB (g6e.12xlarge) holds them with
+        # room for KV cache, and g6e capacity is readily available — unlike the
+        # p5/p5en 8-GPU pools which frequently ICE in this region.
+        {{{KARPENTER_PREFIX}}}/instance-family: g6e
+        # {{{KARPENTER_PREFIX}}}/instance-category: p
+        # {{{KARPENTER_PREFIX}}}/instance-generation: "5"
       containers:
         - name: vllm
-          image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:gptoss
+          # v0.26.0 ships Marlin MXFP4 MoE for Ada (L40S); the old :gptoss tag
+          # only supported Hopper/Blackwell.
+          image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:v0.26.0
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -38,9 +48,17 @@ spec:
             - --served-model-name=gpt-oss-120b
             - --trust-remote-code
             - --gpu-memory-utilization=0.90
+            # Automatic Prefix Caching (APC) on explicitly: the cache-hit ratio is
+            # an SLI on the Token Factory dashboard, so it must not depend on
+            # vLLM's per-architecture default.
+            - --enable-prefix-caching
+            # Return usage.prompt_tokens_details.cached_tokens in every response so
+            # the gateway (LiteLLM litellm_input_cached_tokens_metric) can attribute
+            # cache hits to a tenant / prompt template. Off by default in vLLM.
+            - --enable-prompt-tokens-details
             - --max-model-len=32768 # 32K
             # - --max-model-len=131072 # 128K
-            - --tensor-parallel-size=8
+            - --tensor-parallel-size=4
             - --async-scheduling
           env:
             - name: HUGGING_FACE_HUB_TOKEN
@@ -53,9 +71,9 @@ spec:
               containerPort: 8000
           resources:
             requests:
-              nvidia.com/gpu: 8
+              nvidia.com/gpu: 4
             limits:
-              nvidia.com/gpu: 8
+              nvidia.com/gpu: 4
           volumeMounts:
             - name: huggingface-cache
               mountPath: /root/.cache/huggingface

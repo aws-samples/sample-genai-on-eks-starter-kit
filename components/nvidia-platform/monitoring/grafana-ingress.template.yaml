@@ -1,0 +1,25 @@
+# Expose Grafana on the shared internet-facing ALB via host-header routing
+# (same pattern as the langfuse ingress). external-dns picks up the host and
+# creates the Route53 record. Grafana itself serves from the /grafana
+# sub-path (grafana.ini root_url), so the whole host routes to the service.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-alb
+  namespace: monitoring
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: shared-internet-facing-alb
+  rules:
+    - host: grafana.{{DOMAIN}}
+      http:
+        paths:
+          - backend:
+              service:
+                name: prometheus-grafana
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix

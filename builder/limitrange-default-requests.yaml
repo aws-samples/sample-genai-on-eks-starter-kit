@@ -1,0 +1,20 @@
+# Safety net: any container deployed without CPU/memory requests gets these
+# defaults so the scheduler and Karpenter account for it. No default *limit*
+# is set on purpose (limits stay the component's decision). Existing pods are
+# only affected when they are recreated.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-requests
+spec:
+  limits:
+  - type: Container
+    defaultRequest:
+      cpu: 50m
+      memory: 128Mi
+# Apply to every platform namespace (not kube-system):
+#   for ns in beyla cert-manager external-secrets kgateway-system monitoring tempo \
+#             openbao openchoreo-control-plane openwebui milvus kong kong-system keda \
+#             litellm langfuse bifrost gpu-operator adot traffic-dashboard keycloak thunder; do
+#     kubectl -n $ns apply -f builder/limitrange-default-requests.yaml
+#   done

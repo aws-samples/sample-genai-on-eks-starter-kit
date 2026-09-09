@@ -41,12 +41,28 @@
       "name": "Observability",
       "components": [
         { "dir": "langfuse", "name": "Langfuse" },
+        { "dir": "tempo", "name": "Tempo (trace store)" },
+        { "dir": "beyla", "name": "Beyla (eBPF auto-instrumentation)" },
+        { "dir": "neuron-monitor", "name": "Neuron Monitor (Inferentia / Trainium telemetry)" },
+        { "dir": "network-observability", "name": "Network Flow Monitor (AWS)" },
         { "dir": "mlflow", "name": "MLflow" },
         { "dir": "phoenix", "name": "Phoenix" },
         { "dir": "arize", "name": "Arize AX (SaaS) — workshop companion" }
       ]
     },
-    { "dir": "gui-app", "name": "GUI App", "components": [{ "dir": "openwebui", "name": "Open WebUI" }] },
+    {
+      "dir": "auth",
+      "name": "Authentication",
+      "components": [{ "dir": "keycloak", "name": "Keycloak (OIDC identity provider)" }]
+    },
+    {
+      "dir": "gui-app",
+      "name": "GUI App",
+      "components": [
+        { "dir": "openwebui", "name": "Open WebUI" },
+        { "dir": "traffic-dashboard", "name": "Traffic Dashboard (Agentic Traffic Studio)" }
+      ]
+    },
     {
       "dir": "vector-database",
       "name": "Vector Database",

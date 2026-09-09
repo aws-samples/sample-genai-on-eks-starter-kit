@@ -1,0 +1,20 @@
+# agentgateway controller (Gateway API Inference Extension data plane).
+#
+# kgateway v2.3.x removed InferencePool support from its Envoy data plane
+# ("Removes deprecated Gateway API Inference Extension support, which had
+# already moved to agentgateway", kgateway v2.3.0 release notes), so the
+# Inference Extension runs on a second GatewayClass, `agentgateway`, installed
+# next to the existing kgateway v2.3.1 controller. Both controllers reconcile
+# their own GatewayClass only; the kgateway `ai-gateway` is untouched.
+#
+# Charts: oci://ghcr.io/agentgateway/charts/agentgateway-crds and
+#         oci://ghcr.io/agentgateway/charts/agentgateway (1.5.0, built against
+#         gateway-api-inference-extension v1.5.0 -> install those CRDs first).
+inferenceExtension:
+  enabled: true          # AGW_ENABLE_INFER_EXT=true + RBAC for inferencepools
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi

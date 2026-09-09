@@ -1,0 +1,98 @@
+# Load-balanced chat route: /ai/chat
+#
+# The per-model routes (/ai/qwen3-8b, /ai/deepseek-r1) pin one model each via
+# the single-upstream ai-proxy plugin, so no balancing happens between them.
+# This route uses ai-proxy-advanced, which carries its own target list and
+# balancer, spreading llm/v1/chat traffic round-robin across both vLLM models.
+#
+# The KongService below is a dummy: ai-proxy-advanced overrides the upstream
+# with its per-target upstream_url, but Konnect still requires every route to
+# belong to a service.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongService
+metadata:
+  name: ai-lb-service
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  name: ai-lb-service
+  host: localhost
+  port: 8000
+  protocol: http
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongRoute
+metadata:
+  name: ai-chat-lb-route
+  namespace: kong
+spec:
+  name: ai-chat-lb-route
+  paths:
+    - /ai/chat
+  serviceRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-lb-service
+  strip_path: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ai-proxy-advanced-chat
+  namespace: kong
+plugin: ai-proxy-advanced
+config:
+  balancer:
+    algorithm: round-robin
+    retries: 3
+    failover_criteria:
+      - error
+      - timeout
+  targets:
+    - route_type: llm/v1/chat
+      weight: 50
+      auth:
+        header_name: Authorization
+        header_value: Bearer fake-key
+      model:
+        provider: openai
+        name: qwen3-8b-neuron
+        options:
+          upstream_url: http://qwen3-8b-neuron.vllm:8000/v1/chat/completions
+      logging:
+        log_statistics: true
+    - route_type: llm/v1/chat
+      weight: 50
+      auth:
+        header_name: Authorization
+        header_value: Bearer fake-key
+      model:
+        provider: openai
+        name: deepseek-r1-qwen3-8b-neuron
+        options:
+          upstream_url: http://deepseek-r1-qwen3-8b-neuron.vllm:8000/v1/chat/completions
+      logging:
+        log_statistics: true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongPluginBinding
+metadata:
+  name: ai-proxy-advanced-chat-binding
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  pluginRef:
+    kind: KongPlugin
+    name: ai-proxy-advanced-chat
+  scope: OnlyTargets
+  targets:
+    routeRef:
+      group: configuration.konghq.com
+      kind: KongRoute
+      name: ai-chat-lb-route

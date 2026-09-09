@@ -1,5 +1,8 @@
 image:
-  tag: main-v1.81.3-stable
+  # v1.98.0 (Aug 2026 release line; "-stable" suffixed tags stopped at 1.83).
+  # Needed for litellm_input_cached_tokens_metric (provider-side cached prompt
+  # tokens per team / key / custom metadata label) — absent before ~v1.9x.
+  tag: v1.98.0
 
 global:
   security:
@@ -14,10 +17,26 @@ image:
 
 resources:
   requests:
-    cpu: 1 
+    cpu: 4
     memory: 2Gi
   limits:
     memory: 2Gi
+
+# Keep the proxy replicas on different nodes. On 2026-09-02 one replica sat on a
+# starved 4 GiB spot node and flapped Ready; every time it rejoined the Service
+# half of the traffic through LiteLLM hung and the whole platform's token
+# throughput collapsed. Preferred (not required) so a single-node cluster still
+# schedules.
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          topologyKey: kubernetes.io/hostname
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: litellm
+              app.kubernetes.io/instance: litellm
 
 redis:
   enabled: true
@@ -27,12 +46,15 @@ redis:
     tag: 8.2.1-debian-12-r0
     pullPolicy: IfNotPresent
   master:
-    resources: 
+    # 4x the chart default: 256Mi left Postgres/Redis unable to answer
+    # pg_isready/redis-cli probes within 5s under node pressure, which put
+    # the pods into a liveness restart loop and took the gateway down.
+    resources:
       requests:
         cpu: 125m
-        memory: 256Mi
+        memory: 1Gi
       limits:
-        memory: 256Mi
+        memory: 1Gi
 
 postgresql:
   image:
@@ -41,15 +63,35 @@ postgresql:
     tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
   primary:
-    resources: 
+    # 4x the chart default: 256Mi left Postgres/Redis unable to answer
+    # pg_isready/redis-cli probes within 5s under node pressure, which put
+    # the pods into a liveness restart loop and took the gateway down.
+    resources:
       requests:
         cpu: 125m
-        memory: 256Mi
+        memory: 1Gi
       limits:
-        memory: 256Mi
+        memory: 1Gi
+    # 50Gi: the chart default 8Gi filled up on 2026-09-03 (7.76GiB used) and
+    # Postgres crash-looped in WAL recovery ("No space left on device"), which
+    # took LiteLLM to 0/2. store_prompts_in_spend_logs writes every prompt
+    # (the RAG/review/agent templates are 500-1,000 tokens) per request, so
+    # the spend-log table grows with the traffic generator's rate. The PVC
+    # was expanded in place (StorageClass ebs allows expansion); this keeps
+    # the template in sync for a fresh install.
+    persistence:
+      size: 50Gi
 
 serviceAccount:
   create: true
+
+# Prometheus scraping is done by ./servicemonitor.yaml (applied by index.mjs),
+# not the chart's ServiceMonitor: /metrics/ needs a bearer token since v1.9x and
+# the chart cannot attach one. Exposes litellm_* request/token/cached-token
+# counters with team / api_key_alias / end_user labels — the tenant axis of the
+# cache-hit SLI.
+serviceMonitor:
+  enabled: false
 
 masterkey: {{{LITELLM_API_KEY}}}
 envVars:
@@ -76,6 +118,12 @@ envVars:
   PHOENIX_COLLECTOR_ENDPOINT: http://phoenix-svc.phoenix:4317/v1/traces
   PHOENIX_COLLECTOR_HTTP_ENDPOINT: http://phoenix-svc.phoenix:6006/v1/traces
   {{/if}}
+  {{#if @root.integration.o11y.tempo}}
+  # Export gateway spans to Tempo via OTLP/HTTP so the LiteLLM hop joins the
+  # same trace_id as the Beyla eBPF spans and the Langfuse observation.
+  OTEL_EXPORTER: otlp_http
+  OTEL_ENDPOINT: http://tempo-distributor.tempo.svc.cluster.local:4318/v1/traces
+  {{/if}}
 
 ingress:
   enabled: true
@@ -98,6 +146,15 @@ proxy_config:
     master_key: os.environ/PROXY_MASTER_KEY
     store_model_in_db: true
     store_prompts_in_spend_logs: true
+    # Open-Sora is not OpenAI-compatible (custom /generate + /status/{id} +
+    # /videos/{id}.mp4 API), so it rides through as a pass-through endpoint
+    # instead of a model_list entry.
+    pass_through_endpoints:
+      - path: /sora
+        target: http://opensora-v2.vllm:8000
+        include_subpath: true
+        forward_headers: true
+        timeout: 300
   litellm_settings:
     drop_params: true
     {{#with integration.o11y.config}}
@@ -113,6 +170,15 @@ proxy_config:
     {{/with}}
     redact_user_api_key_info: true
     turn_off_message_logging: false
+    # Prometheus (free in OSS; only managed-batch metrics are enterprise).
+    # Custom metadata labels turn request metadata.* into metric labels so the
+    # prefix-cache hit ratio can be split per tenant and per prompt template
+    # version (KCD Token Factory: "hit rate as an SLI, by node/tenant/template").
+    custom_prometheus_metadata_labels:
+      - metadata.tenant
+      - metadata.prompt_template
+      - metadata.prompt_template_version
+    enable_end_user_cost_tracking_prometheus_only: true
   model_list:
     # Bedrock LLM Models
     {{#each integration.bedrock.llm}}

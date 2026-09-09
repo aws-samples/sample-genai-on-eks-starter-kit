@@ -1,0 +1,188 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: solar-open2-250b
+  namespace: vllm
+spec:
+  replicas: 1
+  # Recreate, not RollingUpdate: a surge replica of an 8-GPU pool needs a second
+  # 8-GPU node that Karpenter may not (and should not) provision; with
+  # RollingUpdate the new pod sits Pending while the old one keeps the GPUs.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: solar-open2-250b
+  template:
+    metadata:
+      labels:
+        app: solar-open2-250b
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      # Solar-Open2-250B (upstage/Solar-Open2-250B) is a 250B-A15B hybrid-attention
+      # MoE shipped in BF16: ~500GB of weights (94 safetensors shards), so the
+      # node needs >= 8 x 141GB. Upstage lists 4x H200 as the minimum and 8x H200
+      # as the recommendation; the recipe (TP=8 + expert parallel) targets 8 GPUs.
+      # Only 12 of the 48 layers keep a KV cache (NoPE hybrid attention), so the
+      # 128K max-model-len below costs little memory. Same node families as
+      # glm-52-fp8 (p6-b200 / p5en / p5e), Spot first with On-Demand fallback.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: {{{KARPENTER_PREFIX}}}/instance-family
+                    operator: In
+                    values: ["p5en", "p5e", "p6-b200"]
+                  - key: karpenter.sh/capacity-type
+                    operator: In
+                    values: ["spot", "on-demand"]
+      containers:
+        - name: vllm
+          # Upstage's vLLM fork (v0.22.0-solar-open2, CUDA 12.9): the SolarOpen2
+          # architecture, its reasoning / tool-call parsers, the triton MoE
+          # backend and the template logits processor are not in upstream vLLM.
+          # Tag 1.0.0 == latest as of 2026-07-21 (~28 GiB, amd64).
+          image: {{DOCKER_IMAGE_PREFIX}}upstage/vllm-solar-open2:1.0.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - upstage/Solar-Open2-250B
+            - --served-model-name=solar-open2-250b
+            # Official recipe: TP=8 with expert parallelism over the 320 routed
+            # experts and the fork's triton MoE kernels.
+            - --tensor-parallel-size=8
+            - --enable-expert-parallel
+            - --moe-backend=triton
+            - --gpu-memory-utilization=0.90
+            - --max-model-len=131072 # 128K (model supports 1M)
+            # Automatic Prefix Caching (APC) on explicitly: the cache-hit ratio is
+            # an SLI on the Token Factory dashboard, so it must not depend on
+            # vLLM's per-architecture default.
+            - --enable-prefix-caching
+            # Return usage.prompt_tokens_details.cached_tokens in every response so
+            # the gateway (LiteLLM litellm_input_cached_tokens_metric) can attribute
+            # cache hits to a tenant / prompt template. Off by default in vLLM.
+            - --enable-prompt-tokens-details
+            # reasoning_effort "high" (the model default, made explicit): the
+            # model reasons for up to 131K tokens before answering and the parser
+            # below returns the trace in message.reasoning. Consequence for the
+            # load lane: the traffic generator treats this pool as a reasoning
+            # class (like vllm/glm-*) and caps max_tokens at
+            # WEBUI_REASONING_MAX_TOKENS, so most responses finish with
+            # reason=length after the reasoning channel consumed the budget —
+            # accepted, the lane measures gateway/engine behaviour, not answers.
+            # Callers that want a direct answer pass "reasoning_effort": "none"
+            # per request.
+            - --default-chat-template-kwargs={"think_render_option":"preserved","reasoning_effort":"high"}
+            - --reasoning-parser=solar_open2
+            - --tool-call-parser=solar_open2
+            - --enable-auto-tool-choice
+            - --logits-processors=vllm.v1.sample.logits_processor.solar_open2:SolarOpen2TemplateLogitsProcessor
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 24
+              memory: 512Gi
+              nvidia.com/gpu: 8
+            limits:
+              nvidia.com/gpu: 8
+          # First start downloads ~500GB to the shared huggingface-cache EFS volume
+          # and then loads it; budget up to two hours before the startup probe
+          # gives up (later starts read the EFS copy and take 15-30 min).
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 600
+            periodSeconds: 30
+            failureThreshold: 60
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 600
+            periodSeconds: 30
+            failureThreshold: 240
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            # Multi-GPU NCCL needs a large shared-memory segment.
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Gi
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: solar-open2-250b
+  namespace: vllm
+spec:
+  selector:
+    app: solar-open2-250b
+  ports:
+    - name: http
+      port: 8000
+---
+# Business-hours schedule, identical to glm-52-fp8-business-hours (KST 09:00–18:00,
+# Mon–Fri). Outside the window the Deployment scales to 0 replicas, so the 8-GPU
+# node is released (p6-b200 ~$41/h Spot, ~$98/h On-Demand); at 09:00 KST it scales
+# back to 1 and Karpenter reprovisions the node. Because GLM and Solar share the
+# same window they compete for 8-GPU capacity every morning — with
+# InsufficientInstanceCapacity one of the two may stay Pending until capacity
+# appears, which is expected and not a config error.
+#
+# NOTE: after the node comes up the first start downloads ~500GB to EFS (up to
+# two hours); later starts load from EFS in 15–30 min, so the model is not
+# serve-ready exactly at 09:00 — budget for the ramp.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: solar-open2-250b-business-hours
+  namespace: vllm
+spec:
+  scaleTargetRef:
+    name: solar-open2-250b
+  # Outside the cron window, hold at 0 (node released → $0).
+  idleReplicaCount: 0
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  # Slow cooldown so a brief Spot interruption inside the window doesn't
+  # immediately scale to 0.
+  cooldownPeriod: 300
+  triggers:
+    - type: cron
+      metadata:
+        timezone: Asia/Seoul
+        start: "0 9 * * 1-5"
+        end: "0 18 * * 1-5"
+        desiredReplicas: "1"

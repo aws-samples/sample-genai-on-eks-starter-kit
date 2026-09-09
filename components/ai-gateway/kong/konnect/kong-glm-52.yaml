@@ -1,0 +1,80 @@
+# GLM-5.2 (glm-52-fp8, vLLM TP=8 on B200) behind Kong Konnect: /ai/glm-52
+#
+# Same shape as the per-model Neuron routes (/ai/qwen3-8b, /ai/deepseek-r1):
+# one KongService per vLLM pool, one KongRoute, and the single-upstream
+# ai-proxy plugin pinning the model so callers may omit "model" in the body.
+# GLM-5.2 is a reasoning model with tool calling (vLLM --tool-call-parser
+# glm47 / --reasoning-parser glm45): log_statistics is on so Kong's AI
+# analytics see prompt/completion token counts per request.
+#
+# Without this file the pool was reachable from nowhere through Kong, which is
+# why the GPU & Accelerators fleet table showed the B200 node as
+# "Allocated, idle" (8 GPUs held, 0% utilization).
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongService
+metadata:
+  name: glm-52-service
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  name: glm-52-service
+  host: glm-52-fp8.vllm
+  port: 8000
+  protocol: http
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongRoute
+metadata:
+  name: glm-52-route
+  namespace: kong
+spec:
+  name: glm-52-route
+  paths:
+    - /ai/glm-52
+  serviceRef:
+    type: namespacedRef
+    namespacedRef:
+      name: glm-52-service
+  strip_path: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ai-proxy-glm-52
+  namespace: kong
+plugin: ai-proxy
+config:
+  route_type: llm/v1/chat
+  auth:
+    header_name: Authorization
+    header_value: Bearer fake-key
+  model:
+    provider: openai
+    name: glm-52-fp8
+    options:
+      upstream_url: http://glm-52-fp8.vllm:8000/v1/chat/completions
+  logging:
+    log_statistics: true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongPluginBinding
+metadata:
+  name: ai-proxy-glm-52-binding
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  pluginRef:
+    kind: KongPlugin
+    name: ai-proxy-glm-52
+  scope: OnlyTargets
+  targets:
+    routeRef:
+      group: configuration.konghq.com
+      kind: KongRoute
+      name: glm-52-route

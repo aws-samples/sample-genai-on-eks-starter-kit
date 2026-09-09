@@ -1,0 +1,238 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak
+---
+# Realm import. Keycloak reads every *.json under /opt/keycloak/data/import at
+# startup when `--import-realm` is passed, and skips realms that already exist,
+# so re-running install() is safe (existing realm state is preserved).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm-import
+  namespace: keycloak
+data:
+  genai-realm.json: |
+    {
+      "realm": "genai",
+      "displayName": "GenAI on EKS",
+      "enabled": true,
+      "sslRequired": "external",
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "accessTokenLifespan": 900,
+      "ssoSessionIdleTimeout": 3600,
+      "ssoSessionMaxLifespan": 36000,
+      "clients": [
+        {
+          "clientId": "traffic-dashboard",
+          "name": "Agentic Traffic Studio",
+          "description": "Custom observability dashboard for the agentic AI platform",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "bearerOnly": false,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "directAccessGrantsEnabled": false,
+          "serviceAccountsEnabled": false,
+          "secret": "{{{KEYCLOAK_DASHBOARD_CLIENT_SECRET}}}",
+          "redirectUris": ["https://dashboard.{{DOMAIN}}/*", "http://localhost:3000/*"],
+          "webOrigins": ["https://dashboard.{{DOMAIN}}", "http://localhost:3000"],
+          "attributes": {
+            "post.logout.redirect.uris": "https://dashboard.{{DOMAIN}}/*##http://localhost:3000/*"
+          },
+          "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+          "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"]
+        }
+      ],
+      "users": [
+        {
+          "username": "{{{KEYCLOAK_ADMIN}}}",
+          "enabled": true,
+          "emailVerified": true,
+          "firstName": "Platform",
+          "lastName": "Operator",
+          "credentials": [
+            {
+              "type": "password",
+              "value": "{{{KEYCLOAK_ADMIN_PASSWORD}}}",
+              "temporary": false
+            }
+          ],
+          "realmRoles": ["default-roles-genai"]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: keycloak-admin
+  namespace: keycloak
+type: Opaque
+stringData:
+  username: "{{{KEYCLOAK_ADMIN}}}"
+  password: "{{{KEYCLOAK_ADMIN_PASSWORD}}}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  type: ClusterIP
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+# Headless service required by the StatefulSet.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-headless
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  clusterIP: None
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  serviceName: keycloak-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.3
+          # Production mode behind the shared ALB: TLS terminates at the ALB, so
+          # HTTP is enabled on the pod and X-Forwarded-* headers are trusted to
+          # keep issuer/redirect URLs on https://keycloak.{{DOMAIN}}.
+          args:
+            - start
+            - --http-enabled=true
+            - --hostname=https://keycloak.{{DOMAIN}}
+            - --proxy-headers
+            - xforwarded
+            - --import-realm
+          env:
+            # dev-file (embedded H2 on the PVC) is deliberate for this demo
+            # platform — no external RDBMS to provision. Swap KC_DB to postgres
+            # for anything resembling production.
+            - name: KC_DB
+              value: dev-file
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_METRICS_ENABLED
+              value: "true"
+            - name: KC_HTTP_PORT
+              value: "8080"
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: username
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-admin
+                  key: password
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          # Keycloak 26 serves health/readiness on the management port (9000).
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: 9000
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 9000
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+          volumeMounts:
+            - name: data
+              mountPath: /opt/keycloak/data
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+      volumes:
+        - name: realm-import
+          configMap:
+            name: keycloak-realm-import
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "{{STORAGE_CLASS}}"
+        resources:
+          requests:
+            storage: 8Gi
+---
+# Expose Keycloak on the shared internet-facing ALB via host-header routing
+# (same pattern as components/nvidia-platform/monitoring/grafana-ingress.template.yaml).
+# external-dns picks up the host and creates the Route53 record.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak-alb
+  namespace: keycloak
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  ingressClassName: shared-internet-facing-alb
+  rules:
+    - host: keycloak.{{DOMAIN}}
+      http:
+        paths:
+          - backend:
+              service:
+                name: keycloak
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix

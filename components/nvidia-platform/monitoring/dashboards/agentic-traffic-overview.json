@@ -1,0 +1,1863 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Unified agentic-AI traffic view: at-a-glance KPIs, AZ/cost network structure (AWS NFM Workload Insights), vLLM LLM performance, eBPF (Beyla) L7 service map, and Langfuse LLM call stack — correlated by OpenTelemetry trace_id.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Open Langfuse (LLM traces: prompt / token / cost)",
+      "type": "link",
+      "icon": "external link",
+      "url": "https://langfuse.${domain}",
+      "targetBlank": true
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "At a Glance — platform health KPIs",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Share of L7 requests that did NOT return 5xx (Beyla eBPF RED metrics), across the agentic request path.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.95
+              },
+              {
+                "color": "green",
+                "value": 0.99
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 101,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "1 - (sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[$__rate_interval])) or vector(0)) / sum(rate(http_server_request_duration_seconds_count[$__rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Request success rate (L7)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "p95 time-to-first-token across all vLLM model servers (native vllm metrics).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 102,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "TTFT p95 (vLLM)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "TCP retransmissions per GB transferred over the NFM Workload Insights window — network reliability signal (higher = packet loss / congestion).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 2000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 103,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(nfm_wi_top_contributor_value{metric=\"retransmissions\"}) / clamp_min(sum(nfm_wi_top_contributor_value{metric=\"data_transferred\"}) / 1e9, 0.001)",
+          "refId": "A"
+        }
+      ],
+      "title": "Retransmissions / GB (NFM)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Share of bytes crossing AZ boundaries (billable) vs total — from NFM Workload Insights.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.3
+              },
+              {
+                "color": "red",
+                "value": 0.6
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 104,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(nfm_wi_top_contributor_value{metric=\"data_transferred\",category=\"inter_az\"}) / clamp_min(sum(nfm_wi_top_contributor_value{metric=\"data_transferred\"}), 1)",
+          "refId": "A"
+        }
+      ],
+      "title": "Inter-AZ traffic ratio",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Monthly run-rate estimate: inter-AZ bytes over the Workload Insights window, extrapolated to 30 days × $az_price_per_gb. Estimate only — actual billing may differ.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "red",
+                "value": 200
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 105,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(nfm_wi_top_contributor_value{metric=\"data_transferred\",category=\"inter_az\"}) / scalar(nfm_wi_query_window_seconds) * 2592000 / 1e9 * $az_price_per_gb",
+          "refId": "A"
+        }
+      ],
+      "title": "Inter-AZ est. cost / month",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Healthy scrape targets in the NFM namespace (agent DaemonSet pods + Workload Insights exporter).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 106,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(up{namespace=\"amazon-network-flow-monitor\"} == 1)",
+          "refId": "A"
+        }
+      ],
+      "title": "NFM collectors up",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 200,
+      "title": "Network Structure & Cost — AZ / VPC flows (NFM Workload Insights)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Bytes by flow category over the Workload Insights window. INTER_AZ and INTER_VPC are the billable categories.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
+      "id": 201,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (category) (nfm_wi_top_contributor_value{metric=\"data_transferred\"})",
+          "legendFormat": "{{category}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Traffic by category",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Top flow contributors (source AZ/subnet → destination) with estimated transfer cost for billable categories (bytes × $az_price_per_gb).",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Bytes"
+              },
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #B"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Est. cost (window)"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 6,
+        "y": 6
+      },
+      "id": 202,
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "Bytes",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk(15, sum by (local_az, local_subnet, remote_id, category) (nfm_wi_top_contributor_value{metric=\"data_transferred\"}))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (local_az, local_subnet, remote_id, category) (nfm_wi_top_contributor_value{metric=\"data_transferred\",category=~\"inter_az|inter_vpc\"}) / 1e9 * $az_price_per_gb",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "local_subnet",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Time 1": true,
+              "Time 2": true,
+              "category 2": true,
+              "local_az 2": true,
+              "remote_id 2": true
+            }
+          }
+        }
+      ],
+      "title": "Top contributors & estimated cost",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Per-AZ traffic split by category over time — shows which AZ generates the billable cross-AZ traffic.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "id": 203,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (local_az, category) (nfm_wi_top_contributor_value{metric=\"data_transferred\"})",
+          "legendFormat": "{{local_az}} · {{category}}",
+          "refId": "A"
+        }
+      ],
+      "title": "AZ traffic by category",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Per-pod network throughput from the AWS Network Flow Monitor agent's open-metrics endpoint (ingress/egress bytes), plus ENA allowance-exceeded events (bandwidth/pps/conntrack throttling).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
+      "id": 204,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (exported_namespace, exported_pod) (rate(egress_bytes{exported_namespace=~\"$namespace\"}[$__rate_interval]))",
+          "legendFormat": "egress {{exported_namespace}}/{{exported_pod}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (exported_namespace, exported_pod) (rate(ingress_bytes{exported_namespace=~\"$namespace\"}[$__rate_interval]))",
+          "legendFormat": "ingress {{exported_namespace}}/{{exported_pod}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (node) (rate(bw_out_allowance_exceeded[$__rate_interval]) + rate(bw_in_allowance_exceeded[$__rate_interval]) + rate(pps_allowance_exceeded[$__rate_interval]) + rate(conntrack_allowance_exceeded[$__rate_interval]))",
+          "legendFormat": "⚠ allowance-exceeded {{node}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Pod throughput & ENA throttling (NFM agent)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Network error signals from Workload Insights: retransmissions and timeouts per category.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
+      "id": 205,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (category) (nfm_wi_top_contributor_value{metric=\"retransmissions\"})",
+          "legendFormat": "retransmissions · {{category}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (category) (nfm_wi_top_contributor_value{metric=\"timeouts\"})",
+          "legendFormat": "timeouts · {{category}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Error signals — retransmissions & timeouts (NFM)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 300,
+      "title": "LLM Performance & Stability — vLLM native metrics",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Real time-to-first-token measured inside vLLM per model (not an HTTP proxy).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "id": 301,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "p50 {{model_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "p95 {{model_name}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:inter_token_latency_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "ITL p95 {{model_name}}",
+          "refId": "C"
+        }
+      ],
+      "title": "TTFT & inter-token latency (vLLM)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Requests running vs waiting per model. A growing waiting queue is the leading indicator of saturation — scale out before TTFT degrades.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "id": 302,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (vllm:num_requests_running)",
+          "legendFormat": "running {{model_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (vllm:num_requests_waiting)",
+          "legendFormat": "waiting {{model_name}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:generation_tokens_total[$__rate_interval]))",
+          "legendFormat": "tokens/s {{model_name}}",
+          "refId": "C"
+        }
+      ],
+      "title": "Queue depth & token throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Stability signals: KV-cache usage (memory pressure), preemptions (requests evicted and recomputed — direct latency hit), and non-success finishes.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/preempt|abort|error/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
+      "id": 303,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (model_name) (vllm:kv_cache_usage_perc)",
+          "legendFormat": "kv-cache {{model_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:num_preemptions_total[$__rate_interval]))",
+          "legendFormat": "preemptions/s {{model_name}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name, finished_reason) (rate(vllm:request_success_total{finished_reason=~\"abort|error\"}[$__rate_interval]))",
+          "legendFormat": "{{finished_reason}}/s {{model_name}}",
+          "refId": "C"
+        }
+      ],
+      "title": "KV-cache, preemptions & aborts",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 400,
+      "title": "Service Map & L7 RED — Beyla eBPF → Tempo",
+      "type": "row"
+    },
+    {
+      "id": 401,
+      "type": "nodeGraph",
+      "title": "L7 Service Map — full request path (Beyla eBPF → Tempo)",
+      "description": "Service graph from Beyla eBPF spans across the whole user path: openwebui → kong/kgateway/ai-gateway → litellm → vllm, plus langfuse / milvus / keycloak / bifrost side-paths. Node = service, edge = request rate + error rate + latency. Kubelet-probe pseudo-clients are filtered out so the force layout stays compact. Zoom & drag to explore.",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 14,
+        "h": 13
+      },
+      "options": {
+        "layoutAlgorithm": "force",
+        "nodes": {
+          "mainStatUnit": "reqps"
+        },
+        "edges": {
+          "mainStatUnit": "reqps",
+          "secondaryStatUnit": "ms"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "serviceMap",
+          "refId": "A",
+          "serviceMapQuery": [
+            "{client=~\"$svc\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name=~\"$namespace\"}",
+            "{server=~\"$svc\", client!~\"i-[0-9a-f]+\", server_k8s_namespace_name=~\"$namespace\"}"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 405,
+      "type": "table",
+      "title": "Service-graph edges — per-hop RED",
+      "description": "Every client→server hop Beyla observed in the selected range, with request rate, error ratio and server-side latency. The tabular twin of the service map — sortable & filterable.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 33,
+        "w": 10,
+        "h": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "req/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p50"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (client, server, connection_type) (rate(traces_service_graph_request_total{source=\"beyla\", client=~\"$svc\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name=~\"$namespace\"}[$__range])) or sum by (client, server, connection_type) (rate(traces_service_graph_request_total{source=\"beyla\", server=~\"$svc\", client!~\"i-[0-9a-f]+\", server_k8s_namespace_name=~\"$namespace\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "((sum by (client, server, connection_type) (rate(traces_service_graph_request_failed_total{source=\"beyla\", client=~\"$svc\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name=~\"$namespace\"}[$__range])) or sum by (client, server, connection_type) (rate(traces_service_graph_request_failed_total{source=\"beyla\", server=~\"$svc\", client!~\"i-[0-9a-f]+\", server_k8s_namespace_name=~\"$namespace\"}[$__range]))) or ((sum by (client, server, connection_type) (rate(traces_service_graph_request_total{source=\"beyla\", client=~\"$svc\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name=~\"$namespace\"}[$__range])) or sum by (client, server, connection_type) (rate(traces_service_graph_request_total{source=\"beyla\", server=~\"$svc\", client!~\"i-[0-9a-f]+\", server_k8s_namespace_name=~\"$namespace\"}[$__range]))) * 0)) / (sum by (client, server, connection_type) (rate(traces_service_graph_request_total{source=\"beyla\", client=~\"$svc\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name=~\"$namespace\"}[$__range])) or sum by (client, server, connection_type) (rate(traces_service_graph_request_total{source=\"beyla\", server=~\"$svc\", client!~\"i-[0-9a-f]+\", server_k8s_namespace_name=~\"$namespace\"}[$__range])))",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, client, server, connection_type) (rate(traces_service_graph_request_server_seconds_bucket{source=\"beyla\", client=~\"$svc\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name=~\"$namespace\"}[$__range])) or sum by (le, client, server, connection_type) (rate(traces_service_graph_request_server_seconds_bucket{source=\"beyla\", server=~\"$svc\", client!~\"i-[0-9a-f]+\", server_k8s_namespace_name=~\"$namespace\"}[$__range])))",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, client, server, connection_type) (rate(traces_service_graph_request_server_seconds_bucket{source=\"beyla\", client=~\"$svc\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name=~\"$namespace\"}[$__range])) or sum by (le, client, server, connection_type) (rate(traces_service_graph_request_server_seconds_bucket{source=\"beyla\", server=~\"$svc\", client!~\"i-[0-9a-f]+\", server_k8s_namespace_name=~\"$namespace\"}[$__range])))",
+          "refId": "D",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "req/s",
+              "Value #B": "error %",
+              "Value #C": "p50",
+              "Value #D": "p95",
+              "client": "client",
+              "server": "server",
+              "connection_type": "type"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "req/s"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "HTTP-level request duration percentiles from Beyla eBPF RED metrics (gateway/app hops). Compare against the in-engine vLLM TTFT above to isolate network vs engine latency.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 8,
+        "h": 9
+      },
+      "id": 402,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, service_name) (rate(http_server_request_duration_seconds_bucket{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__rate_interval])))",
+          "legendFormat": "p50 {{service_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, service_name) (rate(http_server_request_duration_seconds_bucket{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__rate_interval])))",
+          "legendFormat": "p95 {{service_name}}",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, service_name) (rate(http_server_request_duration_seconds_bucket{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__rate_interval])))",
+          "legendFormat": "p99 {{service_name}}",
+          "refId": "C"
+        }
+      ],
+      "title": "L7 request duration percentiles (Beyla)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Request rate and error rate per service from Beyla RED metrics.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 46,
+        "w": 8,
+        "h": 9
+      },
+      "id": 403,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (service_name) (rate(http_server_request_duration_seconds_count{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__rate_interval]))",
+          "legendFormat": "req/s {{service_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (service_name) (rate(http_server_request_duration_seconds_count{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\", http_response_status_code=~\"5..\"}[$__rate_interval]))",
+          "legendFormat": "5xx/s {{service_name}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Request Rate & Errors (Beyla RED)",
+      "type": "timeseries"
+    },
+    {
+      "id": 406,
+      "type": "timeseries",
+      "title": "HTTP errors by service & status (Beyla)",
+      "description": "4xx/5xx rate broken down by service and status code.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 46,
+        "w": 8,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (service_name, http_response_status_code) (rate(http_server_request_duration_seconds_count{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\", http_response_status_code=~\"4..|5..\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{service_name}} {{http_response_status_code}}"
+        }
+      ]
+    },
+    {
+      "id": 407,
+      "type": "table",
+      "title": "Top HTTP routes — traffic, latency & errors (Beyla spans)",
+      "description": "Route-level drill-down: which endpoint carries the traffic, how slow it is, and its 5xx ratio.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 12,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "req/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk(30, sum by (service_name, http_route, http_request_method) (rate(http_server_request_duration_seconds_count{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__range])))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, service_name, http_route, http_request_method) (rate(http_server_request_duration_seconds_bucket{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__range])))",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (service_name, http_route, http_request_method) (rate(http_server_request_duration_seconds_count{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\", http_response_status_code=~\"5..\"}[$__range])) / sum by (service_name, http_route, http_request_method) (rate(http_server_request_duration_seconds_count{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__range]))",
+          "refId": "C",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "req/s",
+              "Value #B": "p95",
+              "Value #C": "5xx %",
+              "service_name": "service",
+              "http_route": "route",
+              "http_request_method": "method"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "req/s"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 408,
+      "type": "table",
+      "title": "Egress calls — outbound dependencies (Beyla http_client)",
+      "description": "Client-side (egress) HTTP calls captured by eBPF: who calls what, how often, how slow.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 55,
+        "w": 12,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "req/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (service_name, server_address, server_port) (rate(http_client_request_duration_seconds_count{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, service_name, server_address, server_port) (rate(http_client_request_duration_seconds_bucket{k8s_namespace_name=~\"$namespace\", k8s_node_name=~\"$node\", service_name=~\"$svc\"}[$__range])))",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Value #A": "req/s",
+              "Value #B": "p95",
+              "service_name": "caller",
+              "server_address": "target",
+              "server_port": "port"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "req/s"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "id": 500,
+      "title": "LLM Call Stack — tokens, cost, models (Langfuse)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Dashboard --"
+      },
+      "description": "Langfuse stores prompt/completion, token usage, cost, and evaluation scores in ClickHouse. Open the full LLM call stack for any request in Langfuse — traces share the same trace_id that Beyla propagates, so a slow span here maps 1:1 to a Langfuse trace.",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 66
+      },
+      "id": 501,
+      "options": {
+        "mode": "markdown",
+        "content": "### 🔗 LLM details live in Langfuse\n\nBeyla propagates the **W3C `traceparent`**, so each request carries **one `trace_id`** across the eBPF spans (Tempo, above) and the LLM observation (Langfuse).\n\n**Drill-down flow:** slow **TTFT** panel → **Explore → Tempo** → open the trace → **Langfuse** link on the span (or use the header link) → prompt / completion / **tokens** / **cost** / eval score.\n\n[Open Langfuse ↗](https://langfuse.${domain})"
+      },
+      "title": "LLM call stack (prompt / token / cost / eval)",
+      "type": "text"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": [
+    "agentic-ai",
+    "ebpf",
+    "beyla",
+    "langfuse",
+    "nfm",
+    "vllm",
+    "traffic"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(http_server_request_duration_seconds_count, k8s_namespace_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Namespace",
+        "multi": true,
+        "name": "namespace",
+        "query": {
+          "query": "label_values(http_server_request_duration_seconds_count, k8s_namespace_name)",
+          "refId": "namespace"
+        },
+        "refresh": 2,
+        "type": "query"
+      },
+      {
+        "current": {
+          "text": "0.01",
+          "value": "0.01"
+        },
+        "hide": 0,
+        "label": "AZ transfer $/GB",
+        "name": "az_price_per_gb",
+        "options": [
+          {
+            "text": "0.01",
+            "value": "0.01"
+          }
+        ],
+        "query": "0.01",
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "text": "yjeong.people.aws.dev",
+          "value": "yjeong.people.aws.dev"
+        },
+        "hide": 2,
+        "label": "Domain",
+        "name": "domain",
+        "options": [
+          {
+            "text": "yjeong.people.aws.dev",
+            "value": "yjeong.people.aws.dev"
+          }
+        ],
+        "query": "yjeong.people.aws.dev",
+        "type": "constant"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(http_server_request_duration_seconds_count, service_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "svc",
+        "options": [],
+        "query": "label_values(http_server_request_duration_seconds_count, service_name)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_node_info, provider_id)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "AZ",
+        "multi": true,
+        "name": "az",
+        "options": [],
+        "query": "label_values(kube_node_info, provider_id)",
+        "refresh": 2,
+        "regex": "/aws:\\/\\/\\/([^\\/]+)\\/.*/",
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_node_info{provider_id=~\"aws:///($az)/.*\"}, node)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Node",
+        "multi": true,
+        "name": "node",
+        "options": [],
+        "query": "label_values(kube_node_info{provider_id=~\"aws:///($az)/.*\"}, node)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Agentic Traffic Overview (eBPF + Langfuse)",
+  "uid": "agentic-traffic-overview",
+  "version": 4,
+  "weekStart": ""
+}

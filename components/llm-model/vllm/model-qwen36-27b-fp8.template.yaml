@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwen36-27b-fp8
+  namespace: vllm
+spec:
+  # 2 replicas (one L40S each, g6e): a single replica saturates near 5 rps
+  # under the traffic-generator mix and the 2026-09-03 target is 2 rps on each
+  # of three gateways (6 rps). Traffic reaches both replicas through the
+  # neuron-lb Envoy (per-request balancing), see the Service below.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: qwen36-27b-fp8
+  template:
+    metadata:
+      labels:
+        app: qwen36-27b-fp8
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        # Qwen3.6-27B-FP8 fits a single 48GB L40S per the vLLM recipe
+        # (FP8: single 40GB+ GPU). Vision+text dense model, 262K native context.
+        {{{KARPENTER_PREFIX}}}/instance-family: g6e
+      containers:
+        - name: vllm
+          # Qwen3.6 (gated delta network hybrid attention) needs vLLM >= 0.19.
+          image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:v0.26.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - Qwen/Qwen3.6-27B-FP8
+            - --served-model-name=qwen36-27b-fp8
+            - --trust-remote-code
+            - --gpu-memory-utilization=0.90
+            # Qwen3.6 is a GDN hybrid: vLLM leaves APC off for hybrid models unless
+            # asked. Turning it on makes vLLM align attention/Mamba page sizes
+            # (block size becomes 784 tokens) and cache Mamba state at block
+            # boundaries (--mamba-cache-mode defaults to "all" when APC is on).
+            - --enable-prefix-caching
+            # Return usage.prompt_tokens_details.cached_tokens in every response so
+            # the gateway (LiteLLM litellm_input_cached_tokens_metric) can attribute
+            # cache hits to a tenant / prompt template. Off by default in vLLM.
+            - --enable-prompt-tokens-details
+            # Native context is 262144; capped so weights + KV cache fit 48GB.
+            - --max-model-len=32768 # 32K
+            # GDN hybrid attention: each decode seq needs one Mamba cache block;
+            # a 48GB L40S fits ~180 blocks, so the default 256 fails at startup.
+            - --max-num-seqs=128
+            # Qwen3.6 specific
+            - --enable-auto-tool-choice
+            - --tool-call-parser=qwen3_coder
+            - --reasoning-parser=qwen3
+            # Skip the vision encoder to free memory for KV cache; drop this
+            # flag to enable image input.
+            - --language-model-only
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 3 #75%
+              memory: 24Gi #75%
+              nvidia.com/gpu: 1
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen36-27b-fp8
+  namespace: vllm
+spec:
+  # Selects the neuron-lb Envoy pods (see neuron-lb.yaml, listener 8003):
+  # per-request LEAST_REQUEST balancing across the replicas of this pool,
+  # which a ClusterIP Service cannot do for keep-alive clients (LiteLLM,
+  # bifrost, Kong pin their connections to the first pod). The pods
+  # themselves are reachable through the headless Service qwen36-27b-fp8-pods.
+  selector:
+    app.kubernetes.io/name: neuron-lb
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8003

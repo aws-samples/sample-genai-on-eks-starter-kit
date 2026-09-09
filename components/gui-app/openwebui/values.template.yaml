@@ -12,6 +12,9 @@ ingress:
 
 # openaiBaseApiUrl: https://litellm.{{{DOMAIN}}}/v1
 openaiBaseApiUrl: http://litellm.litellm:4000/v1
+# The chart injects OPENAI_API_KEY from openaiApiKey automatically. Do NOT also
+# set OPENAI_API_KEY under extraEnvVars or the StatefulSet gets a duplicate env
+# key and helm fails with "duplicate entries for key [name=OPENAI_API_KEY]".
 openaiApiKey: {{{LITELLM_API_KEY}}}
 
 extraEnvVars:
@@ -35,3 +38,14 @@ resources:
     memory: 2Gi
   limits:
     memory: 2Gi
+
+# The websocket Redis (openwebui-redis) uses ~5 MiB but had no request; declare
+# it so the scheduler accounts for the pod.
+websocket:
+  redis:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 32Mi
+      limits:
+        memory: 128Mi

@@ -1,0 +1,50 @@
+# Solar-Open2-250B (solar-open2-250b, 250B-A15B MoE, TP=8 on one B200/H200 node) behind kgateway ai-gateway: /ai/solar-open2/*
+#
+# Same shape as /ai/glm-52: kgateway does not talk to vLLM directly, every
+# /ai/<model> route rewrites to /v1 on bifrost (OpenAI-compatible hop that
+# routes by the "model" field and emits the Langfuse trace); bifrost's vllm
+# provider key for solar-open2-250b (components/ai-gateway/bifrost/bifrost.yaml)
+# carries the pool URL. Added so the traffic generator's load lane can push the
+# same per-pool rate through kgateway as through LiteLLM (LOAD_GATEWAYS).
+# /ai/solar-open2/chat/completions -> bifrost:8080/v1/chat/completions
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  name: solar-open2-vllm
+  namespace: kgateway-system
+spec:
+  type: Static
+  static:
+    hosts:
+      - host: bifrost.bifrost.svc.cluster.local
+        port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: solar-open2-route
+  namespace: kgateway-system
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ai/solar-open2
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1
+      backendRefs:
+        - group: gateway.kgateway.dev
+          kind: Backend
+          name: solar-open2-vllm
+          weight: 1
+      timeouts:
+        request: 300s
+        backendRequest: 300s

@@ -1,0 +1,44 @@
+# Scrape the NFM agent's Prometheus performance metrics (RT/RTO/bytes, packet
+# and allowance-exceeded counters) into kube-prometheus-stack. The agent
+# exposes /metrics on port 9101 on each node's agent pod.
+#
+# A headless Service selects the agent pods so the ServiceMonitor has an
+# endpoint target. The `release: prometheus` label makes the stack's
+# serviceMonitorSelector pick it up.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfm-agent-metrics
+  namespace: {{NFM_NAMESPACE}}
+  labels:
+    app: aws-network-flow-monitor-agent
+    release: prometheus
+spec:
+  clusterIP: None
+  selector:
+    # The agent DaemonSet pods carry name=aws-network-flow-monitor-agent.
+    name: aws-network-flow-monitor-agent
+  ports:
+    - name: metrics
+      port: 9101
+      targetPort: 9101
+      protocol: TCP
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nfm-agent
+  namespace: {{NFM_NAMESPACE}}
+  labels:
+    release: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{NFM_NAMESPACE}}
+  selector:
+    matchLabels:
+      app: aws-network-flow-monitor-agent
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s

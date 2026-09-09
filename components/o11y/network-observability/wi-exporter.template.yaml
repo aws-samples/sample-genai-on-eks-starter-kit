@@ -1,0 +1,252 @@
+# NFM Workload Insights exporter — polls the Network Flow Monitor Workload
+# Insights top-contributors API (the same data source the EKS console Network
+# tab and CloudWatch use) and re-exposes it as Prometheus metrics, adding the
+# AZ / VPC / subnet / category dimensions that the agent's OpenMetrics endpoint
+# does not carry. Grafana uses these for the inter-AZ traffic and cost panels.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfm-wi-exporter-sa
+  namespace: {{NFM_NAMESPACE}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nfm-wi-exporter-script
+  namespace: {{NFM_NAMESPACE}}
+data:
+  exporter.py: |
+    import os
+    import threading
+    import time
+    from datetime import datetime, timedelta, timezone
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    import boto3
+
+    REGION = os.environ.get("AWS_REGION", "us-east-1")
+    PORT = int(os.environ.get("METRICS_PORT", "9469"))
+    POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL_SECONDS", "300"))
+    # Workload Insights aggregates over a window; keep it >= 2 NFM publish
+    # cycles so queries return data.
+    WINDOW = int(os.environ.get("QUERY_WINDOW_SECONDS", "600"))
+    LIMIT = int(os.environ.get("TOP_CONTRIBUTOR_LIMIT", "25"))
+
+    METRICS = ["DATA_TRANSFERRED", "RETRANSMISSIONS", "TIMEOUTS"]
+    CATEGORIES = ["INTRA_AZ", "INTER_AZ", "INTER_VPC", "UNCLASSIFIED"]
+
+    client = boto3.client("networkflowmonitor", region_name=REGION)
+    _lock = threading.Lock()
+    _body = "# nfm-wi-exporter: first collection pending\n"
+
+    def discover_scope_id():
+        for scope in client.list_scopes()["scopes"]:
+            if scope["status"] == "SUCCEEDED":
+                return scope["scopeId"]
+        raise RuntimeError("no SUCCEEDED NFM scope in this account/region")
+
+    def esc(value):
+        return str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+    def short_id(arn_or_id):
+        # remoteIdentifier is often a full ARN; keep the trailing resource id.
+        return str(arn_or_id).rsplit("/", 1)[-1]
+
+    def run_query(scope_id, metric, category, start, end):
+        qid = client.start_query_workload_insights_top_contributors(
+            scopeId=scope_id,
+            startTime=start,
+            endTime=end,
+            metricName=metric,
+            destinationCategory=category,
+            limit=LIMIT,
+        )["queryId"]
+        status = "RUNNING"
+        for _ in range(30):
+            status = client.get_query_status_workload_insights_top_contributors(
+                scopeId=scope_id, queryId=qid
+            )["status"]
+            if status in ("SUCCEEDED", "FAILED", "CANCELED"):
+                break
+            time.sleep(2)
+        if status != "SUCCEEDED":
+            raise RuntimeError("query %s/%s ended with status %s" % (metric, category, status))
+        contributors = []
+        token = None
+        while True:
+            kwargs = dict(scopeId=scope_id, queryId=qid)
+            if token:
+                kwargs["nextToken"] = token
+            page = client.get_query_results_workload_insights_top_contributors(**kwargs)
+            contributors.extend(page.get("topContributors", []))
+            token = page.get("nextToken")
+            if not token:
+                break
+        return contributors
+
+    def collect(scope_id):
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(seconds=WINDOW)
+        lines = [
+            "# HELP nfm_wi_top_contributor_value NFM Workload Insights top-contributor value over the query window (bytes for data_transferred, count for retransmissions/timeouts).",
+            "# TYPE nfm_wi_top_contributor_value gauge",
+        ]
+        success = 1
+        for metric in METRICS:
+            for category in CATEGORIES:
+                try:
+                    for c in run_query(scope_id, metric, category, start, end):
+                        lines.append(
+                            'nfm_wi_top_contributor_value{metric="%s",category="%s",local_az="%s",local_vpc="%s",local_subnet="%s",remote_id="%s"} %s'
+                            % (
+                                metric.lower(),
+                                category.lower(),
+                                esc(c.get("localAz", "")),
+                                esc(c.get("localVpcId", "")),
+                                esc(c.get("localSubnetId", "")),
+                                esc(short_id(c.get("remoteIdentifier", ""))),
+                                c.get("value", 0),
+                            )
+                        )
+                except Exception as exc:  # keep exporting the combos that work
+                    print("collect failed for %s/%s: %s" % (metric, category, exc), flush=True)
+                    success = 0
+        lines += [
+            "# HELP nfm_wi_query_window_seconds Aggregation window used for the Workload Insights queries.",
+            "# TYPE nfm_wi_query_window_seconds gauge",
+            "nfm_wi_query_window_seconds %d" % WINDOW,
+            "# HELP nfm_wi_collect_success 1 if the last collection cycle completed without errors.",
+            "# TYPE nfm_wi_collect_success gauge",
+            "nfm_wi_collect_success %d" % success,
+            "# HELP nfm_wi_last_collect_timestamp_seconds Unix time of the last completed collection cycle.",
+            "# TYPE nfm_wi_last_collect_timestamp_seconds gauge",
+            "nfm_wi_last_collect_timestamp_seconds %d" % int(time.time()),
+        ]
+        return "\n".join(lines) + "\n"
+
+    def poll_loop():
+        global _body
+        scope_id = None
+        while True:
+            started = time.time()
+            try:
+                if scope_id is None:
+                    scope_id = discover_scope_id()
+                    print("using NFM scope %s" % scope_id, flush=True)
+                body = collect(scope_id)
+                with _lock:
+                    _body = body
+                print("collection cycle done in %.1fs" % (time.time() - started), flush=True)
+            except Exception as exc:
+                print("collection cycle failed: %s" % exc, flush=True)
+                scope_id = None  # rediscover on next cycle
+            time.sleep(max(30, POLL_INTERVAL - (time.time() - started)))
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path not in ("/metrics", "/"):
+                self.send_response(404)
+                self.end_headers()
+                return
+            with _lock:
+                payload = _body.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; version=0.0.4")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args):
+            pass
+
+    threading.Thread(target=poll_loop, daemon=True).start()
+    print("nfm-wi-exporter listening on :%d" % PORT, flush=True)
+    ThreadingHTTPServer(("", PORT), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfm-wi-exporter
+  namespace: {{NFM_NAMESPACE}}
+  labels:
+    app: nfm-wi-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfm-wi-exporter
+  template:
+    metadata:
+      labels:
+        app: nfm-wi-exporter
+    spec:
+      serviceAccountName: nfm-wi-exporter-sa
+      containers:
+        - name: exporter
+          image: public.ecr.aws/docker/library/python:3.12-slim
+          command:
+            - /bin/sh
+            - -c
+            - pip install --no-cache-dir --quiet boto3 && exec python /app/exporter.py
+          env:
+            - name: AWS_REGION
+              value: "{{REGION}}"
+          ports:
+            - name: metrics
+              containerPort: 9469
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: script
+              mountPath: /app
+      volumes:
+        - name: script
+          configMap:
+            name: nfm-wi-exporter-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfm-wi-exporter
+  namespace: {{NFM_NAMESPACE}}
+  labels:
+    app: nfm-wi-exporter
+    release: prometheus
+spec:
+  selector:
+    app: nfm-wi-exporter
+  ports:
+    - name: metrics
+      port: 9469
+      targetPort: metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nfm-wi-exporter
+  namespace: {{NFM_NAMESPACE}}
+  labels:
+    release: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{NFM_NAMESPACE}}
+  selector:
+    matchLabels:
+      app: nfm-wi-exporter
+  endpoints:
+    - port: metrics
+      path: /metrics
+      # The exporter refreshes every POLL_INTERVAL (5 min); scraping faster
+      # just re-reads the cached page.
+      interval: 60s

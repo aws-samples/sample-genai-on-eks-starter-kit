@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traffic-dashboard
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: traffic-dashboard-auth
+  namespace: traffic-dashboard
+type: Opaque
+stringData:
+  AUTH_SECRET: "{{{AUTH_SECRET}}}"
+  AUTH_KEYCLOAK_ID: "{{{AUTH_KEYCLOAK_ID}}}"
+  AUTH_KEYCLOAK_SECRET: "{{{AUTH_KEYCLOAK_SECRET}}}"
+  AUTH_KEYCLOAK_ISSUER: "{{{AUTH_KEYCLOAK_ISSUER}}}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-dashboard
+  namespace: traffic-dashboard
+  labels:
+    app: traffic-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-dashboard
+  template:
+    metadata:
+      labels:
+        app: traffic-dashboard
+      annotations:
+        # Forces a new pod when the image tag is reused across installs.
+        deployedAt: "{{DEPLOYED_AT}}"
+    spec:
+      # Keep the dashboard off 2-vCPU spot nodes. Karpenter kept consolidating
+      # platform pods onto c6gn.large / c8g.large nodes at ~90% CPU and memory
+      # requests, where this pod could not boot within its probe window.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: eks.amazonaws.com/instance-cpu
+                    operator: Gt
+                    values: ["3"]
+      containers:
+        - name: app
+          image: "{{IMAGE}}"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            # Public origin of the app; Auth.js builds OIDC callback URLs from
+            # this plus the X-Forwarded-* headers the ALB sets.
+            - name: AUTH_URL
+              value: "https://dashboard.{{DOMAIN}}"
+            - name: AUTH_TRUST_HOST
+              value: "true"
+            - name: DOMAIN
+              value: "{{DOMAIN}}"
+            - name: PROMETHEUS_URL
+              value: "{{PROMETHEUS_URL}}"
+          envFrom:
+            - secretRef:
+                name: traffic-dashboard-auth
+          # Next.js needs a few seconds of CPU to start; on a starved node it
+          # took >60s and the 1s-timeout liveness probe killed it in a loop
+          # (exit 137), which the ALB surfaced as 503. The startup probe owns
+          # the boot window; liveness only fires once the app has served once.
+          startupProbe:
+            httpGet:
+              path: /signin
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              # /signin is the only page reachable without a session, so it is
+              # the probe target.
+              path: /signin
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /signin
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 384Mi
+            limits:
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traffic-dashboard
+  namespace: traffic-dashboard
+  labels:
+    app: traffic-dashboard
+spec:
+  type: ClusterIP
+  selector:
+    app: traffic-dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+---
+# Shared internet-facing ALB via host-header routing — same pattern as
+# components/nvidia-platform/monitoring/grafana-ingress.template.yaml.
+# external-dns picks up the host and creates the Route53 record.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traffic-dashboard-alb
+  namespace: traffic-dashboard
+  annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/target-type: ip
+    # "/" redirects unauthenticated callers to /signin (302), which the default
+    # health check counts as unhealthy; the ALB then only served this target
+    # through fail-open and returned 503 the moment the pod restarted.
+    alb.ingress.kubernetes.io/healthcheck-path: /signin
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  ingressClassName: shared-internet-facing-alb
+  rules:
+    - host: dashboard.{{DOMAIN}}
+      http:
+        paths:
+          - backend:
+              service:
+                name: traffic-dashboard
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix

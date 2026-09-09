@@ -39,12 +39,40 @@ langfuse:
       value: {{{LANGFUSE_USERNAME}}}
     - name: LANGFUSE_INIT_USER_PASSWORD
       value: {{{LANGFUSE_PASSWORD}}}
+    # Module 4 (LLM-as-a-Judge): Langfuse blocks RFC1918 / cluster-internal
+    # hosts via SSRF protection by default. Allowlist the in-cluster LiteLLM
+    # gateway so evaluators can use it as their OpenAI-compatible LLM
+    # connection (http://litellm.litellm.svc.cluster.local:4000/v1).
+    - name: LANGFUSE_LLM_CONNECTION_WHITELISTED_HOST
+      value: litellm.litellm.svc.cluster.local
+    # Skip the per-event "read existing row from ClickHouse, then merge" step
+    # for every project created after this date (the only project, my-project,
+    # was created 2026-06-17). That read was 300 SELECT/s scanning ~80k rows
+    # each and consumed the whole ClickHouse CPU budget while inserts were
+    # idle (2026-09-03). Documented trade-off: a late update to an event whose
+    # S3 blob has already been lifecycle-deleted can leave a duplicate in the
+    # event history. See langfuse.com/self-hosting/configuration/scaling.
+    - name: LANGFUSE_SKIP_INGESTION_CLICKHOUSE_READ_MIN_PROJECT_CREATE_DATE
+      value: "2026-01-01"
   resources:
     requests:
       cpu: 1 
       memory: 2Gi
     limits:
       memory: 2Gi
+  # Ingestion worker. One worker at the default concurrency (20) drained about
+  # 360 rows/s while ClickHouse sat at 7.6 vCPU, and the BullMQ backlog reached
+  # 195k ingestion + 170k otel jobs (17.5 h of lag, 2026-09-03). Three workers
+  # at the documented 2 CPU / 4 GiB minimum; scale on CPU > 50 % per the
+  # Langfuse scaling guide.
+  worker:
+    replicas: 3
+    resources:
+      requests:
+        cpu: 2
+        memory: 4Gi
+      limits:
+        memory: 4Gi
 
 postgresql:
   image:
@@ -56,12 +84,19 @@ postgresql:
     username: admin
     password: password123
   primary:
+    # Karpenter consolidation evicts this single-replica StatefulSet whenever
+    # its spot node is "Underutilized" (2026-09-03 08:05Z): ~1 min of queue
+    # unavailability, all workers crash on lost Redis connections and restart,
+    # ingestion pauses. The EBS PVC keeps the data, but the queue store should
+    # not be an eviction candidate at all.
+    podAnnotations:
+      karpenter.sh/do-not-disrupt: "true"
     resources: 
       requests:
         cpu: 125m
-        memory: 256Mi
+        memory: 1Gi
       limits:
-        memory: 256Mi
+        memory: 1Gi
 
 clickhouse:
   image:
@@ -72,13 +107,109 @@ clickhouse:
   auth:
     password: password123
   replicaCount: 1
+  # Langfuse data is <1 GiB, but ClickHouse's own diagnostic logs had grown to
+  # 158 GiB (36 archived profiler trace_log_N tables = 130 GiB, an 18 GiB
+  # text_log at 'information' level, metric_log, ...) and their background
+  # merges held ~4 GiB of the 5.4 GiB server cap — 10,909 MEMORY_LIMIT_EXCEEDED
+  # in 50 min, Langfuse inserts starved (2026-09-02/03). Keep the diagnostics
+  # but sample every 10 s instead of 1 s, log text at 'warning', and age all
+  # system log tables out after 7 days. The bitnami subchart renders this into
+  # conf.d/extra-configmap/01_extra_overrides.xml.
+  #
+  # NOTE: ClickHouse renames a system log table to <name>_N and starts a fresh
+  # one whenever its stored definition differs from this config (that is how
+  # the 36 trace_log_N copies appeared, one per restart). Changing a TTL or
+  # interval here therefore archives the current tables once; drop the *_N
+  # copies afterwards — they are never cleaned up.
+  extraOverrides: |
+    <clickhouse>
+      <logger>
+        <level>warning</level>
+      </logger>
+      <asynchronous_metrics_update_period_s>10</asynchronous_metrics_update_period_s>
+      <trace_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </trace_log>
+      <text_log>
+        <level>warning</level>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </text_log>
+      <metric_log>
+        <collect_interval_milliseconds>10000</collect_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </metric_log>
+      <asynchronous_metric_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </asynchronous_metric_log>
+      <query_metric_log>
+        <collect_interval_milliseconds>10000</collect_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </query_metric_log>
+      <latency_log>
+        <collect_interval_milliseconds>10000</collect_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </latency_log>
+      <error_log>
+        <collect_interval_milliseconds>10000</collect_interval_milliseconds>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </error_log>
+      <query_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </query_log>
+      <query_thread_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </query_thread_log>
+      <query_views_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </query_views_log>
+      <part_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </part_log>
+      <processors_profile_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </processors_profile_log>
+      <!-- The default config pins this table's engine, and ClickHouse rejects a
+           separate <ttl> in that case: the TTL has to go inside the engine. -->
+      <opentelemetry_span_log>
+        <engine>ENGINE = MergeTree PARTITION BY toYYYYMM(finish_date) ORDER BY (finish_date, finish_time_us, trace_id) TTL finish_date + INTERVAL 7 DAY DELETE</engine>
+      </opentelemetry_span_log>
+      <asynchronous_insert_log>
+        <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+      </asynchronous_insert_log>
+    </clickhouse>
+  # The sampling query profiler (what fills trace_log) is a user-profile
+  # setting, so it lives in users.d, not config.d: 1 s -> 10 s.
+  usersExtraOverrides: |
+    <clickhouse>
+      <profiles>
+        <default>
+          <query_profiler_real_time_period_ns>10000000000</query_profiler_real_time_period_ns>
+          <query_profiler_cpu_time_period_ns>10000000000</query_profiler_cpu_time_period_ns>
+        </default>
+      </profiles>
+    </clickhouse>
+  # Dedicated node: NodePool "clickhouse" (terraform eks-addons.tf) provisions
+  # one On-Demand 16 vCPU / 64 GiB node tainted workload=clickhouse. ClickHouse
+  # caps itself at 90% of the cgroup limit, so size the limit to the node
+  # (leave ~14 GiB for Auto Mode system pods, Beyla and the kubelet).
+  # Sizing history: 8 vCPU / 32 GiB (request cpu 4, mem 20Gi) saturated at
+  # 7.6 vCPU under 300 merge-lookup SELECT/s + 400 HTTP req/s from the
+  # ingestion worker while disk I/O stayed at ~0 (2026-09-03); the CPU request
+  # below claims the node so the scheduler never co-locates anything else.
+  nodeSelector:
+    workload: clickhouse
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: clickhouse
+      effect: NoSchedule
   resources:
     requests:
-      cpu: 1    
-      memory: 3Gi
+      cpu: 12
+      memory: 48Gi
       ephemeral-storage: 50Mi
     limits:
-      memory: 3Gi
+      memory: 48Gi
       ephemeral-storage: 2Gi
   zookeeper:
     image:
@@ -105,12 +236,24 @@ redis:
   auth:
     password: password123
   primary:
+    # Karpenter consolidation evicts this single-replica StatefulSet whenever
+    # its spot node is "Underutilized" (2026-09-03 08:05Z): ~1 min of queue
+    # unavailability, all workers crash on lost Redis connections and restart,
+    # ingestion pauses. The EBS PVC keeps the data, but the queue store should
+    # not be an eviction candidate at all.
+    podAnnotations:
+      karpenter.sh/do-not-disrupt: "true"
+    # Valkey holds the BullMQ ingestion queues. When the worker cannot drain
+    # them (ClickHouse rejecting inserts, 2026-09-02) the backlog grew to an
+    # 813 MB RDB + AOF that no longer fit a 1 GiB limit: every restart was
+    # OOM-killed while replaying the AOF and Langfuse ingestion deadlocked
+    # (2026-09-03). 8 GiB gives the queue room to survive a ClickHouse outage.
     resources: 
       requests:
         cpu: 125m
-        memory: 256Mi
+        memory: 8Gi
       limits:
-        memory: 256Mi
+        memory: 8Gi
 
 s3:
   deploy: false

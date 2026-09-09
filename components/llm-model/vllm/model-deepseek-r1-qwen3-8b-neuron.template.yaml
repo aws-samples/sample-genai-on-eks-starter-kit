@@ -4,7 +4,7 @@ metadata:
   name: deepseek-r1-qwen3-8b-neuron
   namespace: vllm
 spec:
-  replicas: 1
+  replicas: 16
   selector:
     matchLabels:
       app: deepseek-r1-qwen3-8b-neuron
@@ -39,6 +39,10 @@ spec:
             # - --max-model-len=32768 # 32K
             # DeepSeek-R1 specific
             - --reasoning-parser=deepseek_r1
+            # No --enable-prefix-caching: the optimum-neuron backend (vLLM 0.10 V0
+            # engine, static NxD batching, one 8192-token block per sequence) does
+            # not implement prefix caching; the flag is ignored or breaks startup.
+            # Cache-hit SLI panels therefore only cover the GPU pools.
             # Neuron specific
             - --tensor-parallel-size=2
             # - --gpu-memory-utilization=0.95
@@ -56,6 +60,18 @@ spec:
           ports:
             - name: http
               containerPort: 8000
+          # See model-qwen3-8b-neuron.template.yaml: the EPP routes on the
+          # Ready condition, so a pod that is still loading the model gets
+          # traffic (503 Connection refused) unless readiness is gated on
+          # /health. Applying this to a running pool restarts every pod.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 90
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 2
           resources:
             requests:
               cpu: 3 #75%
@@ -74,8 +90,13 @@ metadata:
   name: deepseek-r1-qwen3-8b-neuron
   namespace: vllm
 spec:
+  # Selects the neuron-lb Envoy pods (see neuron-lb.yaml): per-request
+  # LEAST_REQUEST balancing across the replicas of this pool, which a
+  # ClusterIP Service cannot do for keep-alive clients. The pods themselves
+  # are reachable through the headless Service deepseek-r1-qwen3-8b-neuron-pods.
   selector:
-    app: deepseek-r1-qwen3-8b-neuron
+    app.kubernetes.io/name: neuron-lb
   ports:
     - name: http
       port: 8000
+      targetPort: 8002

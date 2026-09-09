@@ -1,0 +1,2835 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "Token Factory Overview — KCD 2026 'K8s 기반 토큰 팩토리' 발표의 LLM-native 신호 세트를 한 화면에: TTFT/TPOT, tokens/sec, queue depth, KV-cache 점유율, prefix-cache 히트율, tokens-in-flight, 스텝당 토큰 소비, GPU util(>70%), preemption.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Agentic Traffic Overview (eBPF + Langfuse)",
+      "type": "link",
+      "url": "/d/agentic-traffic-overview",
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Token Factory — At a Glance (KCD LLM-native signals)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 101,
+      "type": "stat",
+      "title": "TTFT p95",
+      "description": "Time-to-first-token p95, all selected models. Routing/prefill quality signal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.2
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:time_to_first_token_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "TPOT p95",
+      "description": "Time-per-output-token p95 (decode speed as users feel it).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 3,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.2
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:request_time_per_output_token_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "Gen throughput",
+      "description": "Generated tokens/sec across selected models.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(vllm:generation_tokens_total{model_name=~\"$model\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "Prompt throughput",
+      "description": "Prompt (prefill) tokens/sec.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(vllm:prompt_tokens_total{model_name=~\"$model\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "Queue depth",
+      "description": "Requests waiting for scheduling — primary scale-out signal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(vllm:num_requests_waiting{model_name=~\"$model\"})",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "type": "stat",
+      "title": "In flight",
+      "description": "Requests currently decoding (tokens-in-flight proxy).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(vllm:num_requests_running{model_name=~\"$model\"})",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 107,
+      "type": "stat",
+      "title": "KV cache max",
+      "description": "Worst-case KV-cache block usage. Near 1.0 → preemption risk.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.7
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max(vllm:kv_cache_usage_perc{model_name=~\"$model\"})",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "type": "stat",
+      "title": "Prefix cache hit",
+      "description": "APC hit ratio — the cache-hit-cliff SLI. Watch for step drops after prompt-template changes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 1,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.2
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(rate(vllm:prefix_cache_hits_total{model_name=~\"$model\"}[10m])) or vector(0)) / clamp_min(sum(rate(vllm:prefix_cache_queries_total{model_name=~\"$model\"}[10m])), 1e-9)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 109,
+      "type": "stat",
+      "title": "GPU util (avg)",
+      "description": "Fleet-average GPU utilization. Target: keep above 70%.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 50
+              },
+              {
+                "color": "green",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "avg(DCGM_FI_DEV_GPU_UTIL)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "type": "stat",
+      "title": "GPU memory used",
+      "description": "Framebuffer used / total across the GPU fleet.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 3,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.85
+              },
+              {
+                "color": "red",
+                "value": 0.95
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(DCGM_FI_DEV_FB_USED) / (sum(DCGM_FI_DEV_FB_USED) + sum(DCGM_FI_DEV_FB_FREE))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "type": "stat",
+      "title": "Preemptions /min",
+      "description": "KV-cache pressure evictions. Non-zero = silent latency degradation.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(vllm:num_preemptions_total{model_name=~\"$model\"}[10m])) * 60",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 112,
+      "type": "stat",
+      "title": "E2E p95",
+      "description": "End-to-end request latency p95 (queue + prefill + decode).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 9,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 15
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 113,
+      "type": "stat",
+      "title": "Abort/error rate",
+      "description": "Share of requests finishing with abort/error (200 OK ≠ 합격품).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(rate(vllm:request_success_total{finished_reason=~\"abort|error\", model_name=~\"$model\"}[10m])) or vector(0)) / clamp_min(sum(rate(vllm:request_success_total{model_name=~\"$model\"}[10m])), 1e-9)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 114,
+      "type": "stat",
+      "title": "Models serving",
+      "description": "Distinct model deployments currently up.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(count by (model_name) (vllm:num_requests_running))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 115,
+      "type": "stat",
+      "title": "Queue time p95",
+      "description": "Time spent waiting before prefill starts.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(vllm:request_queue_time_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 116,
+      "type": "stat",
+      "title": "Cached prompt tokens",
+      "description": "Fraction of prompt tokens served from prefix cache (prefill skipped).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 21,
+        "y": 5,
+        "w": 3,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.2
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum(rate(vllm:prompt_tokens_cached_total{model_name=~\"$model\"}[10m])) or vector(0)) / clamp_min(sum(rate(vllm:prompt_tokens_total{model_name=~\"$model\"}[10m])), 1e-9)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "라우팅 & 캐시 — TTFT / Prefix Cache (KCD B1)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 201,
+      "type": "timeseries",
+      "title": "TTFT percentiles by model",
+      "description": "Cache-hit TTFT vs cache-miss TTFT separates here — watch p99 diverge from p50 when hit ratio drops.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "p50 {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "B",
+          "legendFormat": "p95 {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "C",
+          "legendFormat": "p99 {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "timeseries",
+      "title": "Prefix-cache hit ratio by model (cache-hit-cliff SLI)",
+      "description": "APC hit ratio per model. A step drop = prompt-template change or tenant-mix shift (KCD S7: 히트율 절벽을 SLI로).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "percentunit",
+          "max": 1,
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:prefix_cache_hits_total{model_name=~\"$model\"}[10m])) / sum by (model_name) (rate(vllm:prefix_cache_queries_total{model_name=~\"$model\"}[10m]))",
+          "refId": "A",
+          "legendFormat": "{{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:external_prefix_cache_hits_total{model_name=~\"$model\"}[10m])) / sum by (model_name) (rate(vllm:external_prefix_cache_queries_total{model_name=~\"$model\"}[10m]))",
+          "refId": "B",
+          "legendFormat": "external {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "type": "timeseries",
+      "title": "Queue time p95 by model",
+      "description": "Pre-prefill wait. Rising queue time with idle GPUs = routing imbalance.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:request_queue_time_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "{{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "type": "timeseries",
+      "title": "Requests waiting by reason",
+      "description": "capacity = KV-cache/slot shortage, deferred = scheduling policy. Splits 'why are we queueing'.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name, reason) (vllm:num_requests_waiting_by_reason{model_name=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "{{model_name}} {{reason}}"
+        }
+      ]
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "토큰 처리량 & 지연 — Throughput / TPOT (KCD B2)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 301,
+      "type": "timeseries",
+      "title": "Token throughput by model (prompt vs generation)",
+      "description": "Factory output: tokens/sec. Prompt tokens = prefill load, generation tokens = decode output.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:prompt_tokens_total{model_name=~\"$model\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "prompt {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:generation_tokens_total{model_name=~\"$model\"}[$__rate_interval]))",
+          "refId": "B",
+          "legendFormat": "gen {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 302,
+      "type": "timeseries",
+      "title": "TPOT & inter-token latency p95 by model",
+      "description": "Decode-side speed per model — the '75 vs 15 tok/s' tiering signal.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:request_time_per_output_token_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "TPOT p95 {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:inter_token_latency_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "B",
+          "legendFormat": "ITL p95 {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 303,
+      "type": "timeseries",
+      "title": "Tokens per engine step (mean)",
+      "description": "스텝당 토큰 소비 추이 (KCD S14). Batch efficiency per scheduler iteration.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:iteration_tokens_total_sum{model_name=~\"$model\"}[$__rate_interval])) / sum by (model_name) (rate(vllm:iteration_tokens_total_count{model_name=~\"$model\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 304,
+      "type": "timeseries",
+      "title": "E2E latency percentiles",
+      "description": "Full request latency per model.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 37,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "p50 {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "B",
+          "legendFormat": "p95 {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 305,
+      "type": "timeseries",
+      "title": "Prefill vs decode time p95",
+      "description": "Where request time goes. Prefill-heavy = cache misses / long prompts; decode-heavy = long outputs.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 37,
+        "w": 8,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:request_prefill_time_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "A",
+          "legendFormat": "prefill {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:request_decode_time_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "refId": "B",
+          "legendFormat": "decode {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 400,
+      "type": "row",
+      "title": "GPU & KV Cache — 자원과 격리 (KCD B3)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 401,
+      "type": "timeseries",
+      "title": "KV-cache usage by model",
+      "description": "KV-cache block usage. Above the 0.9 line, preemptions start — GPU 메모리 예산 = 가중치 + KV cache + 여유분.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "unit": "percentunit",
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.9
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (model_name, engine) (vllm:kv_cache_usage_perc{model_name=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "{{model_name}} e{{engine}}"
+        }
+      ]
+    },
+    {
+      "id": 402,
+      "type": "timeseries",
+      "title": "Preemptions & aborts",
+      "description": "KV-cache pressure fallout: preemption = silent latency degradation (KCD S16 failure mode).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 46,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:num_preemptions_total{model_name=~\"$model\"}[$__rate_interval])) * 60",
+          "refId": "A",
+          "legendFormat": "preempt/min {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:request_success_total{finished_reason=\"abort\", model_name=~\"$model\"}[$__rate_interval])) * 60",
+          "refId": "B",
+          "legendFormat": "abort/min {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 403,
+      "type": "timeseries",
+      "title": "GPU utilization per GPU (target > 70%)",
+      "description": "Per-GPU utilization with the 70% economic threshold (KCD B3: GPU 활용률 >70% 유지).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "unit": "percent",
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean",
+            "last"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "DCGM_FI_DEV_GPU_UTIL",
+          "refId": "A",
+          "legendFormat": "{{Hostname}} gpu{{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 404,
+      "type": "timeseries",
+      "title": "GPU memory (FB used) per GPU",
+      "description": "Framebuffer MiB used = weights + KV cache + activations.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 55,
+        "w": 6,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "mbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "DCGM_FI_DEV_FB_USED",
+          "refId": "A",
+          "legendFormat": "{{Hostname}} gpu{{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 405,
+      "type": "timeseries",
+      "title": "GPU power draw",
+      "description": "Power per GPU — the literal factory power bill.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 55,
+        "w": 6,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "DCGM_FI_DEV_POWER_USAGE",
+          "refId": "A",
+          "legendFormat": "{{Hostname}} gpu{{gpu}}"
+        }
+      ]
+    },
+    {
+      "id": 500,
+      "type": "row",
+      "title": "스케일 신호 — CPU%가 아니라 LLM-native 신호로 (KCD B4)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 501,
+      "type": "timeseries",
+      "title": "Scale signals: waiting vs running",
+      "description": "KEDA scaling inputs: queue depth (scale-out trigger) vs in-flight decode load.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 65,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (vllm:num_requests_waiting{model_name=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "waiting {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (vllm:num_requests_running{model_name=~\"$model\"})",
+          "refId": "B",
+          "legendFormat": "running {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 502,
+      "type": "timeseries",
+      "title": "Scale-signal view — KV cache & queue (KEDA/HPA candidates)",
+      "description": "Candidate LLM-native scale signals for KEDA/HPA: KV-cache occupancy (vllm:kv_cache_usage_perc, with the deprecated vllm:gpu_cache_usage_perc alias as fallback) and queue depth. Scale on these, not CPU% (KCD B4). This cluster currently ships a cron-based ScaledObject only; wire these metrics into a Prometheus trigger to activate.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 65,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "avg by (model_name) (vllm:kv_cache_usage_perc{model_name=~\"$model\"} or vllm:gpu_cache_usage_perc{model_name=~\"$model\"})",
+          "refId": "A",
+          "legendFormat": "kv-cache {{model_name}}"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (vllm:num_requests_waiting{model_name=~\"$model\"})",
+          "refId": "B",
+          "legendFormat": "waiting {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 600,
+      "type": "row",
+      "title": "캐시 히트율 분해 — 노드 · 모델 풀 · 테넌트 믹스 (KCD S7 cache-hit cliff: 평균 하나로 보지 말 것)",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 73,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 601,
+      "type": "timeseries",
+      "title": "Prefix-cache hit ratio by worker node",
+      "description": "KV cache is node-local. One node dropping while the others hold is a routing/placement problem, not a model problem. Line at 50% = cliff watch.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 74,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "line+area"
+            }
+          },
+          "unit": "percentunit",
+          "max": 1,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.3
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (node, model_name) (sum by (pod, model_name) (rate(vllm:prefix_cache_hits_total{model_name=~\"$model\"}[$__rate_interval])) * on (pod) group_left (node) max by (pod, node) (kube_pod_info{namespace=\"vllm\"})) / sum by (node, model_name) (sum by (pod, model_name) (rate(vllm:prefix_cache_queries_total{model_name=~\"$model\"}[$__rate_interval])) * on (pod) group_left (node) max by (pod, node) (kube_pod_info{namespace=\"vllm\"}))",
+          "refId": "A",
+          "legendFormat": "{{node}} · {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 602,
+      "type": "timeseries",
+      "title": "Prefill tokens by source (cache hit vs compute)",
+      "description": "local_cache_hit = prefill skipped, external_kv_transfer = disaggregated prefill, local_compute = full prefill. Token-weighted view of the same cache.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 74,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name, source) (rate(vllm:prompt_tokens_by_source_total{model_name=~\"$model\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{source}} {{model_name}}"
+        }
+      ]
+    },
+    {
+      "id": 603,
+      "type": "bargauge",
+      "title": "Hit ratio by engine (now)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "description": "Current hit ratio per vLLM pod with its worker node. Red < 30%, orange < 50%.",
+      "gridPos": {
+        "x": 0,
+        "y": 83,
+        "w": 8,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.3
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (pod, model_name) (rate(vllm:prefix_cache_hits_total{model_name=~\"$model\"}[$__rate_interval])) / sum by (pod, model_name) (rate(vllm:prefix_cache_queries_total{model_name=~\"$model\"}[$__rate_interval]))) * on (pod) group_left (node) max by (pod, node) (kube_pod_info{namespace=\"vllm\"})",
+          "refId": "A",
+          "legendFormat": "{{model_name}} @ {{node}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 604,
+      "type": "state-timeline",
+      "title": "Cache verdict by engine",
+      "description": "Low hit ratio (<50%) classified by KV pressure: Capacity bottleneck = KV ≥85% or preempting (blocks evicted before reuse → KV fp8 / more replicas). Prompt/routing = KV ≤60% headroom but prefixes not matching (volatile system prompt, template drift, cache-blind routing). Engines with <0.01 cache queries/s are hidden.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 83,
+        "w": 16,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 75,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Healthy",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "Degraded",
+                  "color": "yellow"
+                },
+                "2": {
+                  "text": "Prompt / routing",
+                  "color": "orange"
+                },
+                "3": {
+                  "text": "Capacity bottleneck",
+                  "color": "red"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "auto",
+        "alignValue": "center",
+        "mergeValues": true,
+        "rowHeight": 0.8,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_max( ((sum by (pod, model_name) (rate(vllm:prefix_cache_hits_total{model_name=~\"$model\"}[$__rate_interval])) / sum by (pod, model_name) (rate(vllm:prefix_cache_queries_total{model_name=~\"$model\"}[$__rate_interval]))) < bool 0.5) * ( 1 + (max by (pod, model_name) (vllm:kv_cache_usage_perc{model_name=~\"$model\"}) <= bool 0.6) + 2 * clamp_max((max by (pod, model_name) (vllm:kv_cache_usage_perc{model_name=~\"$model\"}) >= bool 0.85) + (sum by (pod, model_name) (rate(vllm:num_preemptions_total{model_name=~\"$model\"}[$__rate_interval])) > bool 0), 1) ), 3 ) and on (pod, model_name) (sum by (pod, model_name) (rate(vllm:prefix_cache_queries_total{model_name=~\"$model\"}[$__rate_interval])) > 0.01)",
+          "refId": "A",
+          "legendFormat": "{{model_name}} / {{pod}}"
+        }
+      ]
+    },
+    {
+      "id": 605,
+      "type": "timeseries",
+      "title": "Tenant mix per model pool (who drives each pool — Beyla eBPF)",
+      "description": "Several tenants with unrelated prefixes sharing one pool evict each other's KV blocks — the usual cause of the cliff. Read alongside the hit ratio of the same pool. Per-tenant hit ratios require per-key cached-token counters at the gateway (e.g. LiteLLM litellm_input_cached_tokens_metric), not exported on this platform.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 92,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 35,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (server, client_k8s_namespace_name, client) (rate(traces_service_graph_request_total{source=\"beyla\", server=~\"$model\", client!~\"i-[0-9a-f]+\", client_k8s_namespace_name!~\"monitoring|adot|beyla|kube-system\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{server}} ← {{client_k8s_namespace_name}}/{{client}}"
+        }
+      ]
+    },
+    {
+      "id": 606,
+      "type": "timeseries",
+      "title": "Cached prompt-token share by tenant (LiteLLM team / key)",
+      "description": "Per-tenant analogue of the engine hit ratio: backend cached_tokens / prompt tokens, counted by the LiteLLM Prometheus callback under the virtual key's team and alias. Requires vLLM --enable-prompt-tokens-details. Tenants with unrelated prefixes sharing a pool evict each other's blocks.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 100,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "line+area"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.3
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (team_alias, api_key_alias) (rate(litellm_input_cached_tokens_metric_total{api_key_alias!=\"\", api_key_alias!=\"None\"}[$__rate_interval])) or 0 * sum by (team_alias, api_key_alias) (rate(litellm_input_tokens_metric_total{api_key_alias!=\"\", api_key_alias!=\"None\"}[$__rate_interval]))) / sum by (team_alias, api_key_alias) (rate(litellm_input_tokens_metric_total{api_key_alias!=\"\", api_key_alias!=\"None\"}[$__rate_interval]))",
+          "legendFormat": "{{team_alias}} / {{api_key_alias}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 607,
+      "type": "timeseries",
+      "title": "Cached share by prompt template version (metadata.prompt_template_version)",
+      "description": "A prompt-template rollout is a cache-invalidation event: the new version starts at 0 while the old one still reads high. Clients tag requests with metadata.prompt_template / prompt_template_version (custom_prometheus_metadata_labels).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 100,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "line+area"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.3
+              },
+              {
+                "color": "green",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (metadata_prompt_template, metadata_prompt_template_version) (rate(litellm_input_cached_tokens_metric_total{metadata_prompt_template!=\"\", metadata_prompt_template!=\"None\"}[$__rate_interval])) or 0 * sum by (metadata_prompt_template, metadata_prompt_template_version) (rate(litellm_input_tokens_metric_total{metadata_prompt_template!=\"\", metadata_prompt_template!=\"None\"}[$__rate_interval]))) / sum by (metadata_prompt_template, metadata_prompt_template_version) (rate(litellm_input_tokens_metric_total{metadata_prompt_template!=\"\", metadata_prompt_template!=\"None\"}[$__rate_interval]))",
+          "legendFormat": "{{metadata_prompt_template}} {{metadata_prompt_template_version}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 608,
+      "type": "timeseries",
+      "title": "TTFT p95 by model pool (what a miss costs)",
+      "description": "Step up aligned with a hit-ratio drop = cache-hit cliff. Step up with a flat ratio = queueing / capacity.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 109,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket{model_name=~\"$model\"}[$__rate_interval])))",
+          "legendFormat": "{{model_name}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 609,
+      "type": "timeseries",
+      "title": "Prefill tokens per request: prompt vs computed",
+      "description": "Prompt tokens sent vs tokens prefill actually computed (vllm:request_prefill_kv_computed_tokens). The gap is the work the prefix cache removed.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 109,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "lineWidth": 2,
+            "showPoints": "never",
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "stacking": {
+              "mode": "none"
+            }
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "last",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:request_prompt_tokens_sum{model_name=~\"$model\"}[$__rate_interval])) / sum by (model_name) (rate(vllm:request_prompt_tokens_count{model_name=~\"$model\"}[$__rate_interval]))",
+          "legendFormat": "prompt {{model_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (model_name) (rate(vllm:request_prefill_kv_computed_tokens_sum{model_name=~\"$model\"}[$__rate_interval])) / sum by (model_name) (rate(vllm:request_prefill_kv_computed_tokens_count{model_name=~\"$model\"}[$__rate_interval]))",
+          "legendFormat": "computed {{model_name}}",
+          "refId": "B"
+        }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "token-factory",
+    "vllm",
+    "llm",
+    "kcd"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(vllm:num_requests_running, model_name)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Model",
+        "multi": true,
+        "name": "model",
+        "options": [],
+        "query": {
+          "qryType": 1,
+          "query": "label_values(vllm:num_requests_running, model_name)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Token Factory Overview — LLM-native Signals",
+  "uid": "token-factory-overview",
+  "version": 4,
+  "weekStart": ""
+}

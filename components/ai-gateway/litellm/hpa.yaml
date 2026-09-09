@@ -1,0 +1,47 @@
+# LiteLLM proxy autoscaling. The chart's own `autoscaling` block is left off and
+# this HPA owns spec.replicas instead (which is why index.mjs passes
+# --force-conflicts to helm upgrade: the HPA and Helm both write replicas).
+#
+# Sizing rationale (measured 2026-09-02, v1.98.0, 1-core request):
+#   - the proxy spends ~36m CPU per request/s (auth, spend log, Prometheus
+#     callback, JSON re-encoding); at 70% of 1 core one pod is good for ~19 rps.
+#   - minReplicas 2 keeps a second pod for rolling updates and node loss; the
+#     traffic generator's load lane (LOAD_RPS=6 per GPU pool, ~22 rps total)
+#     keeps utilization ~40% so the second replica is also justified by load.
+#   - scale-up is immediate (no stabilization, +100% per 15 s) so a burst is
+#     absorbed within one metrics cycle; scale-down waits 3 min and halves at
+#     most once a minute so short lulls do not flap the deployment.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: litellm-hpa
+  namespace: litellm
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: litellm
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      selectPolicy: Max
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 180
+      selectPolicy: Max
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60

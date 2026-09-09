@@ -1,0 +1,219 @@
+# Open-Sora 2.0 (11B, hpcai-tech/Open-Sora-v2) — text/image-to-video.
+#
+# Upstream ships no serving server (inference is a torchrun batch script), so
+# this Deployment wraps it with a minimal FastAPI server (ConfigMap below):
+#   POST /generate {"prompt": "..."}  -> {"id": ...}   (runs torchrun inference)
+#   GET  /status/{id}                 -> pending|running|done|failed
+#   GET  /videos/{id}.mp4             -> generated video
+#
+# Deployed in the vllm namespace to reuse the huggingface-cache EFS PVC and
+# hf-token secret. GPU usage appears on the traffic dashboard through the
+# per-pod DCGM panels (pod=opensora-v2-*).
+#
+# Memory: upstream reports 44.3GB peak/GPU for 256px with 4-GPU ColossalAI TP,
+# which fits 4x L40S 48GB (g6e.12xlarge). --offload True lowers the peak
+# further as safety margin on the 48GB cards.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensora-v2-server
+  namespace: vllm
+data:
+  server.py: |
+    """Minimal generation API around Open-Sora's torchrun inference script."""
+    import os
+    import subprocess
+    import threading
+    import uuid
+
+    from fastapi import FastAPI, HTTPException
+    from fastapi.responses import FileResponse
+    from pydantic import BaseModel
+
+    REPO = "/workspace/Open-Sora"
+    SAVE_DIR = "/workspace/samples"
+    NPROC = os.environ.get("OPENSORA_NPROC", "4")
+    CONFIG = os.environ.get("OPENSORA_CONFIG", "configs/diffusion/inference/t2i2v_256px.py")
+
+    app = FastAPI()
+    jobs = {}
+    lock = threading.Lock()  # one generation at a time: it saturates all GPUs
+
+
+    class GenerateRequest(BaseModel):
+        prompt: str
+        num_frames: int | None = None
+        aspect_ratio: str | None = None
+
+
+    def run_job(job_id: str, req: GenerateRequest):
+        out_dir = os.path.join(SAVE_DIR, job_id)
+        cmd = [
+            "torchrun", f"--nproc_per_node={NPROC}", "--standalone",
+            "scripts/diffusion/inference.py", CONFIG,
+            "--save-dir", out_dir, "--prompt", req.prompt, "--offload", "True",
+        ]
+        if req.num_frames:
+            cmd += ["--num_frames", str(req.num_frames)]
+        if req.aspect_ratio:
+            cmd += ["--aspect_ratio", req.aspect_ratio]
+        with lock:
+            jobs[job_id]["state"] = "running"
+            proc = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
+        if proc.returncode == 0:
+            mp4s = [f for f in os.listdir(out_dir) if f.endswith(".mp4")] if os.path.isdir(out_dir) else []
+            if mp4s:
+                jobs[job_id].update(state="done", file=os.path.join(out_dir, mp4s[0]))
+                return
+        jobs[job_id].update(state="failed", error=proc.stderr[-2000:])
+
+
+    @app.get("/healthz")
+    def healthz():
+        return {"ok": True}
+
+
+    @app.post("/generate")
+    def generate(req: GenerateRequest):
+        job_id = uuid.uuid4().hex[:12]
+        jobs[job_id] = {"state": "pending", "prompt": req.prompt}
+        threading.Thread(target=run_job, args=(job_id, req), daemon=True).start()
+        return {"id": job_id}
+
+
+    @app.get("/status/{job_id}")
+    def status(job_id: str):
+        if job_id not in jobs:
+            raise HTTPException(404)
+        return {k: v for k, v in jobs[job_id].items() if k != "file"}
+
+
+    @app.get("/videos/{job_id}.mp4")
+    def video(job_id: str):
+        job = jobs.get(job_id)
+        if not job or job.get("state") != "done":
+            raise HTTPException(404)
+        return FileResponse(job["file"], media_type="video/mp4")
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opensora-v2
+  namespace: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensora-v2
+  template:
+    metadata:
+      labels:
+        app: opensora-v2
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      nodeSelector:
+        {{{KARPENTER_PREFIX}}}/instance-family: g6e
+      initContainers:
+        # Checkpoints (~50GB incl. flux + t5) land on the shared EFS cache so
+        # pod restarts and reschedules skip the download.
+        - name: download-ckpts
+          image: {{DOCKER_IMAGE_PREFIX}}python:3.10-slim
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -e
+              pip install --no-cache-dir "huggingface_hub[cli]"
+              hf download hpcai-tech/Open-Sora-v2 --local-dir /root/.cache/huggingface/opensora-v2-ckpts
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+      containers:
+        - name: opensora
+          # torch 2.4.0 + cu121 matches upstream requirements exactly, so pip
+          # only adds opensora + xformers cu121 wheels on top (no CUDA builds).
+          image: {{DOCKER_IMAGE_PREFIX}}pytorch/pytorch:2.4.0-cuda12.1-cudnn9-devel
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -e
+              apt-get update && apt-get install -y --no-install-recommends git ffmpeg && rm -rf /var/lib/apt/lists/*
+              git clone --depth 1 https://github.com/hpcaitech/Open-Sora /workspace/Open-Sora
+              cd /workspace/Open-Sora
+              pip install --no-cache-dir -v .
+              pip install --no-cache-dir xformers==0.0.27.post2 --index-url https://download.pytorch.org/whl/cu121
+              pip install --no-cache-dir fastapi uvicorn
+              ln -sfn /root/.cache/huggingface/opensora-v2-ckpts ./ckpts
+              mkdir -p /workspace/samples
+              exec uvicorn server:app --app-dir /app --host 0.0.0.0 --port 8000
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+            - name: OPENSORA_NPROC
+              value: "4"
+          ports:
+            - name: http
+              containerPort: 8000
+          # Setup (apt + pip + clone) takes ~10-15 min on first start.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 30
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 12
+              memory: 96Gi
+              nvidia.com/gpu: 4
+            limits:
+              nvidia.com/gpu: 4
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            - name: server
+              mountPath: /app
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: server
+          configMap:
+            name: opensora-v2-server
+        - name: shm
+          emptyDir:
+            medium: Memory
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opensora-v2
+  namespace: vllm
+spec:
+  selector:
+    app: opensora-v2
+  ports:
+    - name: http
+      port: 8000

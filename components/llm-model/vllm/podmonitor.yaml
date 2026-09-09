@@ -1,0 +1,34 @@
+# Scrape every vLLM model server's native /metrics (vllm:time_to_first_token_*,
+# vllm:num_requests_running/waiting, vllm:kv_cache_usage_perc, ...) into
+# kube-prometheus-stack. A PodMonitor (not ServiceMonitor) so each model pod is
+# scraped directly regardless of how its Service is shaped; all model
+# Deployments expose the API + metrics on the container port named "http".
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: vllm-models
+  namespace: vllm
+  labels:
+    release: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - vllm
+  selector:
+    # Every model pod carries app=<model-name>; match on the label key being
+    # present rather than enumerating model names.
+    matchExpressions:
+      - key: app
+        operator: Exists
+      # Pods in this namespace that carry app= but are not vLLM engines: the
+      # Open-Sora video server has no /metrics (404 kept the job at 15/16 up)
+      # and neuron-lb is the Envoy in front of the Neuron pools.
+      - key: app
+        operator: NotIn
+        values:
+          - opensora-v2
+          - neuron-lb
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

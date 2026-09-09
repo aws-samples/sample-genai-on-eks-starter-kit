@@ -1,0 +1,303 @@
+# neuron-lb: per-request L7 load balancer in front of the Neuron (inf2) vLLM pools.
+#
+# Why: the Neuron engines are compiled with --max-num-seqs=2, so one replica
+# completes ~0.4 req/s and the pool is scaled horizontally (6 replicas each,
+# 2026-09-02). A plain ClusterIP Service balances per *connection*, and every
+# client in front of it (LiteLLM httpx pool, bifrost, Kong) keeps HTTP
+# keep-alive connections open, so pods added by KEDA or kubectl scale received
+# almost no traffic (measured: 2 of 5 qwen3-8b-neuron pods idle at 0 rps while
+# the two old ones ran at their 0.44 rps ceiling with a queue).
+#
+# How: the Services <model>.vllm:8000 that every consumer already uses keep
+# their names but now select the Envoy pods below; the vLLM pods move to the
+# headless Services <model>-pods, which Envoy resolves (STRICT_DNS, 5 s) and
+# balances with LEAST_REQUEST per request. Active /health checks keep pods that
+# are still loading the model (the Deployments have no readiness probe) out of
+# rotation, and healthy_panic_threshold 0 prevents fallback to unhealthy hosts
+# during scale-out. No client configuration changes.
+#
+# Ports: 8001 -> qwen3-8b-neuron, 8002 -> deepseek-r1-qwen3-8b-neuron,
+#        8003 -> qwen36-27b-fp8 (GPU pool; added 2026-09-03 when it went to
+#        2 replicas — same keep-alive problem, same fix; the name "neuron-lb"
+#        is kept so the existing Services and the PodMonitor exclusion stay).
+# Scope: this LB serves the Service path (LiteLLM, Kong, bifrost). The Gateway
+# API Inference Extension path (components/ai-gateway/agentgateway/) does not
+# use it: there the EPP picks the pod and agentgateway connects to it directly.
+# Metrics: the vllm-models PodMonitor selects pods by the `app` label, which
+# these pods intentionally do not carry (label app.kubernetes.io/name instead).
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen3-8b-neuron-pods
+  namespace: vllm
+spec:
+  clusterIP: None
+  selector:
+    app: qwen3-8b-neuron
+  ports:
+    - name: http
+      port: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deepseek-r1-qwen3-8b-neuron-pods
+  namespace: vllm
+spec:
+  clusterIP: None
+  selector:
+    app: deepseek-r1-qwen3-8b-neuron
+  ports:
+    - name: http
+      port: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwen36-27b-fp8-pods
+  namespace: vllm
+spec:
+  clusterIP: None
+  selector:
+    app: qwen36-27b-fp8
+  ports:
+    - name: http
+      port: 8000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: neuron-lb-envoy
+  namespace: vllm
+data:
+  envoy.yaml: |
+    admin:
+      address:
+        socket_address: { address: 127.0.0.1, port_value: 9901 }
+    static_resources:
+      listeners:
+        - name: qwen3-8b-neuron
+          address:
+            socket_address: { address: 0.0.0.0, port_value: 8001 }
+          filter_chains:
+            - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: qwen3_8b_neuron
+                    stream_idle_timeout: 600s
+                    request_timeout: 0s
+                    route_config:
+                      name: qwen3-8b-neuron
+                      virtual_hosts:
+                        - name: all
+                          domains: ["*"]
+                          routes:
+                            - match: { prefix: "/" }
+                              route: { cluster: qwen3-8b-neuron, timeout: 0s, idle_timeout: 600s }
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        - name: deepseek-r1-qwen3-8b-neuron
+          address:
+            socket_address: { address: 0.0.0.0, port_value: 8002 }
+          filter_chains:
+            - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: deepseek_r1_qwen3_8b_neuron
+                    stream_idle_timeout: 600s
+                    request_timeout: 0s
+                    route_config:
+                      name: deepseek-r1-qwen3-8b-neuron
+                      virtual_hosts:
+                        - name: all
+                          domains: ["*"]
+                          routes:
+                            - match: { prefix: "/" }
+                              route: { cluster: deepseek-r1-qwen3-8b-neuron, timeout: 0s, idle_timeout: 600s }
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        - name: qwen36-27b-fp8
+          address:
+            socket_address: { address: 0.0.0.0, port_value: 8003 }
+          filter_chains:
+            - filters:
+                - name: envoy.filters.network.http_connection_manager
+                  typed_config:
+                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                    stat_prefix: qwen36_27b_fp8
+                    stream_idle_timeout: 600s
+                    request_timeout: 0s
+                    route_config:
+                      name: qwen36-27b-fp8
+                      virtual_hosts:
+                        - name: all
+                          domains: ["*"]
+                          routes:
+                            - match: { prefix: "/" }
+                              route: { cluster: qwen36-27b-fp8, timeout: 0s, idle_timeout: 600s }
+                    http_filters:
+                      - name: envoy.filters.http.router
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+      clusters:
+        - name: qwen3-8b-neuron
+          type: STRICT_DNS
+          dns_lookup_family: V4_ONLY
+          dns_refresh_rate: 5s
+          respect_dns_ttl: false
+          connect_timeout: 2s
+          lb_policy: LEAST_REQUEST
+          least_request_lb_config: { choice_count: 8 }
+          common_lb_config:
+            healthy_panic_threshold: { value: 0 }
+          typed_extension_protocol_options:
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config: { http_protocol_options: {} }
+          health_checks:
+            - timeout: 2s
+              interval: 5s
+              no_traffic_interval: 5s
+              unhealthy_threshold: 2
+              healthy_threshold: 1
+              http_health_check: { path: /health }
+          load_assignment:
+            cluster_name: qwen3-8b-neuron
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: qwen3-8b-neuron-pods.vllm.svc.cluster.local, port_value: 8000 }
+        - name: deepseek-r1-qwen3-8b-neuron
+          type: STRICT_DNS
+          dns_lookup_family: V4_ONLY
+          dns_refresh_rate: 5s
+          respect_dns_ttl: false
+          connect_timeout: 2s
+          lb_policy: LEAST_REQUEST
+          least_request_lb_config: { choice_count: 8 }
+          common_lb_config:
+            healthy_panic_threshold: { value: 0 }
+          typed_extension_protocol_options:
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config: { http_protocol_options: {} }
+          health_checks:
+            - timeout: 2s
+              interval: 5s
+              no_traffic_interval: 5s
+              unhealthy_threshold: 2
+              healthy_threshold: 1
+              http_health_check: { path: /health }
+          load_assignment:
+            cluster_name: deepseek-r1-qwen3-8b-neuron
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: deepseek-r1-qwen3-8b-neuron-pods.vllm.svc.cluster.local, port_value: 8000 }
+        - name: qwen36-27b-fp8
+          type: STRICT_DNS
+          dns_lookup_family: V4_ONLY
+          dns_refresh_rate: 5s
+          respect_dns_ttl: false
+          connect_timeout: 2s
+          lb_policy: LEAST_REQUEST
+          least_request_lb_config: { choice_count: 8 }
+          common_lb_config:
+            healthy_panic_threshold: { value: 0 }
+          typed_extension_protocol_options:
+            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+              "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+              explicit_http_config: { http_protocol_options: {} }
+          health_checks:
+            - timeout: 2s
+              interval: 5s
+              no_traffic_interval: 5s
+              unhealthy_threshold: 2
+              healthy_threshold: 1
+              http_health_check: { path: /health }
+          load_assignment:
+            cluster_name: qwen36-27b-fp8
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: qwen36-27b-fp8-pods.vllm.svc.cluster.local, port_value: 8000 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuron-lb
+  namespace: vllm
+  labels:
+    app.kubernetes.io/name: neuron-lb
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: neuron-lb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: neuron-lb
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: neuron-lb
+      containers:
+        - name: envoy
+          image: envoyproxy/envoy:v1.33-latest
+          args: ["-c", "/etc/envoy/envoy.yaml", "--service-cluster", "neuron-lb", "--log-level", "warn"]
+          ports:
+            - name: qwen3
+              containerPort: 8001
+            - name: deepseek
+              containerPort: 8002
+            - name: qwen36
+              containerPort: 8003
+          readinessProbe:
+            tcpSocket: { port: 8001 }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: 8001 }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+              readOnly: true
+      volumes:
+        - name: envoy-config
+          configMap:
+            name: neuron-lb-envoy

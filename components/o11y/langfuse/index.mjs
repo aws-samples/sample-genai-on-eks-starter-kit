@@ -45,7 +45,12 @@ export async function install() {
     AWS_REGION: process.env.AWS_REGION,
   };
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
-  await $`helm upgrade --install langfuse langfuse/langfuse --namespace langfuse --create-namespace -f ${valuesRenderedPath}`;
+  // Pin the chart version for reproducibility. Chart 1.5.35 ships Langfuse
+  // app v3.185.0 — the version the Module 4 evaluation hands-on (Evaluators /
+  // LLM-as-a-Judge UI) is written and verified against. Bump deliberately when
+  // re-validating the docs, since Langfuse moves the evaluation UI between
+  // releases (e.g. the old "LLM-as-a-Judge" sidebar item is now "Evaluators").
+  await $`helm upgrade --install langfuse langfuse/langfuse --version 1.5.35 --namespace langfuse --create-namespace -f ${valuesRenderedPath}`;
 }
 
 export async function uninstall() {

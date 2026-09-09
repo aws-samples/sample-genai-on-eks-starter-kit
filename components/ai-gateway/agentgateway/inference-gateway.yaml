@@ -1,0 +1,135 @@
+# inference-gateway: Gateway API Inference Extension entry point for the
+# self-hosted Neuron vLLM pools (agentgateway data plane, see
+# values-agentgateway.yaml for why this is not the kgateway `ai-gateway`).
+#
+# Request path:  client -> inference-gateway (agentgateway, :8080)
+#                       -> ext-proc to <pool>-epp.vllm:9002 (Endpoint Picker:
+#                          queue depth / KV-cache utilisation / prefix-cache
+#                          affinity scorers over the pool's pods, read from
+#                          every pod's /metrics)
+#                       -> the picked vLLM pod :8000 directly.
+# There is no Service, no bifrost and no neuron-lb Envoy on this path; the
+# EPP decides per request. The pools themselves are created by the
+# `inferencepool` helm chart (inferencepool-values-<model>.yaml) in namespace
+# vllm, which is why the HTTPRoutes need the ReferenceGrant below.
+#
+# Route shape mirrors the kgateway ai-gateway so clients only change the host:
+#   /ai/qwen3-8b/chat/completions    -> /v1/chat/completions on qwen3-8b-neuron
+#   /ai/deepseek-r1/chat/completions -> /v1/chat/completions on deepseek-r1-qwen3-8b-neuron
+# In-cluster host: inference-gateway.agentgateway-system.svc.cluster.local:8080
+# (ClusterIP on purpose: no second public NLB; kgateway's ai-gateway keeps the
+# external one).
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayParameters
+metadata:
+  name: inference-gateway
+  namespace: agentgateway-system
+spec:
+  service:
+    spec:
+      type: ClusterIP
+  deployment:
+    spec:
+      replicas: 2
+      template:
+        spec:
+          containers:
+            - name: agentgateway
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  memory: 512Mi
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: inference-gateway
+  namespace: agentgateway-system
+spec:
+  gatewayClassName: agentgateway
+  infrastructure:
+    parametersRef:
+      group: agentgateway.dev
+      kind: AgentgatewayParameters
+      name: inference-gateway
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+# Lets HTTPRoutes in agentgateway-system reference InferencePools in vllm.
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: inference-gateway-to-pools
+  namespace: vllm
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: agentgateway-system
+  to:
+    - group: inference.networking.k8s.io
+      kind: InferencePool
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qwen3-8b-neuron
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: inference-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ai/qwen3-8b
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1
+      backendRefs:
+        - group: inference.networking.k8s.io
+          kind: InferencePool
+          name: qwen3-8b-neuron
+          namespace: vllm
+      timeouts:
+        request: 300s
+        backendRequest: 300s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: deepseek-r1-qwen3-8b-neuron
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: inference-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ai/deepseek-r1
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /v1
+      backendRefs:
+        - group: inference.networking.k8s.io
+          kind: InferencePool
+          name: deepseek-r1-qwen3-8b-neuron
+          namespace: vllm
+      timeouts:
+        request: 300s
+        backendRequest: 300s

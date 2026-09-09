@@ -27,6 +27,12 @@ export async function install() {
   await $`kubectl apply -f ${path.join(DIR, "namespace.yaml")}`;
   await $`kubectl apply -f ${path.join(DIR, "pvc-huggingface-cache.yaml")}`;
   await $`kubectl apply -f ${path.join(DIR, "pvc-neuron-cache.yaml")}`;
+  // Scrape vLLM native metrics (TTFT, queue depth, KV-cache, preemptions)
+  // into kube-prometheus-stack; the Grafana LLM-performance panels use them.
+  // Requires the monitoring component (PodMonitor CRD) — skip otherwise.
+  await $`kubectl apply -f ${path.join(DIR, "podmonitor.yaml")}`.catch(() =>
+    console.log("  (PodMonitor CRD not present — skipping vLLM metrics scrape)")
+  );
   const secretTemplatePath = path.join(DIR, "secret.template.yaml");
   const secretRenderedPath = path.join(DIR, "secret.rendered.yaml");
   const secretTemplateString = fs.readFileSync(secretTemplatePath, "utf8");
@@ -43,6 +49,7 @@ export async function install() {
 export async function uninstall() {
   const { models } = config["llm-model"]["vllm"];
   await utils.model.removeAllModels(models, "llm-model", "vllm");
+  await $`kubectl delete -f ${path.join(DIR, "podmonitor.yaml")} --ignore-not-found`.catch(() => {});
   await $`kubectl delete -f ${path.join(DIR, "secret.rendered.yaml")} --ignore-not-found`;
   await $`kubectl delete -f ${path.join(DIR, "pvc-huggingface-cache.yaml")} --ignore-not-found`;
   await $`kubectl delete -f ${path.join(DIR, "pvc-neuron-cache.yaml")} --ignore-not-found`;

@@ -1,4 +1,33 @@
 # Karpenter
+# Custom NodeClass for the default NodePool. Same role/subnets/SG as the
+# EKS-managed "default" NodeClass, but with a high-IOPS node root volume so
+# stateful workloads (Langfuse PostgreSQL/Redis, Tempo, ...) are not starved
+# by EBS IOPS throttling on the shared node disk.
+resource "kubectl_manifest" "karpenter_nodeclass_default_perf" {
+  yaml_body = <<-YAML
+apiVersion: eks.amazonaws.com/v1
+kind: NodeClass
+metadata:
+  name: default-perf
+spec:
+  role: ${module.eks.node_iam_role_name}
+  subnetSelectorTerms:
+%{for subnet_id in var.subnet_ids~}
+    - id: ${subnet_id}
+%{endfor~}
+  securityGroupSelectorTerms:
+    - id: ${module.eks.cluster_primary_security_group_id}
+  snatPolicy: Random
+  networkPolicy: DefaultAllow
+  ephemeralStorage:
+    size: 80Gi
+    iops: 16000
+    throughput: 1000
+  YAML
+
+  depends_on = [module.eks]
+}
+
 resource "kubectl_manifest" "karpenter_nodepool_default" {
   yaml_body = <<-YAML
 apiVersion: karpenter.sh/v1
@@ -20,7 +49,7 @@ spec:
       nodeClassRef:
         group: eks.amazonaws.com
         kind: NodeClass
-        name: default
+        name: default-perf
       requirements:
         - key: karpenter.sh/capacity-type
           operator: In
@@ -31,6 +60,14 @@ spec:
         - key: eks.amazonaws.com/instance-generation
           operator: Gt
           values: ["4"]
+        # Minimum node size: >= 4 vCPU and >= 16 GiB so shared stateful
+        # workloads are not bin-packed onto 2 vCPU / 4 GiB instances.
+        - key: eks.amazonaws.com/instance-cpu
+          operator: Gt
+          values: ["3"]
+        - key: eks.amazonaws.com/instance-memory
+          operator: Gt
+          values: ["15359"]
         - key: kubernetes.io/arch
           operator: In
           values: ["amd64", "arm64"]
@@ -40,7 +77,142 @@ spec:
       terminationGracePeriod: 24h0m0s
   YAML
 
-  depends_on = [module.eks]
+  depends_on = [module.eks, kubectl_manifest.karpenter_nodeclass_default_perf]
+}
+
+# Dedicated NodePool for Langfuse ClickHouse. ClickHouse caps its own memory
+# at 90% of the cgroup limit and runs 16 background merge threads, so on a
+# shared 4 vCPU node it starved the Langfuse worker (CPU 93% requested) and
+# was evicted/OOM-killed repeatedly (2026-09-03). One On-Demand 16 vCPU /
+# 64 GiB node, tainted so nothing else lands there; the clickhouse chart
+# values carry the matching nodeSelector + toleration. On-Demand only: every
+# ClickHouse restart archives its system log tables as *_N copies.
+# 8 -> 16 vCPU (2026-09-03): the ingestion worker's per-event merge lookups
+# pinned an 8 vCPU node at 7.6 vCPU and Langfuse fell 17.5 h behind. The CPU
+# limit is 2x one node so a replacement node can be provisioned while the old
+# one is still draining (Drifted budget is 0, so replacement is triggered by
+# the pod's larger request, not by drift).
+resource "kubectl_manifest" "karpenter_nodepool_clickhouse" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: clickhouse
+spec:
+  weight: 50
+  limits:
+    cpu: 32
+  disruption:
+    budgets:
+      - nodes: "0"
+        reasons: ["Underutilized", "Drifted"]
+      - nodes: "1"
+    consolidateAfter: 5m
+    consolidationPolicy: WhenEmpty
+  template:
+    metadata:
+      labels:
+        workload: clickhouse
+    spec:
+      expireAfter: 336h
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: default-perf
+      taints:
+        - key: workload
+          value: clickhouse
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values: ["m", "r"]
+        - key: eks.amazonaws.com/instance-generation
+          operator: Gt
+          values: ["5"]
+        - key: eks.amazonaws.com/instance-cpu
+          operator: In
+          values: ["16"]
+        - key: eks.amazonaws.com/instance-memory
+          operator: Gt
+          values: ["61439"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+      terminationGracePeriod: 1h0m0s
+  YAML
+
+  depends_on = [module.eks, kubectl_manifest.karpenter_nodeclass_default_perf]
+}
+
+# Dedicated NodePool for the synthetic traffic generator. The generator is a
+# fan-out of ~300 sh+curl processes that opens a new connection per request
+# (and keeps retrying upstreams that are down), so on a shared "default" node
+# it competes for CPU, conntrack and ENA pps with the very gateways it is
+# load-testing (2026-09-03: it sat next to inference-gateway, ai-gateway,
+# bifrost and neuron-lb). One small On-Demand node, tainted so nothing else
+# lands there; traffic-generator.yaml carries the matching nodeSelector +
+# toleration. On-Demand so a Spot reclaim does not show up in the dashboards
+# as a traffic outage. CPU limit is 2x one node so a replacement can be
+# provisioned while the old one drains.
+resource "kubectl_manifest" "karpenter_nodepool_loadgen" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: loadgen
+spec:
+  weight: 50
+  limits:
+    cpu: 8
+  disruption:
+    budgets:
+      - nodes: "1"
+    consolidateAfter: 5m
+    consolidationPolicy: WhenEmpty
+  template:
+    metadata:
+      labels:
+        workload: loadgen
+    spec:
+      expireAfter: 336h
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: default-perf
+      taints:
+        - key: workload
+          value: loadgen
+          effect: NoSchedule
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values: ["c", "m"]
+        - key: eks.amazonaws.com/instance-generation
+          operator: Gt
+          values: ["5"]
+        - key: eks.amazonaws.com/instance-cpu
+          operator: In
+          values: ["4"]
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64", "arm64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+      terminationGracePeriod: 30m0s
+  YAML
+
+  depends_on = [module.eks, kubectl_manifest.karpenter_nodeclass_default_perf]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_gpu" {
@@ -105,7 +277,9 @@ metadata:
   name: neuron
 spec:
   limits:
-    aws.amazon.com/neuroncore: 50
+    # 80 cores = 40 inf2.xlarge. Raised from 50 on 2026-09-03 so the two Neuron
+    # pools can run 16 replicas each (32 nodes, 64 cores) for 2 rps per gateway.
+    aws.amazon.com/neuroncore: 80
   disruption:
     budgets:
       - nodes: 100%
@@ -217,7 +391,31 @@ module "eks_blueprints_addons_core" {
 
   # EKS-managed Add-ons
   eks_addons = {
-    aws-efs-csi-driver = { most_recent = true }
+    aws-efs-csi-driver = {
+      most_recent = true
+      # The driver ships without requests; the node DaemonSet's efs-plugin peaked
+      # at ~170 MiB / 320m and was one of the unaccounted consumers that let
+      # Karpenter over-pack 4 GiB spot nodes (2026-09-02).
+      configuration_values = jsonencode({
+        controller = {
+          resources = {
+            requests = { cpu = "50m", memory = "128Mi" }
+            limits   = { memory = "512Mi" }
+          }
+        }
+        node = {
+          resources = {
+            requests = { cpu = "50m", memory = "128Mi" }
+            limits   = { memory = "512Mi" }
+          }
+        }
+        sidecars = {
+          csiProvisioner      = { resources = { requests = { cpu = "10m", memory = "32Mi" }, limits = { memory = "128Mi" } } }
+          livenessProbe       = { resources = { requests = { cpu = "10m", memory = "32Mi" }, limits = { memory = "128Mi" } } }
+          nodeDriverRegistrar = { resources = { requests = { cpu = "10m", memory = "32Mi" }, limits = { memory = "128Mi" } } }
+        }
+      })
+    }
     external-dns = {
       most_recent = true
       configuration_values = jsonencode({

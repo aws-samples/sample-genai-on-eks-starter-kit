@@ -101,6 +101,17 @@ export async function install() {
     integration.o11y.phoenix = true;
     callbacks.push("arize_phoenix");
   }
+  // If Tempo is present, emit LiteLLM spans via the OTLP endpoint so the
+  // gateway hop shares the same trace_id as the Beyla eBPF spans and the
+  // Langfuse LLM observation (W3C traceparent is propagated end to end).
+  result = await $`kubectl get pod -n tempo -l app.kubernetes.io/name=tempo --ignore-not-found`;
+  if (result.stdout.includes("tempo")) {
+    integration.o11y.tempo = true;
+    callbacks.push("otel");
+  }
+  // Prometheus /metrics is always on: the Token Factory dashboards read the
+  // per-tenant token / cached-token counters from it (OSS feature).
+  callbacks.push("prometheus");
   integration.o11y.config = {
     callbacks: JSON.stringify(callbacks),
     success_callback: JSON.stringify(successCallback),
@@ -134,9 +145,16 @@ export async function install() {
   }
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
   await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
+  // CPU-based HPA (min 2 / max 10); owns spec.replicas, see hpa.yaml.
+  await $`kubectl apply -f ${path.join(DIR, "hpa.yaml")}`;
+  // Authenticated scrape of /metrics/ (see servicemonitor.yaml); no-op without the Prometheus Operator CRDs.
+  await $`kubectl apply -f ${path.join(DIR, "servicemonitor.yaml")}`.catch(() =>
+    console.log("ServiceMonitor CRD not installed; skipping LiteLLM metrics scrape config"),
+  );
 }
 
 export async function uninstall() {
+  await $`kubectl delete -f ${path.join(DIR, "hpa.yaml")} --ignore-not-found`.catch(() => {});
   await $`helm uninstall litellm --namespace litellm`;
   const { enableBedrockGuardrail } = config["litellm"];
   await utils.terraform.destroy(DIR, {

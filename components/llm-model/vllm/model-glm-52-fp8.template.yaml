@@ -1,0 +1,179 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: glm-52-fp8
+  namespace: vllm
+spec:
+  replicas: 1
+  # Recreate, not RollingUpdate: a surge replica of a multi-GPU pool needs a
+  # second multi-GPU node that Karpenter may not (and should not) provision;
+  # with RollingUpdate the new pod sits Pending while the old one keeps the GPUs.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: glm-52-fp8
+  template:
+    metadata:
+      labels:
+        app: glm-52-fp8
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      automountServiceAccountToken: false
+      # GLM-5.2-FP8 is 744B-A40B: the FP8 weights alone are ~744GB, plus the
+      # 128K KV cache, so the node needs ~900GB+ of aggregate GPU memory. Only
+      # three 8-GPU families in this cluster's gpu NodePool qualify:
+      #   p6-b200  8x B200 179GB = 1,433GB   (Blackwell; largest, most available)
+      #   p5en/p5e 8x H200 141GB = 1,128GB   (the official recipe target)
+      # p5 (8x H100 80GB = 640GB) and p4de (8x A100 80GB = 640GB) cannot even
+      # hold the 744GB of weights, so they are intentionally excluded.
+      #
+      # Spot is preferred (~$27/hr p5en, ~$41/hr p6-b200 vs ~$85-98/hr on-demand),
+      # but 8-GPU Spot inventory (both H200 and B200) in us-east-1 is frequently
+      # empty (CreateFleet → UnfulfillableCapacity). Karpenter always tries Spot
+      # first and only falls back to On-Demand when no Spot offering has capacity,
+      # so allowing both capacity-types keeps the common case cheap while still
+      # letting the node come up when Spot is exhausted. The KEDA business-hours
+      # schedule caps how long any On-Demand node can run.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: {{{KARPENTER_PREFIX}}}/instance-family
+                    operator: In
+                    values: ["p5en", "p5e", "p6-b200"]
+                  - key: karpenter.sh/capacity-type
+                    operator: In
+                    values: ["spot", "on-demand"]
+      containers:
+        - name: vllm
+          # GLM-5.2 requires the dedicated vLLM image (v0.23+ with GLM support).
+          # Use the CUDA 12.x tag; switch to glm52 (cu130) if the node driver is CUDA 13+.
+          image: {{DOCKER_IMAGE_PREFIX}}vllm/vllm-openai:glm52-cu129
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+            seccompProfile:
+              type: RuntimeDefault
+          command: ["vllm", "serve"]
+          args:
+            - zai-org/GLM-5.2-FP8
+            - --served-model-name=glm-52-fp8
+            - --trust-remote-code
+            - --tensor-parallel-size=8
+            - --kv-cache-dtype=fp8
+            - --gpu-memory-utilization=0.90
+            # Automatic Prefix Caching (APC) on explicitly: the cache-hit ratio is
+            # an SLI on the Token Factory dashboard, so it must not depend on
+            # vLLM's per-architecture default.
+            - --enable-prefix-caching
+            # Return usage.prompt_tokens_details.cached_tokens in every response so
+            # the gateway (LiteLLM litellm_input_cached_tokens_metric) can attribute
+            # cache hits to a tenant / prompt template. Off by default in vLLM.
+            - --enable-prompt-tokens-details
+            - --max-model-len=131072 # 128K
+            # GLM-5.2 specific parsers (per official vLLM recipe)
+            - --enable-auto-tool-choice
+            - --tool-call-parser=glm47
+            - --reasoning-parser=glm45
+            # Speculative decoding (MTP) — recipe default for FP8
+            - --speculative-config={"method":"mtp","num_speculative_tokens":3}
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 24
+              memory: 512Gi
+              nvidia.com/gpu: 8
+            limits:
+              nvidia.com/gpu: 8
+          # Model loading of a 744B checkpoint is slow; give it a long ramp.
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 600
+            periodSeconds: 30
+            failureThreshold: 60
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 600
+            periodSeconds: 30
+            failureThreshold: 120
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            # Multi-GPU NCCL needs a large shared-memory segment.
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Gi
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: glm-52-fp8
+  namespace: vllm
+spec:
+  selector:
+    app: glm-52-fp8
+  ports:
+    - name: http
+      port: 8000
+---
+# Business-hours schedule (KST 09:00–18:00). Outside the window the Deployment
+# scales to 0 replicas, so the expensive 8x H200 Spot node is released and cost
+# drops to zero; at 09:00 KST it scales back to 1 and Karpenter reprovisions the
+# GPU node. KEDA cron triggers are the desired replica count only DURING the
+# window; the fallback (idleReplicaCount) applies outside it.
+#
+# NOTE: the model checkpoint (744B) takes 15–30 min to load after the node comes
+# up, so the model is not serve-ready exactly at 09:00 — budget for the ramp.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: glm-52-fp8-business-hours
+  namespace: vllm
+spec:
+  scaleTargetRef:
+    name: glm-52-fp8
+  # Outside the cron window, hold at 0 (node released → $0).
+  idleReplicaCount: 0
+  minReplicaCount: 0
+  maxReplicaCount: 1
+  # Give KEDA a slow cooldown so a brief Spot interruption inside the window
+  # doesn't immediately scale to 0.
+  cooldownPeriod: 300
+  triggers:
+    - type: cron
+      metadata:
+        timezone: Asia/Seoul
+        # Mon–Fri, 09:00–18:00 KST. Change dayOfWeek to "* * *" for every day.
+        start: "0 9 * * 1-5"
+        end: "0 18 * * 1-5"
+        desiredReplicas: "1"

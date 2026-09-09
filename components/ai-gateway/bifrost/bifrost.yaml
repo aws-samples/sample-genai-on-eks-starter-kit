@@ -1,0 +1,211 @@
+# Bifrost (maximhq/bifrost): the OpenAI-compatible hop behind kgateway.
+#
+# Routing is by the request's "model" field: "<provider>/<model>" or a bare
+# model name that matches exactly one key's `models` list. One `vllm` provider
+# key per pool; a pool that has no key here returns 4xx from every kgateway
+# /ai/<model> route even when the HTTPRoute exists (that was the case for
+# glm-52-fp8 until it was added below).
+#
+# The image is pinned to the digest that was running (config schema changes
+# between `latest` builds would otherwise land on the next reschedule). The
+# Langfuse OTLP auth header comes from Secret `bifrost-langfuse`
+#
+# plugin_span_filter (Bifrost >= v2.0.0, core/schemas/span_filter.go): without it
+# every request exported ~32 spans to Langfuse -- one prehook/posthook/
+# prerequesthook span per plugin (logging, routing, telemetry, governance, otel)
+# -- and those plugin spans were 90 % of the rows the Langfuse worker had to
+# write (1.14M SPAN vs 0.11M GENERATION per hour, 2026-09-03), which is what
+# pushed the ingestion backlog to 17 h. mode=include with an empty list exports
+# no plugin spans at all; the request, transport-context and provider-call
+# spans that carry the model, tokens and latency are non-plugin spans and are
+# always exported. The plugin reparents children of a filtered span to the
+# nearest exported ancestor, so the trace stays connected.
+# (key `auth-header`, value `Basic <base64(pk:sk)>`).
+#
+# Config is copied from the ConfigMap into an emptyDir at start because Bifrost
+# needs a writable app dir: a ConfigMap change therefore needs a rollout
+# restart to take effect.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bifrost-config
+  namespace: bifrost
+data:
+  config.json: |
+    {
+      "providers": {
+        "vllm": {
+          "keys": [
+            {
+              "name": "qwen3-8b-neuron",
+              "value": "",
+              "models": ["qwen3-8b-neuron"],
+              "weight": 1.0,
+              "vllm_key_config": {
+                "url": "http://qwen3-8b-neuron.vllm:8000",
+                "model_name": "qwen3-8b-neuron"
+              }
+            },
+            {
+              "name": "deepseek-r1-qwen3-8b-neuron",
+              "value": "",
+              "models": ["deepseek-r1-qwen3-8b-neuron"],
+              "weight": 1.0,
+              "vllm_key_config": {
+                "url": "http://deepseek-r1-qwen3-8b-neuron.vllm:8000",
+                "model_name": "deepseek-r1-qwen3-8b-neuron"
+              }
+            },
+            {
+              "name": "glm-52-fp8",
+              "value": "",
+              "models": ["glm-52-fp8"],
+              "weight": 1.0,
+              "vllm_key_config": {
+                "url": "http://glm-52-fp8.vllm:8000",
+                "model_name": "glm-52-fp8"
+              }
+            },
+            {
+              "name": "gpt-oss-120b",
+              "value": "",
+              "models": ["gpt-oss-120b"],
+              "weight": 1.0,
+              "vllm_key_config": {
+                "url": "http://gpt-oss-120b.vllm:8000",
+                "model_name": "gpt-oss-120b"
+              }
+            },
+            {
+              "name": "qwen36-27b-fp8",
+              "value": "",
+              "models": ["qwen36-27b-fp8"],
+              "weight": 1.0,
+              "vllm_key_config": {
+                "url": "http://qwen36-27b-fp8.vllm:8000",
+                "model_name": "qwen36-27b-fp8"
+              }
+            },
+            {
+              "name": "solar-open2-250b",
+              "value": "",
+              "models": ["solar-open2-250b"],
+              "weight": 1.0,
+              "vllm_key_config": {
+                "url": "http://solar-open2-250b.vllm:8000",
+                "model_name": "solar-open2-250b"
+              }
+            }
+          ],
+          "network_config": {
+            "allow_private_network": true,
+            "default_request_timeout_in_seconds": 300,
+            "max_retries": 2
+          }
+        }
+      },
+      "plugins": [
+        {
+          "name": "otel",
+          "enabled": true,
+          "config": {
+            "collector_url": "http://langfuse-web.langfuse.svc.cluster.local:3000/api/public/otel/v1/traces",
+            "trace_type": "genai_extension",
+            "protocol": "http",
+            "service_name": "bifrost",
+            "insecure": true,
+            "headers": {
+              "Authorization": "env.LANGFUSE_AUTH_HEADER",
+              "x-langfuse-ingestion-version": "4"
+            },
+            "plugin_span_filter": {
+              "mode": "include",
+              "plugins": []
+            }
+          }
+        }
+      ],
+      "client": {
+        "enforceAuthOnInference": false
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bifrost
+  namespace: bifrost
+  labels:
+    app: bifrost
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bifrost
+  template:
+    metadata:
+      labels:
+        app: bifrost
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: bifrost
+          image: maximhq/bifrost@sha256:cf71be9fad4e0749b6e26cbb774c687413dad9a0970b83f4e1dadb6f503ea208
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cp /seed/config.json /app/data/config.json;
+              exec /app/main -app-dir /app/data -port 8080 -host 0.0.0.0 -log-level info -log-style pretty
+          env:
+            - name: LANGFUSE_AUTH_HEADER
+              valueFrom:
+                secretKeyRef:
+                  name: bifrost-langfuse
+                  key: auth-header
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: seed-config
+              mountPath: /seed
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: seed-config
+          configMap:
+            name: bifrost-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bifrost
+  namespace: bifrost
+  labels:
+    app: bifrost
+spec:
+  type: ClusterIP
+  selector:
+    app: bifrost
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP

@@ -1,0 +1,39 @@
+# Open-Sora video generation behind Kong: /ai/sora/*
+#
+# Open-Sora's wrapper API (POST /generate, GET /status/{id}, GET /videos/{id}.mp4)
+# is not OpenAI-compatible, so no ai-proxy plugin — plain reverse proxy.
+# strip_path makes /ai/sora/generate hit opensora-v2:8000/generate.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongService
+metadata:
+  name: opensora-service
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  name: opensora-service
+  host: opensora-v2.vllm
+  port: 8000
+  protocol: http
+  # Video generation kicks off a torchrun job; status polling is fast but
+  # keep generous timeouts for the initial request handling.
+  connect_timeout: 60000
+  read_timeout: 300000
+  write_timeout: 300000
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongRoute
+metadata:
+  name: opensora-route
+  namespace: kong
+spec:
+  name: opensora-route
+  paths:
+    - /ai/sora
+  serviceRef:
+    type: namespacedRef
+    namespacedRef:
+      name: opensora-service
+  strip_path: true

@@ -1,0 +1,79 @@
+# Solar-Open2-250B (solar-open2-250b, 250B-A15B MoE, TP=8 on one B200/H200 node) behind Kong Konnect: /ai/solar-open2
+#
+# Same shape as /ai/glm-52 and the Neuron routes: one KongService per vLLM
+# pool, one KongRoute, and the single-upstream ai-proxy plugin pinning the
+# model so callers may omit "model" in the body. Added so the traffic
+# generator's load lane can push the same per-pool rate through Kong as it
+# does through LiteLLM (LOAD_GATEWAYS in traffic-generator.yaml); before this
+# the pool was reachable only through LiteLLM and vLLM-direct.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongService
+metadata:
+  name: solar-open2-service
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  name: solar-open2-service
+  host: solar-open2-250b.vllm
+  port: 8000
+  protocol: http
+  # A 250B MoE answers long-context and tool-call requests in tens of seconds
+  # under the load lane; Kong's 60 s default would 504 first.
+  read_timeout: 180000
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongRoute
+metadata:
+  name: solar-open2-route
+  namespace: kong
+spec:
+  name: solar-open2-route
+  paths:
+    - /ai/solar-open2
+  serviceRef:
+    type: namespacedRef
+    namespacedRef:
+      name: solar-open2-service
+  strip_path: true
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ai-proxy-solar-open2
+  namespace: kong
+plugin: ai-proxy
+config:
+  route_type: llm/v1/chat
+  auth:
+    header_name: Authorization
+    header_value: Bearer fake-key
+  model:
+    provider: openai
+    name: solar-open2-250b
+    options:
+      upstream_url: http://solar-open2-250b.vllm:8000/v1/chat/completions
+  logging:
+    log_statistics: true
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongPluginBinding
+metadata:
+  name: ai-proxy-solar-open2-binding
+  namespace: kong
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: genai-on-eks-pdx
+  pluginRef:
+    kind: KongPlugin
+    name: ai-proxy-solar-open2
+  scope: OnlyTargets
+  targets:
+    routeRef:
+      group: configuration.konghq.com
+      kind: KongRoute
+      name: solar-open2-route

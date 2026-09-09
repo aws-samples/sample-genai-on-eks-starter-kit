@@ -1,0 +1,91 @@
+# InferencePool + Endpoint Picker (EPP) for the deepseek-r1-qwen3-8b-neuron vLLM pool.
+# Chart: oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool
+# (v1.5.0). Release name == pool name == Service name of the pool; the chart
+# creates InferencePool "deepseek-r1-qwen3-8b-neuron" (inference.networking.k8s.io/v1),
+# Deployment/Service "deepseek-r1-qwen3-8b-neuron-epp" (ext-proc :9002) and its RBAC in the
+# release namespace (vllm), which must be the namespace of the model pods.
+inferencePool:
+  apiVersion: inference.networking.k8s.io/v1
+  modelServerType: vllm
+  targetPorts:
+    - number: 8000
+  modelServers:
+    matchLabels:
+      app: deepseek-r1-qwen3-8b-neuron
+inferenceExtension:
+  replicas: 1
+  failureMode: FailOpen
+  # Chart defaults (4 CPU / 8Gi request) are sized for high-QPS scale tests;
+  # this pool runs ~3 req/s across 6 replicas.
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  flags:
+    v: 1
+  # Neuron-specific scheduler config (replaces the chart's default-plugins.yaml):
+  #  - optimum-neuron vLLM (V0 engine) still exports vllm:gpu_cache_usage_perc,
+  #    not vllm:kv_cache_usage_perc, and has no LoRA metric -> map/disable them,
+  #    otherwise every scrape logs "extract failed" for all pods.
+  #  - The pools have no prefix caching (cache_config_info enable_prefix_caching
+  #    ="None", 3 KV blocks of 8192 tokens), so prefix affinity cannot pay off
+  #    and would only pile same-prefix requests onto one 2-slot engine: with
+  #    the scorer even at weight 1, a burst of 24 identical-system-prompt
+  #    requests sent 12 of them to a single pod (measured 2026-09-02). Queue
+  #    depth is the signal that matters here. GPU pools (prefix caching on)
+  #    should use the chart default profile instead (queue 2 / kv 2 / prefix 3).
+  #  - Known limit: the scores come from scraped metrics only. A Neuron prefill
+  #    step takes ~2 s and vLLM V0 refreshes /metrics between steps, so a
+  #    simultaneous burst is scheduled from one stale snapshot (24 requests
+  #    fired at once: 13 landed on one pod). Paced closed-loop traffic like the
+  #    generator's spreads evenly (32 requests: 8/5/5/5/5/4 over 6 pods).
+  #    EPP-side in-flight tracking (inflight-load-producer + token-load-scorer)
+  #    would fix the burst case but the v1.5.0 EPP refuses that config
+  #    ("data type mismatch between produced and consumed data for key:
+  #    InFlightLoadKey"), so it is not enabled; revisit with a newer EPP.
+  # A ConfigMap change does not restart the EPP: `kubectl -n vllm rollout
+  # restart deploy/<pool>-epp` after `helm upgrade`.
+  pluginsConfigFile: neuron-plugins.yaml
+  pluginsCustomConfig:
+    neuron-plugins.yaml: |
+      apiVersion: inference.networking.x-k8s.io/v1alpha1
+      kind: EndpointPickerConfig
+      plugins:
+      - type: queue-scorer
+      - type: kv-cache-utilization-scorer
+      - type: metrics-data-source
+        parameters:
+          scheme: "http"
+          path: "/metrics"
+          insecureSkipVerify: true
+      - type: core-metrics-extractor
+        parameters:
+          defaultEngine: "vllm"
+          engineConfigs:
+          - name: "vllm"
+            queuedRequestsSpec: "vllm:num_requests_waiting"
+            runningRequestsSpec: "vllm:num_requests_running"
+            kvUsageSpec: "vllm:gpu_cache_usage_perc"
+            loraSpec: ""
+            cacheInfoSpec: "vllm:cache_config_info"
+      schedulingProfiles:
+      - name: default
+        plugins:
+        - pluginRef: queue-scorer
+          weight: 2
+        - pluginRef: kv-cache-utilization-scorer
+          weight: 1
+  # registry.k8s.io/.../epp is published for linux/amd64 only; the default
+  # NodePool here is mostly Graviton ("exec /epp: exec format error").
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values: ["amd64"]
+provider:
+  name: none

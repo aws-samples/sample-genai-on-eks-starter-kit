@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/.env
+**/.env.local
+**/npm-debug.log*
+*.rendered.yaml
+Dockerfile
+.dockerignore
+README.md
+# Temporary local-verification pages are created under app/src/app/signin/<name>/
+# because that path is outside the auth middleware matcher; the real sign-in
+# page is signin/page.tsx only. Keep such pages out of the image so a forgotten
+# one can never ship unauthenticated.
+app/src/app/signin/*/**
+**/.omc

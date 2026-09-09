@@ -1,0 +1,136 @@
+# One-off compile of Qwen3-8B for the Neuron (inf2) pool with prefix caching.
+#
+# Why a separate Job: NxD Inference compiles the model graph at server start
+# and the compile needs far more host RAM/CPU than an inf2.xlarge has (4 vCPU,
+# 16 GiB). This runs `vllm serve` once on an on-demand inf2.8xlarge (same
+# Inferentia2 device, 128 GiB RAM), waits for /health, fires two identical
+# requests so the second one produces a prefix-cache hit, dumps the cache
+# metrics, and exits. The compiled artifacts land on the EFS PVC neuron-cache
+# under NEURON_COMPILED_ARTIFACTS and the serving Deployment
+# (model-qwen3-8b-neuron.template.yaml) loads them read-only on inf2.xlarge.
+#
+# Backend: AWS DLC pytorch-inference-vllm-neuronx 0.16.0 = vllm-neuron
+# release-0.5.3 (NxD Inference 0.10, vLLM 0.16 / V1 engine). Replaces the
+# optimum-neuron image (vLLM 0.10 V0) which had no prefix caching and only
+# exported vllm:gpu_cache_usage_perc. With V1 the Neuron pools export the same
+# vllm:kv_cache_usage_perc / vllm:prefix_cache_{queries,hits}_total as the
+# GPU pools, so the dashboard cache columns and the EPP prefix scorer work.
+#
+# KV cache sizing (inf2.xlarge: 1 device, 32 GiB HBM, 2 cores, TP=2):
+#   Qwen3-8B: 36 layers x 2 (K,V) x 8 kv-heads x 128 x 2 B = 147,456 B/token
+#   pa_block_size 32 -> 4.72 MB/block; pa_num_blocks 1536 -> 49,152 tokens
+#   = 7.25 GB (was 3 x 8192 = 3.62 GB contiguous). Measured device memory
+#   before the switch: 22.0 GB used of 34.4 GB, so +3.6 GB leaves ~8.7 GB for
+#   the block-layout scratch. Minimum for 2 seqs x 8192 is 512 blocks.
+# --num-gpu-blocks-override must equal pa_num_blocks and --block-size must
+# equal pa_block_size (NxDI compiles the block count into the graph).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: neuron-compile-qwen3-8b
+  namespace: vllm
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 14400
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        # Deliberately no `app` label: the vllm-models PodMonitor selects on it
+        # and this pod must not show up as an engine.
+        app.kubernetes.io/name: neuron-compile
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      nodeSelector:
+        node.kubernetes.io/instance-type: inf2.8xlarge
+        karpenter.sh/capacity-type: on-demand
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: vllm
+          image: public.ecr.aws/neuron/pytorch-inference-vllm-neuronx:0.16.0-neuronx-py312-sdk2.31.1-ubuntu24.04
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - NET_RAW
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -uo pipefail
+              echo "== compile start $(date -u +%FT%TZ) artifacts=$NEURON_COMPILED_ARTIFACTS"
+              mkdir -p "$NEURON_COMPILED_ARTIFACTS"
+              # Serve from the local snapshot, not the Hub id: the NxDI user guide
+              # notes a meta-tensor error for Qwen checkpoints loaded by model id
+              # with shard-on-load, and the serving pods run HF_HUB_OFFLINE anyway.
+              MODEL_PATH=$(python3 -c 'from huggingface_hub import snapshot_download; print(snapshot_download("Qwen/Qwen3-8B", allow_patterns=["*.json","*.safetensors","*.txt","*.py","merges.txt","vocab.json"]))')
+              echo "== checkpoint $MODEL_PATH"; ls "$MODEL_PATH"
+              vllm serve "$MODEL_PATH" \
+                --served-model-name qwen3-8b-neuron \
+                --tensor-parallel-size 2 \
+                --max-num-seqs 2 \
+                --max-model-len 8192 \
+                --block-size 32 \
+                --num-gpu-blocks-override 1536 \
+                --enable-prefix-caching \
+                --additional-config '{"override_neuron_config": {"is_prefix_caching": true, "is_block_kv_layout": true, "pa_num_blocks": 1536, "pa_block_size": 32}}' \
+                --enable-auto-tool-choice --tool-call-parser hermes --reasoning-parser qwen3 \
+                --port 8000 &
+              PID=$!
+              until curl -sf localhost:8000/health >/dev/null; do
+                kill -0 $PID 2>/dev/null || { echo "== vllm exited before /health"; wait $PID; exit 1; }
+                sleep 20
+              done
+              echo "== ready $(date -u +%FT%TZ)"
+              BODY='{"model":"qwen3-8b-neuron","max_tokens":16,"messages":[{"role":"system","content":"You are a terse assistant for a Kubernetes platform team. Answer in one sentence."},{"role":"user","content":"What does a Kubernetes PodDisruptionBudget do?"}]}'
+              for i in 1 2 3; do curl -s localhost:8000/v1/chat/completions -H 'Content-Type: application/json' -d "$BODY" | head -c 400; echo; done
+              echo "== cache metrics"
+              curl -s localhost:8000/metrics | grep -E '^vllm:(cache_config_info|kv_cache_usage_perc|prefix_cache_(queries|hits)_total|gpu_cache_usage_perc)'
+              echo "== artifacts"
+              du -sh "$NEURON_COMPILED_ARTIFACTS"; ls "$NEURON_COMPILED_ARTIFACTS"
+              kill $PID; wait $PID 2>/dev/null
+              echo "== done $(date -u +%FT%TZ)"
+          env:
+            - name: HF_HOME
+              value: /root/.cache/huggingface
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hf-token
+                  key: token
+            - name: NEURON_COMPILED_ARTIFACTS
+              value: /root/.cache/neuron/Qwen/Qwen3-8B-nxdi-apc1536
+          ports:
+            - name: http
+              containerPort: 8000
+          resources:
+            requests:
+              cpu: 24
+              memory: 96Gi
+              aws.amazon.com/neuroncore: 2
+            limits:
+              aws.amazon.com/neuroncore: 2
+          volumeMounts:
+            - name: huggingface-cache
+              mountPath: /root/.cache/huggingface
+            - name: neuron-cache
+              mountPath: /root/.cache/neuron
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: huggingface-cache
+          persistentVolumeClaim:
+            claimName: huggingface-cache
+        - name: neuron-cache
+          persistentVolumeClaim:
+            claimName: neuron-cache
+        - name: shm
+          emptyDir:
+            medium: Memory

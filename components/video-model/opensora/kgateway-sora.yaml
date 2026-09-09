@@ -1,0 +1,43 @@
+# Open-Sora behind kgateway ai-gateway: /ai/sora/*
+#
+# Open-Sora's wrapper API is not OpenAI-compatible, so it cannot be a bifrost
+# provider — it attaches here at the kgateway layer that fronts bifrost.
+# /ai/sora/generate -> opensora-v2.vllm:8000/generate
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: Backend
+metadata:
+  name: opensora
+  namespace: kgateway-system
+spec:
+  type: Static
+  static:
+    hosts:
+      - host: opensora-v2.vllm.svc.cluster.local
+        port: 8000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sora-route
+  namespace: kgateway-system
+spec:
+  parentRefs:
+    - name: ai-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /ai/sora
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - group: gateway.kgateway.dev
+          kind: Backend
+          name: opensora
+      timeouts:
+        request: 300s
+        backendRequest: 300s

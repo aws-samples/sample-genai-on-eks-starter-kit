@@ -41,6 +41,10 @@ spec:
             - --enable-auto-tool-choice
             - --tool-call-parser=hermes
             - --reasoning-parser=qwen3
+            # No --enable-prefix-caching: the optimum-neuron backend (vLLM 0.10 V0
+            # engine, static NxD batching, one 8192-token block per sequence) does
+            # not implement prefix caching; the flag is ignored or breaks startup.
+            # Cache-hit SLI panels therefore only cover the GPU pools.
             # Neuron specific
             - --tensor-parallel-size=2
             # - --gpu-memory-utilization=0.95
@@ -58,6 +62,23 @@ spec:
           ports:
             - name: http
               containerPort: 8000
+          # Model load on inf2 takes several minutes after the container
+          # starts. Without a readiness gate the pod is Ready immediately and
+          # the Inference Extension EPP (which routes on the pod's Ready
+          # condition, not on a health check) sends requests to it -> 503
+          # "Connection refused" for every replacement pod after a spot
+          # reclaim or scale-out (observed 2026-09-03, 676 x 503 in 3 min on
+          # the kgateway lane while 20 new pods loaded). The neuron-lb Envoy
+          # path was unaffected because it runs its own /health checks.
+          # Applying this to a running pool restarts every pod (RollingUpdate).
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 90   # up to 15 min for image pull + neuron model load
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 2
           resources:
             requests:
               cpu: 3 #75%
@@ -76,8 +97,13 @@ metadata:
   name: qwen3-8b-neuron
   namespace: vllm
 spec:
+  # Selects the neuron-lb Envoy pods (see neuron-lb.yaml): per-request
+  # LEAST_REQUEST balancing across the replicas of this pool, which a
+  # ClusterIP Service cannot do for keep-alive clients. The pods themselves
+  # are reachable through the headless Service qwen3-8b-neuron-pods.
   selector:
-    app: qwen3-8b-neuron
+    app.kubernetes.io/name: neuron-lb
   ports:
     - name: http
       port: 8000
+      targetPort: 8001

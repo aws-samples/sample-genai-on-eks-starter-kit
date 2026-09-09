@@ -1,0 +1,34 @@
+# Scrape LiteLLM's /metrics/ with kube-prometheus-stack.
+#
+# Not the chart's own ServiceMonitor: since LiteLLM v1.9x the metrics endpoint
+# requires a bearer token by default (require_auth_for_metrics_endpoint), and the
+# chart's ServiceMonitor cannot attach credentials. Keeping auth on matters here
+# because the proxy is also reachable through the public ALB ingress, so an
+# unauthenticated /metrics/ would publish per-tenant usage. The scrape uses the
+# proxy master key from the litellm-masterkey Secret (same namespace, as the
+# Prometheus Operator requires).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: litellm-metrics
+  namespace: litellm
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: litellm
+      app.kubernetes.io/instance: litellm
+  namespaceSelector:
+    matchNames:
+      - litellm
+  endpoints:
+    - port: http
+      path: /metrics/
+      interval: 15s
+      scrapeTimeout: 10s
+      authorization:
+        type: Bearer
+        credentials:
+          name: litellm-masterkey
+          key: masterkey

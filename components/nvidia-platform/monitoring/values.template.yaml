@@ -17,9 +17,23 @@ prometheus:
     serviceMonitorNamespaceSelector: {}
     # Allow Probes from any namespace
     probeNamespaceSelector: {}
+    # Accept remote_write pushes (Tempo metrics-generator writes service-graph
+    # and span/RED metrics here for the unified traffic dashboard).
+    enableRemoteWriteReceiver: true
+    # Without explicit requests the scheduler packs Prometheus onto 3-GiB
+    # utility nodes, where ~300k head series starve the node and liveness
+    # probes time out in a restart loop. 4Gi keeps it on a node with headroom.
+    resources:
+      requests:
+        cpu: 500m
+        memory: 4Gi
+      limits:
+        memory: 6Gi
     # Retention
     retention: {{{RETENTION}}}
-    # Storage
+    # Storage. Without a PVC the TSDB lives in an emptyDir and every reschedule
+    # (Karpenter drift/consolidation, node loss) wipes all history. Requires a
+    # block storage class (gp3 "ebs"); Prometheus does not support NFS/EFS.
 {{#if ENABLE_PERSISTENT_STORAGE}}
     storageSpec:
       volumeClaimTemplate:
@@ -29,6 +43,9 @@ prometheus:
           resources:
             requests:
               storage: {{{PROMETHEUS_STORAGE_SIZE}}}
+    # Size-based retention guard so the volume cannot fill up before the
+    # time-based retention above evicts blocks (~95% of the PVC).
+    retentionSize: {{{PROMETHEUS_RETENTION_SIZE}}}
 {{/if}}
 {{#if ENABLE_INGRESS}}
     routePrefix: /prometheus
@@ -58,11 +75,43 @@ grafana:
   adminUser: admin
   adminPassword: "{{{GRAFANA_ADMIN_PASSWORD}}}"
 
+  # Register Tempo as a trace datasource for the unified traffic dashboard.
+  # - serviceMap wires Tempo's service-graph metrics (in Prometheus) into the
+  #   node-graph service map.
+  # - tracesToLogsV2 / the derived data link jumps from a span to Langfuse using
+  #   the shared trace_id (Beyla propagates the W3C traceparent, so the eBPF span
+  #   and the Langfuse LLM observation carry the same trace id).
+  additionalDataSources:
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      access: proxy
+      # tempo-distributed serves the query-frontend HTTP API on 3200 (the
+      # single-binary Tempo default of 3100 does NOT apply to this chart).
+      url: http://tempo-query-frontend.tempo.svc.cluster.local:3200
+      jsonData:
+        serviceMap:
+          datasourceUid: prometheus
+        nodeGraph:
+          enabled: true
+{{#if DOMAIN}}
+        # Deep-link a trace to its Langfuse view. Langfuse trace URLs are keyed
+        # by trace id; ${__trace.traceId} is substituted by Grafana.
+        tracesToLogsV2:
+          datasourceUid: prometheus
+        externalUrl: "https://langfuse.{{{DOMAIN}}}"
+{{/if}}
+
 {{#if ENABLE_INGRESS}}
   grafana.ini:
     server:
       root_url: "%(protocol)s://%(domain)s/grafana"
       serve_from_sub_path: true
+  # With serve_from_sub_path Grafana answers on /grafana/metrics and redirects
+  # the bare /metrics to root_url — whose domain is empty here, so Prometheus
+  # followed it to http://localhost/grafana/metrics and the target was down.
+  serviceMonitor:
+    path: /grafana/metrics
   ingress:
     enabled: true
     ingressClassName: "{{{INGRESS_CLASS}}}"
@@ -77,8 +126,24 @@ grafana:
       - "{{{INGRESS_HOST}}}"
 {{/if}}
 
+  # Grafana peaked at ~500 MiB (12h, 2026-09-02) with no request declared;
+  # unaccounted memory is what let Karpenter pack the utility pods onto 4 GiB
+  # spot nodes. Requests ≈ steady state, limits ≈ 2x peak.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
   # Sidecar to auto-load dashboards from ConfigMaps
   sidecar:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
     dashboards:
       enabled: true
       label: grafana_dashboard
@@ -95,12 +160,47 @@ grafana:
 nodeExporter:
   enabled: true
 
+# node-exporter DaemonSet (~30 MiB) — declare it so every node accounts for it.
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
 # ==============================================================================
 # kube-state-metrics
 # - Kubernetes object state metrics
 # ==============================================================================
 kubeStateMetrics:
   enabled: true
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# ==============================================================================
+# Prometheus Operator (+ config-reloader sidecar injected into Prometheus)
+# ==============================================================================
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+  prometheusConfigReloader:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 64Mi
 
 # ==============================================================================
 # Alertmanager

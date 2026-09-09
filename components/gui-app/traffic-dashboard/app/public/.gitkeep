@@ -1,0 +1,2 @@
+# Next.js static asset root. Kept so the Dockerfile's COPY of public/ succeeds
+# even while the app ships no static files.

@@ -1,0 +1,27 @@
+{
+  "name": "agentic-traffic-studio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "node scripts/check-client-manifest.mjs",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "15.5.22",
+    "next-auth": "5.0.0-beta.32",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "recharts": "^3.10.1",
+    "swr": "^2.4.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.0"
+  }
+}
