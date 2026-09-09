@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 import handlebars from "handlebars";
-import { $, cd } from "zx";
+import { $ } from "zx";
 $.verbose = true;
 
 export const name = "TGI";
@@ -26,7 +26,6 @@ export async function install() {
 
   await $`kubectl apply -f ${path.join(DIR, "namespace.yaml")}`;
   await $`kubectl apply -f ${path.join(DIR, "pvc-huggingface-cache.yaml")}`;
-  await $`kubectl apply -f ${path.join(DIR, "pvc-neuron-cache.yaml")}`;
   const secretTemplatePath = path.join(DIR, "secret.template.yaml");
   const secretRenderedPath = path.join(DIR, "secret.rendered.yaml");
   const secretTemplateString = fs.readFileSync(secretTemplatePath, "utf8");
@@ -36,6 +35,7 @@ export async function install() {
   };
   fs.writeFileSync(secretRenderedPath, secretTemplate(secretVars));
   await $`kubectl apply -f ${secretRenderedPath}`;
+  const { models } = config["llm-model"]["tgi"];
   await utils.model.addModels(models, "llm-model", "tgi");
 }
 
@@ -44,6 +44,5 @@ export async function uninstall() {
   await utils.model.removeAllModels(models, "llm-model", "tgi");
   await $`kubectl delete -f ${path.join(DIR, "secret.rendered.yaml")} --ignore-not-found`;
   await $`kubectl delete -f ${path.join(DIR, "pvc-huggingface-cache.yaml")} --ignore-not-found`;
-  await $`kubectl delete -f ${path.join(DIR, "pvc-neuron-cache.yaml")} --ignore-not-found`;
   await $`kubectl delete -f ${path.join(DIR, "namespace.yaml")} --ignore-not-found`;
 }
