@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — dark-first. Every colour used by the UI and the charts comes
+ * from here; components never hardcode hex values (chart series read the
+ * categorical scale from src/lib/theme.ts, which mirrors these tokens because
+ * Recharts needs literal colour strings in JS).
+ */
+:root {
+  /* Surfaces */
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-raised: #232322;
+
+  /* Ink */
+  --ink-primary: #ffffff;
+  --ink-secondary: #c3c2b7;
+  --ink-muted: #898781;
+
+  /* Structure */
+  --gridline: #2c2c2a;
+  --baseline: #383835;
+  --hairline: rgba(255, 255, 255, 0.1);
+
+  /* Categorical series — fixed order, never cycled */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+
+  /* Status — always paired with an icon or label, never colour alone */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-serious: #ec835a;
+  --status-critical: #d03b3b;
+}
+
+/* Light mode is optional; the app ships dark and only follows the OS when the
+   user has an explicit light preference. */
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] {
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --surface-raised: #ffffff;
+    --ink-primary: #1a1a19;
+    --ink-secondary: #494844;
+    --ink-muted: #6b6a65;
+    --gridline: #e5e4df;
+    --baseline: #c9c8c2;
+    --hairline: rgba(0, 0, 0, 0.1);
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-ink: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-gridline: var(--gridline);
+  --color-baseline: var(--baseline);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+  --color-status-serious: var(--status-serious);
+  --color-status-critical: var(--status-critical);
+  /* Interactive accent (selected tab indicator, focus ring) — series-1 blue. */
+  --color-accent: var(--series-1);
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html,
+body {
+  background: var(--page);
+  color: var(--ink-primary);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers in tables, axis ticks and stat tiles align across rows/frames. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--series-1);
+  outline-offset: 2px;
+}
+
+/* Tabs sit inside a horizontally scrolling strip; an outset ring would be
+   clipped by the overflow container, so draw it inside the button instead. */
+[role="tab"]:focus-visible {
+  outline-offset: -2px;
+}
+
+/*
+ * Service-map edges: a drifting dotted overlay conveys direction of travel.
+ * This is a separate path from the edge stroke on purpose — the base stroke
+ * encodes health as solid vs dashed, and a CSS stroke-dasharray here would
+ * override that presentation attribute and flatten the distinction.
+ *
+ * Motion is decoration only: the arrowheads carry direction on their own, so
+ * hiding the overlay entirely under reduced-motion loses no information.
+ */
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.edge-flow {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .edge-flow {
+    display: inline;
+    stroke-dasharray: 1 7;
+    animation: edge-flow 1.6s linear infinite;
+  }
+}

@@ -11,7 +11,7 @@ The starter kit includes the configurable components and examples from several c
 - LLM Model - [vLLM](https://docs.vllm.ai), [SGLang](https://docs.sglang.ai), [Ollama](https://ollama.com)
 - Embedding Model - [Text Embedding Inference (TEI)](https://huggingface.co/docs/text-embeddings-inference)
 - Observability (o11y) - [Langfuse](https://langfuse.com), [Phoenix](https://phoenix.arize.com)
-- GUI App - [Open WebUI](https://docs.openwebui.com)
+- GUI App - [Open WebUI](https://docs.openwebui.com), [Traffic Dashboard (Agentic Traffic Studio)](components/gui-app/traffic-dashboard/README.md)
 - Vector Database - [Qdrant](https://qdrant.tech), [Chroma](https://docs.trychroma.com), [Milvus](https://milvus.io)
 - Workflow Automation - [n8n](https://docs.n8n.io)
 - AI Agent - [OpenClaw](https://github.com/openclaw/openclaw)

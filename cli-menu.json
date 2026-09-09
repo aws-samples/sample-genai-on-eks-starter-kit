@@ -46,7 +46,14 @@
         { "dir": "arize", "name": "Arize AX (SaaS) — workshop companion" }
       ]
     },
-    { "dir": "gui-app", "name": "GUI App", "components": [{ "dir": "openwebui", "name": "Open WebUI" }] },
+    {
+      "dir": "gui-app",
+      "name": "GUI App",
+      "components": [
+        { "dir": "openwebui", "name": "Open WebUI" },
+        { "dir": "traffic-dashboard", "name": "Traffic Dashboard (Agentic Traffic Studio)" }
+      ]
+    },
     {
       "dir": "vector-database",
       "name": "Vector Database",
