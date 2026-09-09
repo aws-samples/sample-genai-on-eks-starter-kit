@@ -31,8 +31,9 @@ export async function install() {
   
   const appTemplatePath = path.join(DIR, "app.template.yaml");
   const appRenderedPath = path.join(DIR, "app.rendered.yaml");
-  const { arch } = config.docker;
+  const { useBuildx, arch } = config.docker;
   const appVars = {
+    useBuildx,
     arch,
     IMAGE: publicEcrImage,
     GUARDRAILS_TOKEN: GUARDRAILS_AI_API_KEY,
