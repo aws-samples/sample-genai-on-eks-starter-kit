@@ -1,9 +1,11 @@
-"""Ray Serve wrapper for the workshop's optimum-neuron qwen3-8b vLLM image.
+"""Ray Serve wrapper for the workshop's GPU vLLM image (deepseek-r1-qwen3-8b on g6.xlarge / L4).
 
-Each Serve replica runs the EXACT `vllm serve ...` the workshop deployment uses,
-as a pod-local subprocess (127.0.0.1:VLLM_PORT), and exposes an OpenAI-compatible
-proxy so Ray Serve can autoscale replicas (1 per inf2 device = neuron_cores:2).
-Faithful to the workshop pod (same CLI/flags) and robust across vLLM versions.
+Each Serve replica runs the EXACT `vllm serve ...` the workshop's fixed GPU deployment uses
+(components/llm-model/vllm/model-deepseek-r1-qwen3-8b.template.yaml), as a pod-local subprocess
+(127.0.0.1:VLLM_PORT), and exposes an OpenAI-compatible proxy so Ray Serve can autoscale replicas
+(1 GPU per replica). Uses the workshop's own stock vLLM (vllm/vllm-openai:v0.10.2), which serves
+deepseek-r1-qwen3-8b cleanly — unlike Ray Serve LLM's build_openai_app on newer vLLM, which
+mis-detokenizes this model. Faithful to the fixed pod (same CLI/flags), robust across requests.
 """
 import os, json, time, logging, subprocess, urllib.request
 import httpx
@@ -13,27 +15,28 @@ from ray import serve
 
 logger = logging.getLogger("ray.serve")
 
-MODEL_PATH    = os.environ.get("MODEL_PATH", "/root/.cache/neuron/Qwen/Qwen3-8B")
-SERVED_NAME   = os.environ.get("SERVED_MODEL_NAME", "qwen3-8b-neuron-ray")
-TP            = os.environ.get("TENSOR_PARALLEL_SIZE", "2")
-MAX_NUM_SEQS  = os.environ.get("MAX_NUM_SEQS", "2")
-MAX_MODEL_LEN = os.environ.get("MAX_MODEL_LEN", "8192")
+# Defaults match the fixed GPU deployment sized for a single g6.xlarge (NVIDIA L4, 24 GB).
+MODEL_PATH    = os.environ.get("MODEL_PATH", "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B")
+SERVED_NAME   = os.environ.get("SERVED_MODEL_NAME", "deepseek-r1-qwen3-8b-ray")
+GPU_MEM_UTIL  = os.environ.get("GPU_MEMORY_UTILIZATION", "0.90")
+MAX_MODEL_LEN = os.environ.get("MAX_MODEL_LEN", "16384")   # 8B + KV must fit the L4's 24 GB
+REASONING     = os.environ.get("REASONING_PARSER", "deepseek_r1")
 VLLM_PORT     = int(os.environ.get("VLLM_PORT", "8100"))
-NEURON_CORES  = int(os.environ.get("NEURON_CORES", "2"))
+NUM_GPUS      = float(os.environ.get("NUM_GPUS", "1"))
 READY_TIMEOUT = int(os.environ.get("VLLM_READY_TIMEOUT", "1800"))
 
 web = FastAPI()
 
 @serve.deployment(
-    name="qwen3-neuron",
+    name="deepseek",
     autoscaling_config={"min_replicas": 1, "max_replicas": 2, "target_ongoing_requests": 2},
     max_ongoing_requests=8,
-    ray_actor_options={"resources": {"neuron_cores": NEURON_CORES}},
+    ray_actor_options={"num_gpus": NUM_GPUS},
     health_check_period_s=30,
     health_check_timeout_s=60,
 )
 @serve.ingress(web)
-class VLLMNeuronProxy:
+class VLLMGpuProxy:
     def __init__(self):
         self.base = f"http://127.0.0.1:{VLLM_PORT}"
         cmd = [
@@ -41,23 +44,12 @@ class VLLMNeuronProxy:
             f"--served-model-name={SERVED_NAME}",
             "--host=127.0.0.1", f"--port={VLLM_PORT}",
             "--trust-remote-code",
-            "--gpu-memory-utilization=0.90",
-            "--enable-auto-tool-choice",
-            "--tool-call-parser=hermes",
-            "--reasoning-parser=qwen3",
-            f"--tensor-parallel-size={TP}",
-            f"--max-num-seqs={MAX_NUM_SEQS}",
+            f"--gpu-memory-utilization={GPU_MEM_UTIL}",
             f"--max-model-len={MAX_MODEL_LEN}",
+            f"--reasoning-parser={REASONING}",
         ]
         logger.info("Launching vLLM subprocess: %s", " ".join(cmd))
-        # NEURON_RT_VISIBLE_CORES format conflict: Ray's raylet parses it as a COMMA list of core IDs
-        # (e.g. "0,1") to count neuron_cores, but optimum-neuron/vLLM needs the RANGE form ("0-1").
-        # Ray sets the actor's env to the assigned comma list; convert it to a range for the child.
-        _cores = os.environ.get("NEURON_RT_VISIBLE_CORES", "0,1")
-        _ids = [int(x) for x in _cores.replace("-", ",").split(",") if x.strip() != ""]
-        _range = f"{min(_ids)}-{max(_ids)}" if _ids else "0-1"
-        _child_env = {**os.environ, "NEURON_RT_VISIBLE_CORES": _range}
-        self.proc = subprocess.Popen(cmd, env=_child_env)
+        self.proc = subprocess.Popen(cmd, env={**os.environ})
         self._wait_ready(READY_TIMEOUT)
         self.client = httpx.AsyncClient(base_url=self.base,
                                         timeout=httpx.Timeout(600.0, connect=10.0))
@@ -115,4 +107,4 @@ class VLLMNeuronProxy:
                         media_type="application/json")
 
 
-app = VLLMNeuronProxy.bind()
+app = VLLMGpuProxy.bind()
