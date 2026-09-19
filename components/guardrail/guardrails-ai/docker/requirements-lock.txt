@@ -5,7 +5,7 @@ aiosignal==1.4.0
 alembic==1.18.4
 annotated-doc==0.0.4
 annotated-types==0.7.0
-anyio==4.13.0
+anyio==4.14.2
 arrow==1.4.0
 attrs==26.1.0
 boto3==1.42.88
