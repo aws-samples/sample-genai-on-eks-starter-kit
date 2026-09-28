@@ -20,7 +20,13 @@ spec:
             karpenter.sh/do-not-disrupt: "true"
         spec:
           enableServiceLinks: false
-          automountServiceAccountToken: false
+          # automountServiceAccountToken is deliberately NOT disabled on the head.
+          # enableInTreeAutoscaling: true makes KubeRay run an autoscaler sidecar
+          # in this pod, and it authenticates to the API server with the head's
+          # ServiceAccount token. Suppressing the token does not crash anything -
+          # the head keeps serving at min replicas - it just silently stops
+          # scale-up from ever firing. The worker group has no such sidecar, so it
+          # does set automountServiceAccountToken: false.
           securityContext:
             seccompProfile:
               type: RuntimeDefault

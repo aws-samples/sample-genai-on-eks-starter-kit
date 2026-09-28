@@ -48,10 +48,23 @@ Three Ray Serve applications are baked in and selected per deployment via `impor
 | `compose_app:app` | CPU gateway + guard in front of the GPU model, wired with `DeploymentHandle` |
 | `pack_app:app` | two small models sharing one GPU at `num_gpus: 0.49` |
 
-**Only `vllm_serve:app` has a manifest in this repo.** `compose_app` and `pack_app` are
-**image-only building blocks** — they are deployed through the Anyscale control plane
-(`anyscale service deploy`, with `import_path` selecting the app), not by KubeRay, so
-there is no `RayService` for them here.
+All three are **plain Ray Serve applications** — nothing about them is runtime-specific,
+so any of them can be deployed by KubeRay by copying
+`rayservice-deepseek-r1-qwen3-8b.yaml` and changing `import_path` (and, for `pack_app`,
+giving the worker 3 CPUs so both model replicas plus the router fit).
+
+**Only `vllm_serve:app` ships a manifest here today.** `compose_app` and `pack_app` are
+currently image-only building blocks — a `RayService` for each is a reasonable addition.
+
+## ⚠️ In-tree autoscaling needs the head's ServiceAccount token
+
+`enableInTreeAutoscaling: true` makes KubeRay run an autoscaler **sidecar inside the head
+pod**, and that sidecar authenticates to the API server with the head's ServiceAccount
+token. Do **not** set `automountServiceAccountToken: false` on the head group.
+
+This fails silently, which makes it expensive to debug: nothing crashes, the head keeps
+serving at `min_replicas`, and scale-up simply never fires. The worker group has no such
+sidecar, so it does set `automountServiceAccountToken: false`.
 
 They are baked into the image rather than shipped via Anyscale's `working_dir`, because
 `working_dir` activates Anyscale's session/file-sync machinery, which requires the
