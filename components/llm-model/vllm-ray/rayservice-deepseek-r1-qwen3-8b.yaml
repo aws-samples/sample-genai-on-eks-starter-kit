@@ -20,12 +20,25 @@ spec:
             karpenter.sh/do-not-disrupt: "true"
         spec:
           enableServiceLinks: false
+          automountServiceAccountToken: false
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
           nodeSelector:
             kubernetes.io/arch: amd64
           containers:
           - name: ray-head
-            image: public.ecr.aws/jalawala/ray-vllm-gpu:deepseek-r1-qwen3-8b
-            imagePullPolicy: Always
+            # Pinned by digest: the image is ~11.6 GB, so a moving tag plus
+            # imagePullPolicy: Always re-pulls it on every reschedule.
+            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-gpu@sha256:eec2aee90853b8bc9cd0f32c4a657a153862c1cf800d013a8a7d5ba0244200f9
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - NET_RAW
+              seccompProfile:
+                type: RuntimeDefault
             command: ["/bin/bash","-lc"]
             args:
             - |
@@ -71,6 +84,10 @@ spec:
             karpenter.sh/do-not-disrupt: "true"
         spec:
           enableServiceLinks: false
+          automountServiceAccountToken: false
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
           nodeSelector:
             kubernetes.io/arch: amd64
             node.kubernetes.io/instance-type: g6.xlarge   # 1x NVIDIA L4 24 GB; g6e is often capacity-constrained
@@ -78,8 +95,16 @@ spec:
           - { key: "nvidia.com/gpu", operator: "Exists", effect: "NoSchedule" }
           containers:
           - name: ray-worker
-            image: public.ecr.aws/jalawala/ray-vllm-gpu:deepseek-r1-qwen3-8b
-            imagePullPolicy: Always
+            # Pinned by digest - see the head group above.
+            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-gpu@sha256:eec2aee90853b8bc9cd0f32c4a657a153862c1cf800d013a8a7d5ba0244200f9
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - NET_RAW
+              seccompProfile:
+                type: RuntimeDefault
             command: ["/bin/bash","-lc"]
             args:
             - |
