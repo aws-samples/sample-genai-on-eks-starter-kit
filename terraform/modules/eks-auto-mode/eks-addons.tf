@@ -43,6 +43,51 @@ spec:
   depends_on = [module.eks]
 }
 
+# Dedicated GPU NodeClass.
+#
+# The GPU NodePool intentionally does NOT use the EKS Auto Mode built-in
+# "default" NodeClass. A dedicated NodeClass gives GPU nodes an object we own,
+# so GPU-only settings can be applied without mutating the EKS-managed
+# "default" NodeClass that every other NodePool (general-purpose, system,
+# default, neuron) shares.
+#
+# The main use is On-Demand Capacity Reservations (ODCRs): an event operator can
+# attach a reservation with
+#
+#   kubectl patch nodeclass gpu --type=merge \
+#     -p '{"spec":{"capacityReservationSelectorTerms":[{"id":"cr-..."}]}}'
+#
+# or select by tag/owner for a reservation shared in from another account:
+#
+#   capacityReservationSelectorTerms:
+#     - tags:    { <key>: <value> }
+#       ownerID: "<odcr-owner-account-id>"
+#
+# capacityReservationSelectorTerms is deliberately left OUT of Terraform: the
+# reservation id/owner/tags differ per event, per region and per run, so baking
+# them in here would force a new starter-kit release for every event. Karpenter
+# only consumes a reservation when "reserved" is also an allowed capacity type
+# on the NodePool below.
+resource "kubectl_manifest" "karpenter_nodeclass_gpu" {
+  yaml_body = <<-YAML
+apiVersion: eks.amazonaws.com/v1
+kind: NodeClass
+metadata:
+  name: gpu
+spec:
+  role: ${module.eks.node_iam_role_name}
+  subnetSelectorTerms: ${jsonencode([for subnet_id in var.subnet_ids : { id = subnet_id }])}
+  securityGroupSelectorTerms:
+    - tags:
+        "aws:eks:cluster-name": ${module.eks.cluster_name}
+  tags:
+    intent: gpu
+    cluster: ${module.eks.cluster_name}
+  YAML
+
+  depends_on = [module.eks]
+}
+
 resource "kubectl_manifest" "karpenter_nodepool_gpu" {
   yaml_body = <<-YAML
 apiVersion: karpenter.sh/v1
@@ -70,14 +115,19 @@ spec:
       nodeClassRef:
         group: eks.amazonaws.com
         kind: NodeClass
-        name: default
+        name: gpu
       requirements:
+        # "reserved" must be present for Karpenter to launch into an ODCR.
+        # Karpenter prices reserved offerings at zero, so it prefers them
+        # automatically whenever a matching reservation has room, and falls
+        # back to the remaining types when it does not.
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["${join("\", \"", var.gpu_nodepool_capacity_type)}"]
-        # - key: node.kubernetes.io/instance-type
-        #   operator: In
-        #   values: ["g6e.xlarge"]
+        # Instance families stay broad on purpose (g6, g6e, ...). Pin the exact
+        # instance type per workload with a pod nodeSelector, e.g.
+        #   node.kubernetes.io/instance-type: g6.xlarge
+        # so a different instance size never requires a starter-kit change.
         - key: eks.amazonaws.com/instance-family
           operator: In
           values: ["${join("\", \"", var.gpu_nodepool_instance_family)}"]
@@ -94,7 +144,7 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [module.eks]
+  depends_on = [module.eks, kubectl_manifest.karpenter_nodeclass_gpu]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_neuron" {

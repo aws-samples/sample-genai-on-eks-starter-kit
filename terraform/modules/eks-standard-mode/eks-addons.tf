@@ -185,6 +185,62 @@ spec:
   depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
 }
 
+# Dedicated GPU EC2NodeClass — mirrors NodeClass/gpu in the eks-auto-mode module.
+#
+# The GPU NodePool intentionally does NOT share EC2NodeClass/default with the
+# other NodePools. A dedicated node class gives GPU nodes an object that can
+# carry GPU-only settings — principally On-Demand Capacity Reservations — without
+# applying them to every other NodePool in the cluster.
+#
+# Attach a reservation with:
+#
+#   kubectl patch ec2nodeclass gpu --type=merge \
+#     -p '{"spec":{"capacityReservationSelectorTerms":[{"id":"cr-..."}]}}'
+#
+# capacityReservationSelectorTerms is deliberately NOT set here: the reservation
+# id differs per event, per region and per run, and for a reservation shared in
+# from another account only "id" is usable as a selector — tags are not
+# propagated cross-account (the consumer sees Tags: []) and ownerID cannot stand
+# alone. Event tooling patches the id in at provisioning time, which keeps this
+# file stable. Karpenter only consumes a reservation when "reserved" is also an
+# allowed capacity type on the NodePool below.
+resource "kubectl_manifest" "karpenter_ec2nodeclass_gpu" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: gpu
+spec:
+  amiSelectorTerms:
+    - alias: bottlerocket@latest
+  role: ${module.karpenter.node_iam_role_name}
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: ${module.eks.cluster_name}
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: ${module.eks.cluster_name}
+  tags:
+    karpenter.sh/discovery: ${module.eks.cluster_name}
+    intent: gpu
+  kubelet:
+    maxPods: 110
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 4Gi
+        volumeType: gp3
+        encrypted: true
+    - deviceName: /dev/xvdb
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        encrypted: true
+  YAML
+
+  depends_on = [helm_release.karpenter]
+}
+
 resource "kubectl_manifest" "karpenter_nodepool_gpu" {
   yaml_body = <<-YAML
 apiVersion: karpenter.sh/v1
@@ -212,14 +268,19 @@ spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: default
+        name: gpu
       requirements:
+        # "reserved" must be present for Karpenter to launch into an ODCR.
+        # Karpenter prices reserved offerings at zero, so it prefers them
+        # automatically whenever a matching reservation has room, and falls back
+        # to the remaining types when it does not.
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["${join("\", \"", var.gpu_nodepool_capacity_type)}"]
-        # - key: node.kubernetes.io/instance-type
-        #   operator: In
-        #   values: ["g6e.xlarge"]
+        # Instance families stay broad on purpose (g5 through g7). Pin the exact
+        # instance type per workload with a pod nodeSelector, e.g.
+        #   node.kubernetes.io/instance-type: g6.xlarge
+        # so a different instance size never requires a starter-kit change.
         - key: karpenter.k8s.aws/instance-family
           operator: In
           values: ["${join("\", \"", var.gpu_nodepool_instance_family)}"]
@@ -236,7 +297,7 @@ spec:
           effect: NoSchedule
   YAML
 
-  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_default]
+  depends_on = [kubectl_manifest.karpenter_ec2nodeclass_gpu]
 }
 
 resource "kubectl_manifest" "karpenter_nodepool_neuron" {

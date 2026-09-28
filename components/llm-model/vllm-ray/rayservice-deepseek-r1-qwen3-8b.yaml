@@ -1,0 +1,149 @@
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: deepseek-ray
+  namespace: vllm
+spec:
+  serveConfigV2: |
+    applications:
+      - name: deepseek
+        import_path: vllm_serve:app
+        route_prefix: "/"
+  rayClusterConfig:
+    rayVersion: '2.58.0'
+    enableInTreeAutoscaling: true
+    headGroupSpec:
+      rayStartParams: {}
+      template:
+        metadata:
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+        spec:
+          enableServiceLinks: false
+          # automountServiceAccountToken is deliberately NOT disabled on the head.
+          # enableInTreeAutoscaling: true makes KubeRay run an autoscaler sidecar
+          # in this pod, and it authenticates to the API server with the head's
+          # ServiceAccount token. Suppressing the token does not crash anything -
+          # the head keeps serving at min replicas - it just silently stops
+          # scale-up from ever firing. The worker group has no such sidecar, so it
+          # does set automountServiceAccountToken: false.
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          containers:
+          - name: ray-head
+            # Pinned by digest: the image is ~11.6 GB, so a moving tag plus
+            # imagePullPolicy: Always re-pulls it on every reschedule.
+            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-gpu@sha256:eec2aee90853b8bc9cd0f32c4a657a153862c1cf800d013a8a7d5ba0244200f9
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - NET_RAW
+              seccompProfile:
+                type: RuntimeDefault
+            command: ["/bin/bash","-lc"]
+            args:
+            - |
+              /opt/rayvenv/bin/ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 --num-cpus=0 --num-gpus=0 --metrics-export-port=8080 --block --dashboard-agent-listen-port=52365 --no-monitor
+            env:
+            - { name: PYTHONPATH, value: "/home/ray" }
+            - { name: RAY_SERVE_HTTP_HOST, value: "0.0.0.0" }
+            resources:
+              requests: { cpu: 3, memory: 8Gi }
+              limits: { cpu: 4, memory: 12Gi }
+            ports:
+            - { containerPort: 6379, name: gcs }
+            - { containerPort: 8265, name: dashboard }
+            - { containerPort: 10001, name: client }
+            - { containerPort: 8000, name: serve }
+            - { containerPort: 52365, name: dashboard-agent }
+            - { containerPort: 8080, name: metrics }
+            - { containerPort: 44217, name: as-metrics }
+            - { containerPort: 44227, name: dash-metrics }
+            livenessProbe:
+              exec:
+                command: ["bash","-c","python3 -c \"import urllib.request,sys; sys.exit(0 if b'success' in urllib.request.urlopen('http://localhost:52365/api/local_raylet_healthz',timeout=8).read() else 1)\""]
+              initialDelaySeconds: 60
+              periodSeconds: 15
+              timeoutSeconds: 10
+              failureThreshold: 10
+            readinessProbe:
+              exec:
+                command: ["bash","-c","/opt/rayvenv/bin/ray health-check --address 127.0.0.1:6379 > /dev/null 2>&1"]
+              initialDelaySeconds: 30
+              periodSeconds: 15
+              timeoutSeconds: 10
+              failureThreshold: 10
+    workerGroupSpecs:
+    - replicas: 1
+      minReplicas: 1
+      maxReplicas: 2
+      groupName: gpu-group
+      rayStartParams: {}
+      template:
+        metadata:
+          annotations:
+            karpenter.sh/do-not-disrupt: "true"
+        spec:
+          enableServiceLinks: false
+          automountServiceAccountToken: false
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          nodeSelector:
+            kubernetes.io/arch: amd64
+            node.kubernetes.io/instance-type: g6.xlarge   # 1x NVIDIA L4 24 GB; g6e is often capacity-constrained
+          tolerations:
+          - { key: "nvidia.com/gpu", operator: "Exists", effect: "NoSchedule" }
+          containers:
+          - name: ray-worker
+            # Pinned by digest - see the head group above.
+            image: public.ecr.aws/agentic-ai-platforms-on-k8s/ray-vllm-gpu@sha256:eec2aee90853b8bc9cd0f32c4a657a153862c1cf800d013a8a7d5ba0244200f9
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                  - NET_RAW
+              seccompProfile:
+                type: RuntimeDefault
+            command: ["/bin/bash","-lc"]
+            args:
+            - |
+              /opt/rayvenv/bin/ray start --address=${RAY_ADDRESS:-${FQ_RAY_IP}:6379} --dashboard-agent-listen-port=52365 --metrics-export-port=8080 --block --num-cpus=2 --num-gpus=1 --no-monitor
+            env:
+            - { name: PYTHONPATH, value: "/home/ray" }
+            - { name: CC, value: "/usr/bin/gcc" }   # Triton JIT-compiles CUDA kernels and needs a C compiler
+            - { name: HF_HOME, value: "/root/.cache/huggingface" }
+            - name: HUGGING_FACE_HUB_TOKEN
+              valueFrom: { secretKeyRef: { name: hf-token, key: token } }
+            resources:
+              # g6.xlarge has only 16 GiB system RAM — keep the request under it (the model lives in GPU memory).
+              requests: { cpu: 2, memory: 12Gi, nvidia.com/gpu: 1 }
+              limits: { memory: 15Gi, nvidia.com/gpu: 1 }
+            livenessProbe:
+              exec:
+                command: ["bash","-c","python3 -c \"import urllib.request,sys; sys.exit(0 if b'success' in urllib.request.urlopen('http://localhost:52365/api/local_raylet_healthz',timeout=8).read() else 1)\""]
+              initialDelaySeconds: 90
+              periodSeconds: 20
+              timeoutSeconds: 10
+              failureThreshold: 15
+            readinessProbe:
+              exec:
+                command: ["bash","-c","python3 -c \"import urllib.request,sys; sys.exit(0 if b'success' in urllib.request.urlopen('http://localhost:52365/api/local_raylet_healthz',timeout=8).read() else 1)\""]
+              initialDelaySeconds: 45
+              periodSeconds: 20
+              timeoutSeconds: 10
+              failureThreshold: 15
+            volumeMounts:
+            - { name: hf-cache, mountPath: /root/.cache/huggingface }
+            - { name: shm, mountPath: /dev/shm }
+          volumes:
+          - name: hf-cache
+            persistentVolumeClaim: { claimName: huggingface-cache }
+          - name: shm
+            emptyDir: { medium: Memory, sizeLimit: 10Gi }
