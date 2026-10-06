@@ -11,7 +11,6 @@ from agno.db.sqlite import SqliteDb
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
-from langfuse import get_client
 import openlit
 
 
@@ -37,12 +36,11 @@ if "LANGFUSE_HOST" in os.environ:
     LANGFUSE_AUTH = base64.b64encode(
         f"{os.environ.get('LANGFUSE_PUBLIC_KEY')}:{os.environ.get('LANGFUSE_SECRET_KEY')}".encode()
     ).decode()
-    os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = (
-        os.environ.get("LANGFUSE_HOST") + "/api/public/otel/v1/traces"
+    openlit.init(
+        otlp_endpoint=os.environ.get("LANGFUSE_HOST") + "/api/public/otel/v1/traces",
+        otlp_headers=f"Authorization=Basic {LANGFUSE_AUTH}",
+        disable_batch=True,
     )
-    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {LANGFUSE_AUTH}"
-    langfuse = get_client()
-    openlit.init(tracer=langfuse._otel_tracer, disable_batch=True)
 
 system_prompt = """
 You are a helpful calculator assistant that can perform basic arithmetic operations.
