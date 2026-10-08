@@ -284,7 +284,8 @@ import openlit
 from langfuse import get_client
 
 langfuse = get_client()
-openlit.init(tracer=langfuse._otel_tracer, disable_batch=True)
+# Reuses the tracer provider Langfuse installed. Langfuse ingests traces only.
+openlit.init(disable_batch=True, disable_metrics=True, disable_events=True)
 ```
 
 This provides automatic instrumentation for:

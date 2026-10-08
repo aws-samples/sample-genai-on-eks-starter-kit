@@ -1,6 +1,5 @@
 import os
 import asyncio
-import base64
 from contextlib import asynccontextmanager
 from agno.agent import Agent
 from agno.models.aws import AwsBedrock
@@ -34,15 +33,9 @@ else:
     )
 
 if "LANGFUSE_HOST" in os.environ:
-    LANGFUSE_AUTH = base64.b64encode(
-        f"{os.environ.get('LANGFUSE_PUBLIC_KEY')}:{os.environ.get('LANGFUSE_SECRET_KEY')}".encode()
-    ).decode()
-    os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = (
-        os.environ.get("LANGFUSE_HOST") + "/api/public/otel/v1/traces"
-    )
-    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {LANGFUSE_AUTH}"
     langfuse = get_client()
-    openlit.init(tracer=langfuse._otel_tracer, disable_batch=True)
+    # Langfuse ingests traces only, so openlit's metrics and events stay off.
+    openlit.init(disable_batch=True, disable_metrics=True, disable_events=True)
 
 system_prompt = """
 You are a helpful calculator assistant that can perform basic arithmetic operations.
