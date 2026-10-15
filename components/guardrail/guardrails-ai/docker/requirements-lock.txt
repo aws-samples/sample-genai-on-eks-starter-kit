@@ -21,7 +21,7 @@ fastuuid==0.14.0
 filelock==3.25.2
 fqdn==1.5.1
 frozenlist==1.8.0
-fsspec==2026.3.0
+fsspec==2026.6.0
 googleapis-common-protos==1.74.0
 greenlet==3.4.0
 grpcio==1.80.0
