@@ -98,6 +98,9 @@ export async function install() {
   
   // Use defaults from config.json (no interactive prompts)
   const grafanaPassword = monitoringConfig.grafanaAdminPassword || "admin";
+  // Masked form for console output so the admin password is never printed
+  // in clear text (it is still passed to Helm via GRAFANA_ADMIN_PASSWORD).
+  const grafanaPasswordMasked = "********";
   const retention = monitoringConfig.retention || "7d";
   const enablePersistentStorage = monitoringConfig.enablePersistentStorage ?? false;
   const storageSize = monitoringConfig.prometheusStorageSize || "50Gi";
@@ -153,7 +156,7 @@ export async function install() {
   // Step 3: Install/Upgrade kube-prometheus-stack
   console.log("\n[3/4] Installing kube-prometheus-stack...");
   console.log(`  Namespace: ${MONITORING_NAMESPACE}`);
-  console.log(`  Grafana password: ${grafanaPassword}`);
+  console.log(`  Grafana password: ${grafanaPasswordMasked}`);
   console.log(`  Retention: ${retention}`);
   console.log(`  Alertmanager: ${alertmanagerEnabled}`);
   console.log(`  Ingress: ${enableIngress ? ingressClass : "disabled"}`);
@@ -204,12 +207,13 @@ export async function install() {
     console.log("2. Access (via Ingress):");
     console.log(`   Grafana:    http://<node-ip>:<node-port>/grafana`);
     console.log(`   Prometheus: http://<node-ip>:<node-port>/prometheus`);
-    console.log(`   User: admin / Password: ${grafanaPassword}`);
+    console.log(`   User: admin / Password: ${grafanaPasswordMasked}`);
   } else {
     console.log("2. Access (port-forward):");
     console.log(`   kubectl port-forward svc/prometheus-grafana 3000:80 -n ${MONITORING_NAMESPACE} --address 0.0.0.0`);
-    console.log(`   User: admin / Password: ${grafanaPassword}`);
+    console.log(`   User: admin / Password: ${grafanaPasswordMasked}`);
   }
+  console.log(`   Retrieve password: kubectl get secret prometheus-grafana -n ${MONITORING_NAMESPACE} -o jsonpath="{.data.admin-password}" | base64 -d`);
 }
 
 // Apply all Grafana dashboard ConfigMaps

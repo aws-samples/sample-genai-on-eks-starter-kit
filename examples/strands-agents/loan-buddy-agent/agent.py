@@ -400,8 +400,14 @@ Return a structured assessment with your recommendation."""
             "processing_note": "Strands agent via Kong->Bedrock; traced in Arize AX",
         }
     except Exception as e:  # noqa: BLE001
-        logger.error("Error processing credit application: %s", e)
-        return {"status": "ERROR", "message": str(e)}
+        # Log the full detail server-side only; do not leak exception
+        # internals (which can expose stack-trace/implementation details)
+        # to the HTTP client.
+        logger.exception("Error processing credit application: %s", e)
+        return {
+            "status": "ERROR",
+            "message": "Internal error while processing the credit application.",
+        }
 
 
 @app.get("/api/health")

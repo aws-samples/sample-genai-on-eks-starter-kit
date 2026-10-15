@@ -35,7 +35,14 @@ export function patchConfig(configPath: string, options?: PatchOptions): void {
   }
 
   writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
-  console.log("[patch-config] Final config:", JSON.stringify(config, null, 2));
+  // Log only an allowlisted, non-sensitive summary (never log full config).
+  console.log("[patch-config] Final config summary:", {
+    gatewayPort: config.gateway?.port,
+    authMethod: config.auth?.method,
+    telegramRemoved: config.telegram === undefined,
+    llmConfigured: config.llm !== undefined,
+    hasLlmApiKey: config.llm?.apiKey !== undefined,
+  });
 }
 
 // CLI entry point: node patch-config.js <configPath>
