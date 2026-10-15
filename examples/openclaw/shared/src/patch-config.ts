@@ -35,7 +35,13 @@ export function patchConfig(configPath: string, options?: PatchOptions): void {
   }
 
   writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
-  console.log("[patch-config] Final config:", JSON.stringify(config, null, 2));
+  // Redact secrets (e.g. llm.apiKey) before logging so API keys are never
+  // written to stdout in clear text.
+  const redacted = JSON.parse(JSON.stringify(config)) as Record<string, Record<string, unknown>>;
+  if (redacted.llm && redacted.llm.apiKey !== undefined) {
+    redacted.llm.apiKey = "[REDACTED]";
+  }
+  console.log("[patch-config] Final config:", JSON.stringify(redacted, null, 2));
 }
 
 // CLI entry point: node patch-config.js <configPath>
