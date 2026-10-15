@@ -4,5 +4,5 @@ strands-agents-tools==0.1.6
 mcp==1.28.1
 fastapi[standard]==0.115.13
 pydantic==2.12.5
-litellm==1.85.1
+litellm==1.93.2
 langfuse==3.0.5
