@@ -1,0 +1,10 @@
+# codespell configuration (https://github.com/codespell-project/codespell).
+# CI runs `codespell` with no arguments from the repository root, so it reads
+# these settings; running `codespell` locally reproduces the check exactly.
+[codespell]
+skip = ./site,./node_modules,./package-lock.json,*.lock,*.svg,*.png,*.jpg,*.jpeg,*.gif,*.ico,*.woff,*.woff2,*.pdf
+# Domain terms codespell should not report, comma-separated and lowercase.
+# Seeded with the product names called out in #201; none of them is in the
+# current dictionaries, so add new entries only when a term is actually
+# reported, and keep them specific — an entry silences that word repo-wide.
+ignore-words-list = karpenter,langfuse,vllm,neuron
