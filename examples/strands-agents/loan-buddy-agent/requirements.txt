@@ -10,7 +10,7 @@ strands-agents==1.47.0
 strands-agents-tools==0.8.3
 
 # LLM client (talks to Kong as an OpenAI-compatible endpoint) + MCP (SSE tools)
-litellm==1.92.0
+litellm==1.93.2
 mcp==1.28.1
 # litellm imports orjson opportunistically for fast JSON (raises "No module named
 # 'orjson'" at request time if absent). It is NOT a hard litellm dep, so pin it here
