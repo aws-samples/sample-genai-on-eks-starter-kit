@@ -41,6 +41,7 @@
       "name": "Observability",
       "components": [
         { "dir": "langfuse", "name": "Langfuse" },
+        { "dir": "neuron-monitor", "name": "Neuron Monitor (Inferentia / Trainium telemetry)" },
         { "dir": "mlflow", "name": "MLflow" },
         { "dir": "phoenix", "name": "Phoenix" },
         { "dir": "arize", "name": "Arize AX (SaaS) — workshop companion" }

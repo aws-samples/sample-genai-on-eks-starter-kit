@@ -1,0 +1,155 @@
+# AWS Neuron telemetry for the Inferentia / Trainium nodes.
+#
+# vLLM reports the same metric names whichever accelerator it runs on
+# (vllm:gpu_cache_usage_perc, --gpu-memory-utilization, …), and the NVIDIA
+# DCGM exporter only ever sees NVIDIA devices, so without this DaemonSet the
+# Neuron pools are invisible as accelerators: the dashboard cannot tell an
+# inf2 engine from an L40S one, and NeuronCore utilisation / device memory are
+# not measured at all.
+#
+# neuron-monitor (aws-neuron-tools) reads the Neuron driver on the node and
+# sees every runtime on the host, including the vLLM container in another pod,
+# so one privileged DaemonSet pod per Neuron node covers all model pods there.
+# `neuron-monitor-prometheus.py` turns its JSON stream into /metrics:
+#   neuroncore_utilization_ratio{neuroncore, runtime_tag, instance_type, …}
+#   neuron_runtime_memory_used_bytes, neuroncore_memory_usage_<type>
+#   execution_latency_seconds{percentile}, execution_status_total{status_type}
+#   execution_errors_total{error_type}, hardware_ecc_events_total
+#   neuron_hardware_info{neuron_device_count, neuroncore_per_device_count, …}
+# Manifest follows the upstream reference
+# (aws-neuron-sdk/src/k8/k8s-neuron-monitor-daemonset.yml); the node selection
+# is widened from an instance-type list to the accelerator labels EKS Auto Mode
+# and Karpenter put on Neuron nodes, so new inf/trn sizes need no edit here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neuron-monitor
+  labels:
+    # neuron-monitor must run privileged to open /dev/neuron*; keep the
+    # namespace itself out of the restricted PSA profile.
+    pod-security.kubernetes.io/enforce: privileged
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: neuron-monitor
+  namespace: neuron-monitor
+  labels:
+    app: neuron-monitor
+spec:
+  selector:
+    matchLabels:
+      app: neuron-monitor
+  template:
+    metadata:
+      labels:
+        app: neuron-monitor
+    spec:
+      automountServiceAccountToken: false
+      priorityClassName: system-node-critical
+      # neuron-monitor labels every series with instance_type / instance_id /
+      # availability_zone from IMDS. From the pod network those come back empty
+      # (IMDSv2 hop limit 1), so the exporter runs on the host network; the
+      # dashboard's accelerator filter is derived from instance_type.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            # Terms are OR-ed: any one of these labels marks a Neuron node.
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: neuron.amazonaws.com/present
+                    operator: In
+                    values: ["true"]
+              - matchExpressions:
+                  - key: eks.amazonaws.com/instance-accelerator-manufacturer
+                    operator: In
+                    values: ["aws"]
+              - matchExpressions:
+                  - key: karpenter.k8s.aws/instance-accelerator-manufacturer
+                    operator: In
+                    values: ["aws"]
+      tolerations:
+        - key: aws.amazon.com/neuron
+          operator: Exists
+          effect: NoSchedule
+        - key: aws.amazon.com/neuroncore
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: neuron-monitor
+          image: public.ecr.aws/neuron/neuron-monitor:1.12.0
+          imagePullPolicy: IfNotPresent
+          command: ["/opt/bin/entrypoint.sh"]
+          args:
+            - "--port"
+            - "8000"
+            - "--neuron-monitor-config"
+            - "/opt/aws/neuron/bin/neuron-monitor.conf"
+          ports:
+            - name: metrics
+              containerPort: 8000
+          env:
+            - name: GOMEMLIMIT
+              value: 160MiB
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            # Required: the Neuron driver's device nodes and per-process
+            # runtime statistics are only readable by a privileged container.
+            privileged: true
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuron-monitor
+  namespace: neuron-monitor
+  labels:
+    app: neuron-monitor
+spec:
+  clusterIP: None
+  selector:
+    app: neuron-monitor
+  ports:
+    - name: metrics
+      port: 8000
+      targetPort: metrics
+---
+# Scraped by kube-prometheus-stack (release=prometheus selector). Every series
+# gets a `node` label from the pod's node so the dashboard can join Neuron
+# telemetry to the vLLM pod running there (kube_pod_info) without the
+# --enable-k8s-info side-car, which is not supported on EKS Auto Mode.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: neuron-monitor
+  namespace: neuron-monitor
+  labels:
+    release: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - neuron-monitor
+  selector:
+    matchLabels:
+      app: neuron-monitor
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node

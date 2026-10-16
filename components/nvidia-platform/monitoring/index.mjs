@@ -217,6 +217,7 @@ async function applyGrafanaDashboards() {
   const dashboards = [
     { file: "dynamo-dashboard.json", name: "grafana-dynamo-dashboard", label: "Dynamo Dashboard" },
     { file: "dcgm-metrics.json", name: "grafana-dcgm-dashboard", label: "DCGM GPU Monitoring" },
+    { file: "neuron-monitor.json", name: "grafana-neuron-dashboard", label: "AWS Neuron (Inferentia / Trainium) Monitoring" },
     { file: "kvbm.json", name: "grafana-kvbm-dashboard", label: "KVBM KV Cache" },
     { file: "benchmark-dashboard.json", name: "grafana-benchmark-dashboard", label: "Benchmark Pareto" },
   ];

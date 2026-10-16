@@ -286,6 +286,20 @@ Llama-3.1-8B-Instruct, DeepSeek-R1-Distill-Llama-8B, Mistral-7B-Instruct-v0.3 mo
 - Then, on `config.json` (or `config.local.json`), change from `"compile": true` to `"compile": false`
 - Then, delete the model deploymen and then deploy again which will use inf2.xlarge
 
+### How can I monitor Neuron (Inferentia / Trainium) accelerator usage?
+
+vLLM exposes the same metric names on every accelerator (`vllm:gpu_cache_usage_perc`, `--gpu-memory-utilization`, …) and the NVIDIA DCGM exporter only sees NVIDIA GPUs, so on their own the monitoring dashboards cannot tell an `inf2` model pod from a GPU one, and NeuronCore utilization is not measured at all.
+
+Install the Neuron Monitor component to close that gap:
+
+```bash
+./cli o11y neuron-monitor install
+```
+
+It deploys the AWS `neuron-monitor` DaemonSet (upstream image `public.ecr.aws/neuron/neuron-monitor`) on every node that carries a Neuron accelerator label, exposes `neuroncore_utilization_ratio`, `neuron_runtime_memory_used_bytes`, `execution_latency_seconds`, `execution_errors_total`, `hardware_ecc_events_total` and friends on `/metrics`, and registers a `PodMonitor` for the kit's kube-prometheus-stack. The monitoring component ships a matching Grafana dashboard, **AWS Neuron (Inferentia / Trainium) Monitoring**, which also flags nodes whose NeuronCores are allocated to a pod but idle.
+
+The DaemonSet runs privileged on the host network: `neuron-monitor` needs the Neuron device nodes, and IMDS access is what fills the `instance_type` / `availability_zone` labels on EKS Auto Mode nodes.
+
 ### How can I disable the multi-arch container image build?
 
 By default, `docker buildx` is used to build the multi-arch container images. To disable it, modify the `docker` section on `config.json` (or `config.local.json`) to set `"useBuildx": false` and `arch` based on your machine OS arch.
