@@ -33,6 +33,6 @@ uvicorn[standard]==0.51.0
 pydantic==2.13.4
 
 # Image processing + AWS S3 (image storage)
-Pillow==12.3.0
+Pillow==13.0.0
 boto3==1.43.47
 botocore==1.43.47
