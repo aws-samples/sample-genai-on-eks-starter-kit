@@ -4,7 +4,10 @@ global:
     allowInsecureImages: true
 
 ingress:
-  enabled: true
+  # Private by default: no Ingress unless DOMAIN is set, so MLflow stays
+  # ClusterIP. Reach it with a port-forward:
+  #   kubectl port-forward -n mlflow svc/mlflow 5000:80
+  enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
   className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
   annotations:
       alb.ingress.kubernetes.io/target-type: ip

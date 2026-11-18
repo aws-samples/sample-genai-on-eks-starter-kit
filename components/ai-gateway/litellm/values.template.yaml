@@ -78,25 +78,43 @@ envVars:
   {{/if}}
 
 ingress:
-  enabled: true
-  className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
+  # Private by default. Without DOMAIN there is no Ingress at all: the Service
+  # stays ClusterIP and LiteLLM is reachable only from inside the cluster.
+  #
+  # This proxy holds an AWS credential (EKS Pod Identity, bedrock:InvokeModel)
+  # and an admin API that can register new models, so an internet-facing ALB
+  # makes it a public, credential-bearing endpoint. Reach it instead with a
+  # port-forward from the machine that needs it:
+  #
+  #   kubectl port-forward -n litellm svc/litellm 4000:4000
+  #   # then http://localhost:4000 (UI at /ui)
+  #
+  # Set DOMAIN only when you are deploying behind HTTPS on a hostname you own
+  # and have put authentication in front of it.
+  enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
+  {{#if DOMAIN}}
+  className: shared-internet-facing-alb
   annotations:
     alb.ingress.kubernetes.io/target-type: ip
-    {{#if DOMAIN}}
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
-    {{/if}}
   hosts:
     - paths:
         - path: /
           pathType: Prefix
-      {{#if DOMAIN}}
       host: litellm.{{{DOMAIN}}}
-      {{/if}}
+  {{/if}}
 
 proxy_config:
   general_settings:
     master_key: os.environ/PROXY_MASTER_KEY
-    store_model_in_db: true
+    # Models come only from the rendered model_list below, which is built from
+    # config.json at deploy time. With store_model_in_db: true anyone holding
+    # the master key can register ADDITIONAL models through the admin API at
+    # runtime -- including models the deployment was never meant to serve.
+    # Keep this false; change the config and redeploy to add a model.
+    # IAM is the backstop (see main.tf): the pod role is scoped to the
+    # configured model ARNs, so an unlisted model cannot be invoked either way.
+    store_model_in_db: false
     store_prompts_in_spend_logs: true
   litellm_settings:
     drop_params: true

@@ -17,8 +17,8 @@ Request path:
 
 Env:
   # LLM via Kong (required)
-  KONG_BASE_URL       e.g. http://<kong-proxy-lb>/loan-strands   (no trailing /v1)
-  KONG_API_KEY        the Kong consumer key sent as the 'apikey' header (default loan-strands-key-123)
+  KONG_BASE_URL       e.g. http://proxy1.kong.svc.cluster.local/loan-strands  (no trailing /v1)
+  KONG_API_KEY        the Kong consumer key sent as the 'apikey' header (required, no default)
   KONG_MODEL_ID       OpenAI-compat model id string (default: openai/bedrock-claude)
   # Arize AX (optional; tracing disabled if unset)
   ARIZE_API_KEY, ARIZE_SPACE_ID   (Service key + Space ID)
@@ -107,8 +107,13 @@ from utils import store_object, encode_image, generate_256_bit_hex_key
 # LiteLLMModel treats the Kong route as an OpenAI-compatible endpoint. Kong's
 # ai-proxy translates to Bedrock and (allow_override=false) injects the model,
 # so KONG_MODEL_ID is just the OpenAI-compat routing string.
-KONG_BASE_URL = os.environ.get("KONG_BASE_URL", "http://kong-proxy/loan-strands")
-KONG_API_KEY = os.environ.get("KONG_API_KEY", "loan-strands-key-123")
+# Cluster-internal Service DNS: the agent and Kong run in the same cluster, so
+# this traffic never needs to leave it (and Kong must not be published -- its
+# proxy holds an AWS credential for Bedrock).
+KONG_BASE_URL = os.environ.get("KONG_BASE_URL", "http://proxy1.kong.svc.cluster.local/loan-strands")
+# No default: a credential baked into this repo is a credential everyone has.
+# The deployment injects the live key read from the KongCredentialAPIKey.
+KONG_API_KEY = os.environ.get("KONG_API_KEY", "")
 # Must be the EXACT model the Kong ai-proxy route pins (allow_override=false),
 # openai/-prefixed so litellm treats Kong as an OpenAI-compatible endpoint.
 KONG_MODEL_ID = os.environ.get(

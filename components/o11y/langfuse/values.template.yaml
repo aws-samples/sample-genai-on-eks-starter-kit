@@ -12,19 +12,23 @@ langfuse:
   encryptionKey:
     value: 7188cd4d31f5b0470ed96fa34615a3e779f3a71d1d0f68fc5c166b1c6e515c59 # Dummy key
   ingress:
-    enabled: true
+    # Private by default — see the LiteLLM values template for the rationale.
+    # Langfuse holds traces (prompts and completions), so it is not public
+    # either. Without DOMAIN the Service stays ClusterIP; reach the UI with:
+    #
+    #   kubectl port-forward -n langfuse svc/langfuse-web 3000:3000
+    #   # then http://localhost:3000
+    enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
+    {{#if DOMAIN}}
     annotations:
       alb.ingress.kubernetes.io/target-type: ip
-      {{#if DOMAIN}}
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
-      {{/if}}
     hosts:
       - paths:
           - path: /
             pathType: Prefix
-        {{#if DOMAIN}}
         host: langfuse.{{{DOMAIN}}}
-        {{/if}}
+    {{/if}}
 
   additionalEnv:
     - name: LANGFUSE_INIT_ORG_ID

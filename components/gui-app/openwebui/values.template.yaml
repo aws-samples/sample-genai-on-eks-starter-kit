@@ -1,13 +1,16 @@
 nameOverride: openwebui
 ingress:
-  enabled: true
+  # Private by default — see the LiteLLM values template for the rationale.
+  # Without DOMAIN the Service stays ClusterIP; reach the UI with:
+  #
+  #   kubectl port-forward -n openwebui svc/open-webui 8080:80
+  #   # then http://localhost:8080
+  enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
+  {{#if DOMAIN}}
   annotations:
     alb.ingress.kubernetes.io/target-type: ip
-  {{#if DOMAIN}}
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
   host: openwebui.{{{DOMAIN}}}
-  {{else}}
-  host:
   {{/if}}
 
 # openaiBaseApiUrl: https://litellm.{{{DOMAIN}}}/v1

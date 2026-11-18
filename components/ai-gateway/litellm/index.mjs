@@ -20,15 +20,38 @@ export async function init(_BASE_DIR, _config, _utils) {
   utils = _utils;
 }
 
+// LiteLLM Helm chart version. Empty = install the LATEST published chart, so
+// every deploy picks up upstream bug and security fixes without a repo change
+// (the incident deployment was LiteLLM 1.81.3).
+//
+// Set LITELLM_CHART_VERSION to pin a specific chart when you need to: taking
+// "latest" also means a broken upstream release reaches every new event
+// immediately, and two events never run byte-identical versions. Pinning is the
+// escape hatch for that, not the default.
+const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "";
+
 export async function install() {
   const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   const { enableBedrockGuardrail, enableGuardrailsAI } = config["litellm"];
+  const bedrockRegion = config["bedrock"]["region"] || process.env.REGION;
+  // Scope the pod role to exactly the Bedrock models this deployment serves.
+  // Anything not listed in config.json cannot be invoked, even by someone who
+  // holds the LiteLLM master key.
+  const bedrockModelIds = [
+    ...(config["bedrock"]["llm"]["models"] ?? []),
+    ...(config["bedrock"]["embedding"]["models"] ?? []),
+  ]
+    .map((m) => m.model)
+    .filter(Boolean);
+  const bedrockAllowedRegions = [...new Set([bedrockRegion, process.env.REGION].filter(Boolean))];
   await utils.terraform.apply(DIR, {
     vars: {
-      bedrock_region: config["bedrock"]["region"] || process.env.REGION,
+      bedrock_region: bedrockRegion,
       enable_bedrock_guardrail: enableBedrockGuardrail,
+      bedrock_model_ids: bedrockModelIds,
+      bedrock_allowed_regions: bedrockAllowedRegions,
     },
   });
 
@@ -133,7 +156,9 @@ export async function install() {
     valuesVars.MLFLOW_PASSWORD = process.env.MLFLOW_PASSWORD;
   }
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
-  await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
+  // Install the latest chart by default; add --version only when pinned.
+  const versionArgs = LITELLM_CHART_VERSION ? ["--version", LITELLM_CHART_VERSION] : [];
+  await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm ${versionArgs} --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
 }
 
 export async function uninstall() {

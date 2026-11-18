@@ -2,7 +2,10 @@ proxy:
   enabled: true
   type: ClusterIP
   ingress:
-    enabled: true
+    # Private by default: no Ingress unless DOMAIN is set, so the proxy stays
+    # ClusterIP. Reach it with a port-forward:
+    #   kubectl port-forward -n kong svc/kong-kong-proxy 8000:80
+    enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
     {{#if DOMAIN}}
     hostname: kong.{{{DOMAIN}}}
     {{/if}}

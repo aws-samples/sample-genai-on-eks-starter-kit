@@ -41,3 +41,7 @@ examples/openclaw/shared/dist/
 PLAN.md
 .cache/
 workshops/eks-genai-workshop/static/code/module3/credit-validation/agentic-application-deployment.configured.yaml
+# Local credential overrides and backups must never be committed.
+# .env itself stays tracked as the (credential-free) template.
+.env.bak*
+.env.*.local
