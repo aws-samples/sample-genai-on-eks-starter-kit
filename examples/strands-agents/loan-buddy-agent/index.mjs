@@ -188,7 +188,7 @@ export async function install() {
     IMAGE: IMAGE_URL,
     KONG_BASE_URL,
     KONG_API_KEY: kongApiKey,
-    KONG_MODEL_ID: envCfg.KONG_MODEL_ID || "openai/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    KONG_MODEL_ID: envCfg.KONG_MODEL_ID || "openai/global.anthropic.claude-sonnet-5-5",
     // MCP servers are deployed by the default Loan Buddy (Module 3) in the `workshop`
     // namespace on port 8000. Reference them cross-namespace via their FQDN.
     MCP_IMAGE_PROCESSOR: "http://mcp-image-processor.workshop:8000",
