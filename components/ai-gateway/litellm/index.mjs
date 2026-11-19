@@ -23,10 +23,11 @@ export async function init(_BASE_DIR, _config, _utils) {
 // LiteLLM Helm **chart** version, pinned for reproducibility so two deploys
 // never silently differ and a broken upstream chart cannot reach every event.
 //
-// Note this does NOT pin the LiteLLM application: the chart's appVersion is
-// "latest". The app version is set by image.tag in values.template.yaml.
+// Chart 1.100.4 has appVersion 1.100.4, matching image.tag in
+// values.template.yaml. Old 0.1.x charts hardcode a db-ready init container on
+// docker.io/bitnami/postgresql:16.1.0-debian-11-r20, which no longer exists.
 // Override with LITELLM_CHART_VERSION to test a newer chart.
-const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "0.1.100";
+const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "1.100.4";
 
 export async function install() {
   const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
