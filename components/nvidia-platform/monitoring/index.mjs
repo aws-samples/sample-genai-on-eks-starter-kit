@@ -96,8 +96,13 @@ export async function install() {
     }
   }
   
-  // Use defaults from config.json (no interactive prompts)
-  const grafanaPassword = monitoringConfig.grafanaAdminPassword || "admin";
+  // Use defaults from config.json (no interactive prompts).
+  // No "admin" fallback: a default here means every deployment of this public
+  // repo ships the same Grafana admin password. Set GRAFANA_ADMIN_PASSWORD (or
+  // monitoring.grafanaAdminPassword in config) per deployment -- missing is a
+  // hard failure rather than a known credential.
+  utils.checkRequiredEnvVars(monitoringConfig.grafanaAdminPassword ? [] : ["GRAFANA_ADMIN_PASSWORD"]);
+  const grafanaPassword = monitoringConfig.grafanaAdminPassword || process.env.GRAFANA_ADMIN_PASSWORD;
   const retention = monitoringConfig.retention || "7d";
   const enablePersistentStorage = monitoringConfig.enablePersistentStorage ?? false;
   const storageSize = monitoringConfig.prometheusStorageSize || "50Gi";

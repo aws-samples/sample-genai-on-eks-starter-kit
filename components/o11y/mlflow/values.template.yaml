@@ -36,9 +36,11 @@ postgresql:
     repository: agentic-ai-platforms-on-k8s/postgresql
     tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
+  # Backing datastore credential, generated per deployment. Was the literal
+  # "password123", shared by every deployment of this public repo.
   auth:
     username: admin
-    password: password123
+    password: {{{MLFLOW_POSTGRES_PASSWORD}}}
   primary:
     resources: 
       requests:

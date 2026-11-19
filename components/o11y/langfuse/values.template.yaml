@@ -62,9 +62,12 @@ postgresql:
     repository: agentic-ai-platforms-on-k8s/postgresql
     tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
+  # Backing datastore credential. Was the literal "password123", which every
+  # deployment of this public repo shared -- the same shared-credential issue as
+  # the admin UIs, just one layer down. Generated per deployment now.
   auth:
     username: admin
-    password: password123
+    password: {{{LANGFUSE_POSTGRES_PASSWORD}}}
   primary:
     resources: 
       requests:
@@ -80,7 +83,7 @@ clickhouse:
     tag: 25.2.1-debian-12-r0
     pullPolicy: IfNotPresent
   auth:
-    password: password123
+    password: {{{LANGFUSE_CLICKHOUSE_PASSWORD}}}
   replicaCount: 1
   resources:
     requests:
@@ -113,7 +116,7 @@ redis:
     tag: 8.0.2-debian-12-r2
     pullPolicy: IfNotPresent
   auth:
-    password: password123
+    password: {{{LANGFUSE_REDIS_PASSWORD}}}
   primary:
     resources: 
       requests:

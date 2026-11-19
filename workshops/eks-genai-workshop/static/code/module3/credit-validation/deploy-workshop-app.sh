@@ -90,7 +90,7 @@ echo -e "\n${YELLOW}Step 3: Getting AWS region...${NC}"
 # Try to get region from environment variable first
 if [ -z "$REGION" ]; then
     # Try to load from .env file in multiple locations
-    for ENV_FILE in "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
+    for ENV_FILE in "/workshop/.env.local" "${SCRIPT_DIR}/../../../../../.env.local" "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
         if [ -f "$ENV_FILE" ]; then
             source "$ENV_FILE"
             break
@@ -120,6 +120,9 @@ echo -e "${GREEN}✅ AWS Region: ${REGION}${NC}"
 # Step 4: Get LiteLLM API key
 echo -e "\n${YELLOW}Step 4: Getting LiteLLM API key...${NC}"
 
+# .env.local (generated per account) defines LITELLM_API_KEY, not AGENT_KEY.
+AGENT_KEY="${AGENT_KEY:-$LITELLM_API_KEY}"
+
 if [ -z "$AGENT_KEY" ]; then
     echo -e "${YELLOW}⚠️  AGENT_KEY not found in environment.${NC}"
     echo -e "${YELLOW}   Please enter your LiteLLM API key (Virtual Key from Module 2):${NC}"
@@ -138,7 +141,7 @@ echo -e "\n${YELLOW}Step 5: Getting Langfuse credentials...${NC}"
 
 # Try to load from .env file if not already set
 if [ -z "$LANGFUSE_PUBLIC_KEY" ] || [ -z "$LANGFUSE_SECRET_KEY" ]; then
-    for ENV_FILE in "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
+    for ENV_FILE in "/workshop/.env.local" "${SCRIPT_DIR}/../../../../../.env.local" "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
         if [ -f "$ENV_FILE" ]; then
             source "$ENV_FILE"
             break
@@ -202,7 +205,7 @@ echo -e "\n${YELLOW}Step 7b: Creating Pod Identity Association for S3 access...$
 
 # Get the cluster name from .env file
 CLUSTER_NAME=""
-for ENV_FILE in "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
+for ENV_FILE in "/workshop/.env.local" "${SCRIPT_DIR}/../../../../../.env.local" "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
     if [ -f "$ENV_FILE" ]; then
         source "$ENV_FILE"
         if [ ! -z "$EKS_CLUSTER_NAME" ]; then
@@ -280,14 +283,18 @@ fi
 echo -e "\n${YELLOW}Step 8: Configuring deployment file...${NC}"
 
 # Create a configured version of the deployment file
+# Langfuse OTLP ingestion uses HTTP Basic auth over the public/secret key pair.
+# Derive it here so no encoded credential is committed to the template.
+OTLP_BASIC_AUTH=$(printf '%s:%s' "$LANGFUSE_PUBLIC_KEY" "$LANGFUSE_SECRET_KEY" | base64 | tr -d '\n')
+
 cp "$DEPLOYMENT_TEMPLATE" "$DEPLOYMENT_FILE"
 
 # Replace placeholders using sed - do S3_BUCKET_NAME and AWS_REGION separately to avoid conflicts
 sed -i.bak \
-  -e "s|value: \"lf_pk_1234567890\"|value: \"${LANGFUSE_PUBLIC_KEY}\"|g" \
-  -e "s|value: \"lf_sk_1234567890\"|value: \"${LANGFUSE_SECRET_KEY}\"|g" \
-  -e "s|value: \"sk-4qgicypE01dIhc5mPsBWDQ\"|value: \"${AGENT_KEY}\"|g" \
-  -e "s|value: \"sk-SSar1N3WA6zAmTIHzmkxIg\"|value: \"${AGENT_KEY}\"|g" \
+  -e "s|__LANGFUSE_PUBLIC_KEY__|${LANGFUSE_PUBLIC_KEY}|g" \
+  -e "s|__LANGFUSE_SECRET_KEY__|${LANGFUSE_SECRET_KEY}|g" \
+  -e "s|__AGENT_KEY__|${AGENT_KEY}|g" \
+  -e "s|__OTLP_BASIC_AUTH__|${OTLP_BASIC_AUTH}|g" \
   "$DEPLOYMENT_FILE"
 
 # Replace S3_BUCKET_NAME placeholders (only after S3_BUCKET_NAME env var)

@@ -31,6 +31,11 @@ export async function install() {
     "LANGFUSE_SALT",
     "LANGFUSE_NEXTAUTH_SECRET",
     "LANGFUSE_ENCRYPTION_KEY",
+    // Backing datastores (PostgreSQL / ClickHouse / Valkey). Previously the
+    // literal "password123" in values.template.yaml, shared by every deployment.
+    "LANGFUSE_POSTGRES_PASSWORD",
+    "LANGFUSE_CLICKHOUSE_PASSWORD",
+    "LANGFUSE_REDIS_PASSWORD",
   ];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
@@ -54,6 +59,9 @@ export async function install() {
     LANGFUSE_SALT: process.env.LANGFUSE_SALT,
     LANGFUSE_NEXTAUTH_SECRET: process.env.LANGFUSE_NEXTAUTH_SECRET,
     LANGFUSE_ENCRYPTION_KEY: process.env.LANGFUSE_ENCRYPTION_KEY,
+    LANGFUSE_POSTGRES_PASSWORD: process.env.LANGFUSE_POSTGRES_PASSWORD,
+    LANGFUSE_CLICKHOUSE_PASSWORD: process.env.LANGFUSE_CLICKHOUSE_PASSWORD,
+    LANGFUSE_REDIS_PASSWORD: process.env.LANGFUSE_REDIS_PASSWORD,
     LANGFUSE_BUCKET_NAME: langfuseBucketName,
     AWS_REGION: process.env.AWS_REGION,
   };

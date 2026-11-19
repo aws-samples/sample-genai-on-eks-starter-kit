@@ -162,7 +162,7 @@
   },
   "platform": {
     "monitoring": {
-      "grafanaAdminPassword": "admin",
+      "grafanaAdminPassword": "",
       "retention": "7d",
       "enablePersistentStorage": false,
       "prometheusStorageSize": "50Gi",

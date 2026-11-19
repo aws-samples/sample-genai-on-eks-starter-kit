@@ -24,13 +24,13 @@ spec:
         - name: LANGFUSE_URL
           value: "http://langfuse-web.langfuse.svc.cluster.local:3000"
         - name: LANGFUSE_PUBLIC_KEY
-          value: "lf_pk_1234567890"
+          value: "__LANGFUSE_PUBLIC_KEY__"
         - name: LANGFUSE_SECRET_KEY  
-          value: "lf_sk_1234567890"
+          value: "__LANGFUSE_SECRET_KEY__"
         - name: GATEWAY_URL
           value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: "sk-4qgicypE01dIhc5mPsBWDQ"
+          value: "__AGENT_KEY__"
         - name: S3_BUCKET_NAME
           value: "<>"
         - name: AWS_REGION
@@ -42,7 +42,7 @@ spec:
         - name: MCP_IMAGE_PROCESSOR
           value: "http://mcp-image-processor:8000"
         - name: OTEL_EXPORTER_OTLP_HEADERS
-          value: "Authorization=Basic bGZfcGtfMTIzNDU2Nzg5MDpsZl9za18xMjM0NTY3ODkw"
+          value: "Authorization=Basic __OTLP_BASIC_AUTH__"
         - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
           value: "http://langfuse-web.langfuse.svc.cluster.local:3000/api/public/otel/v1/traces"
         resources:
@@ -134,7 +134,7 @@ spec:
         - name: GATEWAY_URL
           value: "http://litellm.litellm.svc.cluster.local:4000"  
         - name: GATEWAY_MODEL_ACCESS_KEY
-          value: "sk-SSar1N3WA6zAmTIHzmkxIg"  
+          value: "__AGENT_KEY__"  
         - name: S3_BUCKET_NAME
           value: "<>"
         - name: AWS_REGION
