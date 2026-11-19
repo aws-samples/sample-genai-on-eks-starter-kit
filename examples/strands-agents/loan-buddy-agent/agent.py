@@ -11,7 +11,7 @@ Instead of LangChain/LangGraph + LiteLLM + Langfuse, it uses:
 
 Request path:
   client ── POST /api/process_credit_application_with_upload (image) ──▶ this agent
-     agent ──▶ Kong /loan-strands (key-auth) ──(ai-proxy)──▶ Bedrock Claude 4.5 Sonnet
+     agent ──▶ Kong /loan-strands (key-auth) ──(ai-proxy)──▶ Bedrock Claude Sonnet 5.5
      agent ──▶ MCP tools (SSE)  extract / validate address / validate employment
      agent ──▶ OpenTelemetry (global provider = Arize AX)  project 'loan-strands'
 
@@ -117,7 +117,7 @@ KONG_API_KEY = os.environ.get("KONG_API_KEY", "")
 # Must be the EXACT model the Kong ai-proxy route pins (allow_override=false),
 # openai/-prefixed so litellm treats Kong as an OpenAI-compatible endpoint.
 KONG_MODEL_ID = os.environ.get(
-    "KONG_MODEL_ID", "openai/global.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    "KONG_MODEL_ID", "openai/global.anthropic.claude-sonnet-5-5"
 )
 
 
@@ -162,7 +162,7 @@ def _split_parallel_tool_calls(messages):
     Kong's ai-proxy (Operator 2.x / kong-gateway 3.x) does not correctly translate an
     assistant turn that carries MULTIPLE ``tool_calls`` (it fails to group the parallel
     tool-results into a single Bedrock Converse ``user`` turn) → Bedrock rejects the
-    request with "request body doesn't contain valid inputs". Claude Sonnet 4.5 emits
+    request with "request body doesn't contain valid inputs". Claude Sonnet 5.5 emits
     parallel tool calls and ignores ``parallel_tool_calls: false`` through the gateway,
     so we normalize the request instead::
 
