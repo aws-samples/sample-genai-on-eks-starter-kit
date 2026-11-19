@@ -107,7 +107,7 @@ locals {
       resources = [
         for m in local.bedrock_cris_model_ids : "arn:aws:bedrock:*::foundation-model/${local.bedrock_base_of[m]}"
       ]
-      condition = [
+      conditions = [
         {
           test     = "ArnLike"
           variable = "bedrock:InferenceProfileArn"
@@ -128,7 +128,7 @@ locals {
       resources = [
         for m in local.bedrock_global_model_ids : "arn:aws:bedrock:::foundation-model/${local.bedrock_base_of[m]}"
       ]
-      condition = [
+      conditions = [
         {
           test     = "StringEquals"
           variable = "aws:RequestedRegion"
@@ -151,7 +151,7 @@ locals {
       resources = [
         for m in local.bedrock_plain_model_ids : "arn:aws:bedrock:*::foundation-model/${m}"
       ]
-      condition = [
+      conditions = [
         {
           test     = "StringEquals"
           variable = "aws:RequestedRegion"
