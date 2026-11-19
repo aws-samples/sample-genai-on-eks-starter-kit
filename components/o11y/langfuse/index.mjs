@@ -21,7 +21,17 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["LANGFUSE_USERNAME", "LANGFUSE_PASSWORD", "LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"];
+  const requiredEnvVars = [
+    "LANGFUSE_USERNAME",
+    "LANGFUSE_PASSWORD",
+    "LANGFUSE_PUBLIC_KEY",
+    "LANGFUSE_SECRET_KEY",
+    // Cryptographic secrets -- no defaults are shipped, so a deployment fails
+    // closed rather than reusing values published in this repo.
+    "LANGFUSE_SALT",
+    "LANGFUSE_NEXTAUTH_SECRET",
+    "LANGFUSE_ENCRYPTION_KEY",
+  ];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await utils.terraform.apply(DIR);
@@ -41,6 +51,9 @@ export async function install() {
     LANGFUSE_PASSWORD: process.env.LANGFUSE_PASSWORD,
     LANGFUSE_PUBLIC_KEY: process.env.LANGFUSE_PUBLIC_KEY,
     LANGFUSE_SECRET_KEY: process.env.LANGFUSE_SECRET_KEY,
+    LANGFUSE_SALT: process.env.LANGFUSE_SALT,
+    LANGFUSE_NEXTAUTH_SECRET: process.env.LANGFUSE_NEXTAUTH_SECRET,
+    LANGFUSE_ENCRYPTION_KEY: process.env.LANGFUSE_ENCRYPTION_KEY,
     LANGFUSE_BUCKET_NAME: langfuseBucketName,
     AWS_REGION: process.env.AWS_REGION,
   };

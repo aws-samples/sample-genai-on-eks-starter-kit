@@ -1,5 +1,16 @@
 image:
-  tag: main-v1.81.3-stable
+  # LiteLLM application version. THIS is what pins the app -- the Helm chart's
+  # appVersion is literally "latest", so pinning the chart version alone does
+  # not pin LiteLLM.
+  #
+  # Moved off main-v1.81.3-stable, which is the version that ran during the
+  # incident and carries two high advisories:
+  #   - arbitrary local file read via vertex_ai_credentials  (fixed 1.95.0)
+  #   - proxy-admin privilege escalation via salt key reuse  (fixed 1.100.4)
+  # The file-read issue is a plausible route for how the pod credentials were
+  # read. v1.100.4 is the lowest version clearing both, chosen to minimise the
+  # behavioural delta; newer tags (v1.108.0 etc.) are published if wanted.
+  tag: v1.100.4
 
 global:
   security:
@@ -9,6 +20,10 @@ global:
 {{#if @root.integration.o11y.mlflow}}
 image:
   repository: public.ecr.aws/agentic-ai-platforms-on-k8s/litellm
+  # TODO(security): this custom image is still LiteLLM 1.79.1, which carries the
+  # same two advisories fixed in 1.95.0 / 1.100.4. It cannot be bumped by
+  # changing a tag -- the image has to be rebuilt from >= 1.100.4 and
+  # re-published. Only used when the MLflow integration is enabled.
   tag: v1.79.1-mlflow
 {{/if}}
 

@@ -53,38 +53,104 @@ data "aws_caller_identity" "current" {}
 
 locals {
   bedrock_regions = length(var.bedrock_allowed_regions) > 0 ? var.bedrock_allowed_regions : distinct([var.region, var.bedrock_region])
+  bedrock_account = data.aws_caller_identity.current.account_id
+  bedrock_actions = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
 
-  # A cross-region inference profile ID (global.* / us.* / eu.* / apac.*) needs
-  # BOTH the profile ARN and the underlying foundation-model ARN. Strip the
-  # prefix to get the base model ID for the foundation-model ARN.
-  bedrock_base_model_ids = [for m in var.bedrock_model_ids : replace(m, "/^(global|us|eu|apac)\\./", "")]
+  # Model IDs fall into three classes, and each needs a DIFFERENT policy shape.
+  # Getting this wrong denies the very model the deployment is configured to
+  # serve, so the classes are kept explicit rather than collapsed.
+  #
+  #   global.<model>            GLOBAL cross-Region inference (CRIS). Routes to
+  #                             any Region AWS chooses. Destination-Region model
+  #                             access is authorised with
+  #                             aws:RequestedRegion = "unspecified" against a
+  #                             REGIONLESS foundation-model ARN.
+  #   us.|eu.|apac.<model>      GEOGRAPHIC CRIS. Routes within a geography.
+  #                             Destination-Region model access is authorised per
+  #                             Region, gated on the profile that routed it.
+  #   <model>                   No profile. Plain in-Region invoke.
+  #
+  # Reference: "Securing Amazon Bedrock cross-Region inference: Geographic and
+  # global" -- the global case requires the "unspecified" Region condition, which
+  # a plain aws:RequestedRegion allow-list would deny.
+  bedrock_global_model_ids = [for m in var.bedrock_model_ids : m if startswith(m, "global.")]
+  bedrock_geo_model_ids    = [for m in var.bedrock_model_ids : m if length(regexall("^(us|eu|apac)\\.", m)) > 0]
+  bedrock_plain_model_ids  = [for m in var.bedrock_model_ids : m if length(regexall("^(global|us|eu|apac)\\.", m)) == 0]
+  bedrock_cris_model_ids   = concat(local.bedrock_global_model_ids, local.bedrock_geo_model_ids)
 
-  # Foundation models are region-wildcarded: a cross-region profile routes the
-  # inference to whichever region it chooses, and the call is still constrained
-  # by the aws:RequestedRegion condition below.
-  bedrock_foundation_model_arns = [for m in local.bedrock_base_model_ids : "arn:aws:bedrock:*::foundation-model/${m}"]
+  # Base model ID = the profile ID with its routing prefix stripped.
+  bedrock_base_of = { for m in var.bedrock_model_ids : m => replace(m, "/^(global|us|eu|apac)\\./", "") }
 
-  # Only prefixed IDs are inference profiles; a bare model ID has no profile ARN.
-  bedrock_inference_profile_arns = [
-    for m in var.bedrock_model_ids : "arn:aws:bedrock:${var.bedrock_region}:${data.aws_caller_identity.current.account_id}:inference-profile/${m}"
-    if length(regexall("^(global|us|eu|apac)\\.", m)) > 0
+  # Inference profiles are resolved in the SOURCE Region (where the call lands).
+  bedrock_profile_arns = [
+    for m in local.bedrock_cris_model_ids :
+    "arn:aws:bedrock:${var.bedrock_region}:${local.bedrock_account}:inference-profile/${m}"
   ]
 
-  bedrock_invoke_resources = concat(local.bedrock_foundation_model_arns, local.bedrock_inference_profile_arns)
-
-  # bedrock:InvokeModel on the configured models only. Dropped from the previous
-  # policy: resources = ["*"] (any model in any account's region), and
-  # aws-marketplace:Subscribe / ViewSubscriptions -- those let the role accept
-  # Marketplace model agreements and so enable models the deployment never
-  # configured. Nothing in this stack needs to subscribe at runtime.
-  bedrock_invoke_statements = length(local.bedrock_invoke_resources) > 0 ? [
+  # 1. Invoke the configured inference profiles themselves, in the source Region.
+  bedrock_profile_statements = length(local.bedrock_profile_arns) > 0 ? [
     {
-      sid = "BedrockInvokeConfiguredModels"
-      actions = [
-        "bedrock:InvokeModel",
-        "bedrock:InvokeModelWithResponseStream"
+      sid       = "BedrockInvokeConfiguredInferenceProfiles"
+      actions   = local.bedrock_actions
+      resources = local.bedrock_profile_arns
+    }
+  ] : []
+
+  # 2. Invoke the underlying foundation model in whichever Region the profile
+  #    routes to -- but ONLY when the request arrived through one of our
+  #    profiles. That condition is what keeps this least-privilege: it does not
+  #    permit direct, un-profiled invocation anywhere.
+  bedrock_cris_model_statements = length(local.bedrock_cris_model_ids) > 0 ? [
+    {
+      sid     = "BedrockInvokeModelViaConfiguredProfiles"
+      actions = local.bedrock_actions
+      resources = [
+        for m in local.bedrock_cris_model_ids : "arn:aws:bedrock:*::foundation-model/${local.bedrock_base_of[m]}"
       ]
-      resources = local.bedrock_invoke_resources
+      condition = [
+        {
+          test     = "ArnLike"
+          variable = "bedrock:InferenceProfileArn"
+          values   = local.bedrock_profile_arns
+        }
+      ]
+    }
+  ] : []
+
+  # 3. GLOBAL CRIS only: the destination-Region grant uses a REGIONLESS
+  #    foundation-model ARN plus aws:RequestedRegion = "unspecified". Without
+  #    this statement a global.* profile is denied once it routes out of the
+  #    source Region -- the failure mode this policy previously had.
+  bedrock_global_model_statements = length(local.bedrock_global_model_ids) > 0 ? [
+    {
+      sid     = "BedrockInvokeModelViaGlobalProfiles"
+      actions = local.bedrock_actions
+      resources = [
+        for m in local.bedrock_global_model_ids : "arn:aws:bedrock:::foundation-model/${local.bedrock_base_of[m]}"
+      ]
+      condition = [
+        {
+          test     = "StringEquals"
+          variable = "aws:RequestedRegion"
+          values   = ["unspecified"]
+        },
+        {
+          test     = "ArnLike"
+          variable = "bedrock:InferenceProfileArn"
+          values   = local.bedrock_profile_arns
+        }
+      ]
+    }
+  ] : []
+
+  # 4. Plain model IDs (no profile): in-Region invoke, Region-scoped.
+  bedrock_plain_model_statements = length(local.bedrock_plain_model_ids) > 0 ? [
+    {
+      sid     = "BedrockInvokeConfiguredModelsInRegion"
+      actions = local.bedrock_actions
+      resources = [
+        for m in local.bedrock_plain_model_ids : "arn:aws:bedrock:*::foundation-model/${m}"
+      ]
       condition = [
         {
           test     = "StringEquals"
@@ -94,6 +160,17 @@ locals {
       ]
     }
   ] : []
+
+  # Dropped from the previous policy: resources = ["*"] (any model, any Region)
+  # and aws-marketplace:Subscribe / ViewSubscriptions, which let the role accept
+  # Marketplace model agreements and so enable models the deployment never
+  # configured. Nothing in this stack needs to subscribe at runtime.
+  bedrock_invoke_statements = concat(
+    local.bedrock_profile_statements,
+    local.bedrock_cris_model_statements,
+    local.bedrock_global_model_statements,
+    local.bedrock_plain_model_statements,
+  )
 
   bedrock_guardrail_statements = var.enable_bedrock_guardrail ? [
     {

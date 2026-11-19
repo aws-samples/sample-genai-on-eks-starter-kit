@@ -4,13 +4,19 @@ global:
     allowInsecureImages: true
 
 langfuse:
+  # These three are cryptographic secrets, not config. They were hardcoded here,
+  # which means every deployment of this public repo shared them. The salt is the
+  # worst of the three: reusing it across deployments is the basis of the
+  # LiteLLM/Langfuse proxy-admin privilege-escalation class of issue, because API
+  # key hashes become portable between installs.
+  # Supplied per deployment from the environment and validated by index.mjs.
   salt:
-    value: salt
+    value: {{{LANGFUSE_SALT}}}
   nextauth:
     secret:
-      value: secret
+      value: {{{LANGFUSE_NEXTAUTH_SECRET}}}
   encryptionKey:
-    value: 7188cd4d31f5b0470ed96fa34615a3e779f3a71d1d0f68fc5c166b1c6e515c59 # Dummy key
+    value: {{{LANGFUSE_ENCRYPTION_KEY}}}
   ingress:
     # Private by default — see the LiteLLM values template for the rationale.
     # Langfuse holds traces (prompts and completions), so it is not public

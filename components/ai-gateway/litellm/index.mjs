@@ -20,15 +20,13 @@ export async function init(_BASE_DIR, _config, _utils) {
   utils = _utils;
 }
 
-// LiteLLM Helm chart version. Empty = install the LATEST published chart, so
-// every deploy picks up upstream bug and security fixes without a repo change
-// (the incident deployment was LiteLLM 1.81.3).
+// LiteLLM Helm **chart** version, pinned for reproducibility so two deploys
+// never silently differ and a broken upstream chart cannot reach every event.
 //
-// Set LITELLM_CHART_VERSION to pin a specific chart when you need to: taking
-// "latest" also means a broken upstream release reaches every new event
-// immediately, and two events never run byte-identical versions. Pinning is the
-// escape hatch for that, not the default.
-const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "";
+// Note this does NOT pin the LiteLLM application: the chart's appVersion is
+// "latest". The app version is set by image.tag in values.template.yaml.
+// Override with LITELLM_CHART_VERSION to test a newer chart.
+const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "0.1.100";
 
 export async function install() {
   const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
