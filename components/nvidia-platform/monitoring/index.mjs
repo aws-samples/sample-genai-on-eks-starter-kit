@@ -96,8 +96,13 @@ export async function install() {
     }
   }
   
-  // Use defaults from config.json (no interactive prompts)
-  const grafanaPassword = monitoringConfig.grafanaAdminPassword || "admin";
+  // Use defaults from config.json (no interactive prompts).
+  // No "admin" fallback: a default here means every deployment of this public
+  // repo ships the same Grafana admin password. Set GRAFANA_ADMIN_PASSWORD (or
+  // monitoring.grafanaAdminPassword in config) per deployment -- missing is a
+  // hard failure rather than a known credential.
+  utils.checkRequiredEnvVars(monitoringConfig.grafanaAdminPassword ? [] : ["GRAFANA_ADMIN_PASSWORD"]);
+  const grafanaPassword = monitoringConfig.grafanaAdminPassword || process.env.GRAFANA_ADMIN_PASSWORD;
   const retention = monitoringConfig.retention || "7d";
   const enablePersistentStorage = monitoringConfig.enablePersistentStorage ?? false;
   const storageSize = monitoringConfig.prometheusStorageSize || "50Gi";
@@ -153,7 +158,7 @@ export async function install() {
   // Step 3: Install/Upgrade kube-prometheus-stack
   console.log("\n[3/4] Installing kube-prometheus-stack...");
   console.log(`  Namespace: ${MONITORING_NAMESPACE}`);
-  console.log(`  Grafana password: ${grafanaPassword}`);
+  console.log("  Grafana password: set from GRAFANA_ADMIN_PASSWORD (not printed)");
   console.log(`  Retention: ${retention}`);
   console.log(`  Alertmanager: ${alertmanagerEnabled}`);
   console.log(`  Ingress: ${enableIngress ? ingressClass : "disabled"}`);
@@ -204,11 +209,11 @@ export async function install() {
     console.log("2. Access (via Ingress):");
     console.log(`   Grafana:    http://<node-ip>:<node-port>/grafana`);
     console.log(`   Prometheus: http://<node-ip>:<node-port>/prometheus`);
-    console.log(`   User: admin / Password: ${grafanaPassword}`);
+    console.log("   User: admin / Password: see GRAFANA_ADMIN_PASSWORD in .env.local");
   } else {
     console.log("2. Access (port-forward):");
     console.log(`   kubectl port-forward svc/prometheus-grafana 3000:80 -n ${MONITORING_NAMESPACE} --address 0.0.0.0`);
-    console.log(`   User: admin / Password: ${grafanaPassword}`);
+    console.log("   User: admin / Password: see GRAFANA_ADMIN_PASSWORD in .env.local");
   }
 }
 

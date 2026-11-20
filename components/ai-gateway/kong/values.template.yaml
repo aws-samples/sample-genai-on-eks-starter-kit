@@ -2,7 +2,10 @@ proxy:
   enabled: true
   type: ClusterIP
   ingress:
-    enabled: true
+    # Private by default: no Ingress unless DOMAIN is set, so the proxy stays
+    # ClusterIP. Reach it with a port-forward:
+    #   kubectl port-forward -n kong svc/kong-kong-proxy 8000:80
+    enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
     {{#if DOMAIN}}
     hostname: kong.{{{DOMAIN}}}
     {{/if}}
@@ -61,8 +64,8 @@ admin:
 postgresql:
   enabled: true
   auth:
-    postgresPassword: Pass@123
-    password: Pass@123
+    postgresPassword: {{{KONG_POSTGRES_PASSWORD}}}
+    password: {{{KONG_POSTGRES_PASSWORD}}}
   image:  
     registry: public.ecr.aws
     repository: agentic-ai-platforms-on-k8s/postgresql

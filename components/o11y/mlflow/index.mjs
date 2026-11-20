@@ -19,7 +19,9 @@ export async function init(_BASE_DIR, _config, _utils) {
 }
 
 export async function install() {
-  const requiredEnvVars = ["MLFLOW_USERNAME", "MLFLOW_PASSWORD"];
+  // MLFLOW_POSTGRES_PASSWORD backs the bundled PostgreSQL; it was the literal
+  // "password123" in values.template.yaml, shared by every deployment.
+  const requiredEnvVars = ["MLFLOW_USERNAME", "MLFLOW_PASSWORD", "MLFLOW_POSTGRES_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   await utils.terraform.apply(DIR);
@@ -33,6 +35,7 @@ export async function install() {
     DOMAIN: process.env.DOMAIN,
     MLFLOW_USERNAME: process.env.MLFLOW_USERNAME,
     MLFLOW_PASSWORD: process.env.MLFLOW_PASSWORD,
+    MLFLOW_POSTGRES_PASSWORD: process.env.MLFLOW_POSTGRES_PASSWORD,
     MLFLOW_BUCKET_NAME: mlflowBucketName,
     AWS_REGION: process.env.AWS_REGION,
   };

@@ -4,7 +4,10 @@ global:
     allowInsecureImages: true
 
 ingress:
-  enabled: true
+  # Private by default: no Ingress unless DOMAIN is set, so MLflow stays
+  # ClusterIP. Reach it with a port-forward:
+  #   kubectl port-forward -n mlflow svc/mlflow 5000:80
+  enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
   className: {{#if DOMAIN}}shared-{{/if}}internet-facing-alb
   annotations:
       alb.ingress.kubernetes.io/target-type: ip
@@ -33,9 +36,11 @@ postgresql:
     repository: agentic-ai-platforms-on-k8s/postgresql
     tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
+  # Backing datastore credential, generated per deployment. Was the literal
+  # "password123", shared by every deployment of this public repo.
   auth:
     username: admin
-    password: password123
+    password: {{{MLFLOW_POSTGRES_PASSWORD}}}
   primary:
     resources: 
       requests:

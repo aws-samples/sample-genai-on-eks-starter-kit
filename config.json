@@ -83,7 +83,7 @@
         { "name": "amazon-nova-2-lite", "model": "global.amazon.nova-2-lite-v1:0" },
         { "name": "claude-opus-4.6", "model": "global.anthropic.claude-opus-4-6-20260214-v1:0" },
         { "name": "claude-4.5-opus", "model": "global.anthropic.claude-opus-4-5-20251101-v1:0" },
-        { "name": "claude-4.5-sonnet", "model": "global.anthropic.claude-sonnet-4-5-20250929-v1:0" },
+        { "name": "claude-4.5-sonnet", "model": "global.anthropic.claude-sonnet-5-5" },
         { "name": "claude-4.5-haiku", "model": "global.anthropic.claude-haiku-4-5-20251001-v1:0" },
         { "name": "llama4-maverick", "model": "us.meta.llama4-maverick-17b-instruct-v1:0" },
         { "name": "llama4-scout", "model": "us.meta.llama4-scout-17b-instruct-v1:0" }
@@ -99,7 +99,7 @@
     "openclaw": {
       "env": {
         "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
-        "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+        "OPENCLAW_GATEWAY_TOKEN": ""
       }
     }
   },
@@ -126,7 +126,7 @@
       },
       "loan-buddy-agent": {
         "env": {
-          "KONG_MODEL_ID": "openai/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+          "KONG_MODEL_ID": "openai/global.anthropic.claude-sonnet-5-5",
           "ARIZE_PROJECT_NAME": "loan-strands"
         }
       }
@@ -135,13 +135,13 @@
       "doc-writer": {
         "env": {
           "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
-          "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+          "OPENCLAW_GATEWAY_TOKEN": ""
         }
       },
       "devops-agent": {
         "env": {
           "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
-          "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+          "OPENCLAW_GATEWAY_TOKEN": ""
         }
       }
     }
@@ -162,7 +162,7 @@
   },
   "platform": {
     "monitoring": {
-      "grafanaAdminPassword": "admin",
+      "grafanaAdminPassword": "",
       "retention": "7d",
       "enablePersistentStorage": false,
       "prometheusStorageSize": "50Gi",

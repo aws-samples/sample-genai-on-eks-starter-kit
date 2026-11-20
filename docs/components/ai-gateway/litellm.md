@@ -86,7 +86,7 @@ model_list:
   # AWS Bedrock models (from config.json)
   - model_name: claude-4.5-sonnet
     litellm_params:
-      model: bedrock/global.anthropic.claude-sonnet-4-5-20250929-v1:0
+      model: bedrock/global.anthropic.claude-sonnet-5-5
       aws_region_name: us-east-1
 
   # SGLang models (auto-detected)

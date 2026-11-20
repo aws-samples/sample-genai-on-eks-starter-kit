@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import path from "path";
 import fs from "fs";
 import inquirer from "inquirer";
@@ -458,9 +459,88 @@ const cleanupStandardModeResources = async () => {
   await new Promise((resolve) => setTimeout(resolve, 5000));
 };
 
+
+// Generate the credentials that .env deliberately ships blank.
+//
+// .env carries no working defaults, so every deployment gets its own values and
+// nothing is readable off GitHub. That protects shared installs but broke the
+// plain-kit path: `./cli demo-setup` would apply Terraform and only then fail in
+// the first component whose checkRequiredEnvVars found an empty value.
+//
+// This fills any missing value into .env.local BEFORE Terraform runs, so the kit
+// works out of the box without reintroducing a shipped secret. Values already
+// set in the environment, .env.local or env.workshop are never overwritten --
+// Workshop Studio generates its own set into /workshop/.env.local and must win.
+//
+// Keys that are credentials for an EXTERNAL service (a Hugging Face token, an
+// Arize or Kong Konnect key) cannot be invented and are left alone; the
+// component that needs one still fails closed with a clear message.
+const EXTERNAL_CREDENTIALS = [
+  "HF_TOKEN",
+  "ARIZE_API_KEY",
+  "ARIZE_SPACE_ID",
+  "PHOENIX_API_KEY",
+  "GUARDRAILS_AI_API_KEY",
+  "OPENCLAW_GATEWAY_TOKEN",
+  "OPENCLAW_DOC_WRITER_GIT_USERNAME",
+  "OPENCLAW_DOC_WRITER_GIT_TOKEN",
+];
+
+const randomPassword = () => crypto.randomBytes(24).toString("base64").replace(/[/+=]/g, "").slice(0, 20);
+
+const generateValueFor = (key) => {
+  // Langfuse project keys. These are the kit's own, created against the Langfuse
+  // instance it installs -- not third-party credentials -- so they have to be
+  // generated or the Langfuse install fails on a plain `./cli demo-setup`.
+  // Same shape the Workshop Studio setup writes: lf_pk_ / lf_sk_ + 32 hex.
+  if (key === "LANGFUSE_PUBLIC_KEY") return `lf_pk_${crypto.randomBytes(16).toString("hex")}`;
+  if (key === "LANGFUSE_SECRET_KEY") return `lf_sk_${crypto.randomBytes(16).toString("hex")}`;
+  if (key === "LANGFUSE_ENCRYPTION_KEY") return crypto.randomBytes(32).toString("hex"); // must be 64 hex chars
+  if (key === "LANGFUSE_SALT" || key === "LANGFUSE_NEXTAUTH_SECRET") return crypto.randomBytes(32).toString("base64");
+  if (/_API_KEY$/.test(key)) return `sk-${crypto.randomBytes(20).toString("hex")}`;
+  if (/_PASSWORD$/.test(key) || /_SECRET$/.test(key)) return randomPassword();
+  return null;
+};
+
+const ensureGeneratedCredentials = (baseDir) => {
+  const envPath = path.join(baseDir, ".env");
+  if (!fs.existsSync(envPath)) return;
+  const envLocalPath = path.join(baseDir, ".env.local");
+
+  // Keys that .env declares with an empty value are the ones needing a value.
+  const declared = fs
+    .readFileSync(envPath, "utf8")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"))
+    .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).replace(/\s+#.*$/, "").trim()])
+    .filter(([k, v]) => k && v === "");
+
+  const generated = [];
+  for (const [key] of declared) {
+    if (process.env[key]) continue; // already supplied -- never overwrite
+    if (EXTERNAL_CREDENTIALS.includes(key)) continue;
+    const value = generateValueFor(key);
+    if (!value) continue;
+    process.env[key] = value;
+    generated.push(`${key}=${value}`);
+  }
+  if (generated.length === 0) return;
+
+  const header = "\n# --- generated per deployment by `./cli`; do not share or commit ---\n";
+  fs.appendFileSync(envLocalPath, (fs.existsSync(envLocalPath) ? header : header.trimStart()) + generated.join("\n") + "\n", { mode: 0o600 });
+  try {
+    fs.chmodSync(envLocalPath, 0o600);
+  } catch {
+    /* best effort on platforms without POSIX modes */
+  }
+  console.log(`Generated ${generated.length} missing credential(s) into .env.local (mode 600).`);
+};
+
 export default {
   init,
   checkRequiredEnvVars,
+  ensureGeneratedCredentials,
   checkHtpasswd,
   setK8sContext,
   renderTemplate,

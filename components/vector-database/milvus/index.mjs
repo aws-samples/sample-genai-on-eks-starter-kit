@@ -53,19 +53,32 @@ export async function install() {
   fs.writeFileSync(secretRenderedPath, secretTemplate(secretVars));
   await $`kubectl apply -f ${secretRenderedPath}`;
 
-  const ingressTemplatePath = path.join(DIR, "ingress.template.yaml");
-  const ingressRenderedPath = path.join(DIR, "ingress.rendered.yaml");
-  const ingressTemplateString = fs.readFileSync(ingressTemplatePath, "utf8");
-  const ingressTemplate = handlebars.compile(ingressTemplateString);
-  const ingressVars = {
-    DOMAIN: process.env.DOMAIN,
-  };
-  fs.writeFileSync(ingressRenderedPath, ingressTemplate(ingressVars));
-  await $`kubectl apply -f ${ingressRenderedPath}`;
+  // Milvus is a datastore: never put it behind an internet-facing load
+  // balancer. Create the Ingress only when DOMAIN is set, i.e. when the
+  // operator is deliberately publishing it on a hostname they own, behind
+  // HTTPS and their own authentication. Otherwise the Service stays ClusterIP:
+  //   kubectl port-forward -n milvus svc/milvus 19530:19530
+  if (process.env.DOMAIN) {
+    const ingressTemplatePath = path.join(DIR, "ingress.template.yaml");
+    const ingressRenderedPath = path.join(DIR, "ingress.rendered.yaml");
+    const ingressTemplateString = fs.readFileSync(ingressTemplatePath, "utf8");
+    const ingressTemplate = handlebars.compile(ingressTemplateString);
+    const ingressVars = {
+      DOMAIN: process.env.DOMAIN,
+    };
+    fs.writeFileSync(ingressRenderedPath, ingressTemplate(ingressVars));
+    await $`kubectl apply -f ${ingressRenderedPath}`;
+  } else {
+    console.log("DOMAIN not set: skipping the Milvus Ingress (Service stays ClusterIP). Use kubectl port-forward.");
+  }
 }
 
 export async function uninstall() {
-  await $`kubectl delete -f ${path.join(DIR, "ingress.rendered.yaml")} --ignore-not-found`;
+  // The Ingress is only rendered when DOMAIN is set, so the file may not exist.
+  // kubectl --ignore-not-found covers missing resources, not a missing file.
+  if (fs.existsSync(path.join(DIR, "ingress.rendered.yaml"))) {
+    await $`kubectl delete -f ${path.join(DIR, "ingress.rendered.yaml")} --ignore-not-found`;
+  }
   await $`kubectl delete -f ${path.join(DIR, "secret.rendered.yaml")} --ignore-not-found`;
   await $`helm uninstall milvus --namespace milvus`;
   await utils.terraform.destroy(DIR);

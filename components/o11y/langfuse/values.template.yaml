@@ -4,27 +4,37 @@ global:
     allowInsecureImages: true
 
 langfuse:
+  # These three are cryptographic secrets, not config. They were hardcoded here,
+  # which means every deployment of this public repo shared them. The salt is the
+  # worst of the three: reusing it across deployments is the basis of the
+  # LiteLLM/Langfuse proxy-admin privilege-escalation class of issue, because API
+  # key hashes become portable between installs.
+  # Supplied per deployment from the environment and validated by index.mjs.
   salt:
-    value: salt
+    value: {{{LANGFUSE_SALT}}}
   nextauth:
     secret:
-      value: secret
+      value: {{{LANGFUSE_NEXTAUTH_SECRET}}}
   encryptionKey:
-    value: 7188cd4d31f5b0470ed96fa34615a3e779f3a71d1d0f68fc5c166b1c6e515c59 # Dummy key
+    value: {{{LANGFUSE_ENCRYPTION_KEY}}}
   ingress:
-    enabled: true
+    # Private by default — see the LiteLLM values template for the rationale.
+    # Langfuse holds traces (prompts and completions), so it is not public
+    # either. Without DOMAIN the Service stays ClusterIP; reach the UI with:
+    #
+    #   kubectl port-forward -n langfuse svc/langfuse-web 3000:3000
+    #   # then http://localhost:3000
+    enabled: {{#if DOMAIN}}true{{else}}false{{/if}}
+    {{#if DOMAIN}}
     annotations:
       alb.ingress.kubernetes.io/target-type: ip
-      {{#if DOMAIN}}
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
-      {{/if}}
     hosts:
       - paths:
           - path: /
             pathType: Prefix
-        {{#if DOMAIN}}
         host: langfuse.{{{DOMAIN}}}
-        {{/if}}
+    {{/if}}
 
   additionalEnv:
     - name: LANGFUSE_INIT_ORG_ID
@@ -52,9 +62,12 @@ postgresql:
     repository: agentic-ai-platforms-on-k8s/postgresql
     tag: 17.5.0-debian-12-r8
     pullPolicy: IfNotPresent
+  # Backing datastore credential. Was the literal "password123", which every
+  # deployment of this public repo shared -- the same shared-credential issue as
+  # the admin UIs, just one layer down. Generated per deployment now.
   auth:
     username: admin
-    password: password123
+    password: {{{LANGFUSE_POSTGRES_PASSWORD}}}
   primary:
     resources: 
       requests:
@@ -70,7 +83,7 @@ clickhouse:
     tag: 25.2.1-debian-12-r0
     pullPolicy: IfNotPresent
   auth:
-    password: password123
+    password: {{{LANGFUSE_CLICKHOUSE_PASSWORD}}}
   replicaCount: 1
   resources:
     requests:
@@ -103,7 +116,7 @@ redis:
     tag: 8.0.2-debian-12-r2
     pullPolicy: IfNotPresent
   auth:
-    password: password123
+    password: {{{LANGFUSE_REDIS_PASSWORD}}}
   primary:
     resources: 
       requests:

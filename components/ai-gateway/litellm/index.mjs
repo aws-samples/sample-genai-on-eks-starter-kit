@@ -20,21 +20,50 @@ export async function init(_BASE_DIR, _config, _utils) {
   utils = _utils;
 }
 
+// LiteLLM Helm chart version, pinned for reproducibility so two deploys never
+// silently differ and a broken upstream chart cannot reach every event.
+//
+// Must be 1.100.4, not 0.1.100. Chart 0.1.100 hardcodes an init container image
+// docker.io/bitnami/postgresql:16.1.0-debian-11-r20 that no longer exists on
+// Docker Hub, so the pod never leaves Init:ImagePullBackOff. Chart 1.100.4 has
+// no such init container and its appVersion matches image.tag below, so the
+// chart and the application version move together.
+//
+// Override with LITELLM_CHART_VERSION only to test a newer chart.
+const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "1.100.4";
+
 export async function install() {
   const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
   utils.checkRequiredEnvVars(requiredEnvVars);
 
   const { enableBedrockGuardrail, enableGuardrailsAI } = config["litellm"];
+  const bedrockRegion = config["bedrock"]["region"] || process.env.REGION;
+  // Scope the pod role to exactly the Bedrock models this deployment serves.
+  // Anything not listed in config.json cannot be invoked, even by someone who
+  // holds the LiteLLM master key.
+  const bedrockModelIds = [
+    ...(config["bedrock"]["llm"]["models"] ?? []),
+    ...(config["bedrock"]["embedding"]["models"] ?? []),
+  ]
+    .map((m) => m.model)
+    .filter(Boolean);
+  const bedrockAllowedRegions = [...new Set([bedrockRegion, process.env.REGION].filter(Boolean))];
   await utils.terraform.apply(DIR, {
     vars: {
-      bedrock_region: config["bedrock"]["region"] || process.env.REGION,
+      bedrock_region: bedrockRegion,
       enable_bedrock_guardrail: enableBedrockGuardrail,
+      bedrock_model_ids: bedrockModelIds,
+      bedrock_allowed_regions: bedrockAllowedRegions,
     },
   });
 
   const integration = { "llm-model": {}, "embedding-model": {}, "mcp-servers": [], o11y: {}, guardrail: {} };
   integration["bedrock"] = {
-    region: config["bedrock"]["region"],
+    // Resolved Region, not the raw config value. config.bedrock.region is null
+    // in the shipped config, and the IAM policy above is built from
+    // bedrockRegion -- passing the raw value here let the rendered model list
+    // and the policy disagree about which Region is in play.
+    region: bedrockRegion,
     llm: config["bedrock"]["llm"]["models"],
     embedding: config["bedrock"]["embedding"]["models"],
   };
@@ -133,7 +162,9 @@ export async function install() {
     valuesVars.MLFLOW_PASSWORD = process.env.MLFLOW_PASSWORD;
   }
   fs.writeFileSync(valuesRenderedPath, valuesTemplate(valuesVars));
-  await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
+  // Install the latest chart by default; add --version only when pinned.
+  const versionArgs = LITELLM_CHART_VERSION ? ["--version", LITELLM_CHART_VERSION] : [];
+  await $`helm upgrade --install litellm oci://ghcr.io/berriai/litellm-helm ${versionArgs} --namespace litellm --create-namespace -f ${valuesRenderedPath}`;
 }
 
 export async function uninstall() {

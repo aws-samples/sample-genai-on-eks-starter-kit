@@ -115,17 +115,12 @@ export async function install() {
   // 2. Ensure namespace (idempotent).
   await $`kubectl create namespace strands-agents --dry-run=client -o yaml | kubectl apply -f -`;
 
-  // 4. Resolve the Kong proxy LoadBalancer hostname (the /loan-strands route).
-  let kongHost = "";
-  try {
-    const r = await $`kubectl get svc -n kong proxy1 -o jsonpath={.status.loadBalancer.ingress[0].hostname}`;
-    kongHost = r.stdout.trim();
-  } catch {
-    console.log("WARN: kong proxy1 svc not found; set KONG_BASE_URL manually in the rendered yaml.");
-  }
-  const KONG_BASE_URL =
-    process.env.KONG_BASE_URL ||
-    (kongHost ? `http://${kongHost}/loan-strands` : "http://kong-proxy/loan-strands");
+  // 4. The agent reaches Kong over the CLUSTER-INTERNAL Service DNS, never a
+  //    load balancer. The agent pod and Kong are in the same cluster, so there
+  //    is no reason for this traffic to leave it -- and Kong's proxy carries an
+  //    AWS credential (Bedrock via Pod Identity), so it must not be published.
+  //    This also matches how the image-processor MCP reaches Kong's /vision route.
+  const KONG_BASE_URL = process.env.KONG_BASE_URL || "http://proxy1.kong.svc.cluster.local/loan-strands";
 
   // 5. S3 bucket for image storage. Reuse THIS cluster's langfuse bucket.
   //    Match on the cluster name (e.g. genai-on-eks-v2-bucket-langfuse-...) so we don't
@@ -160,6 +155,29 @@ export async function install() {
     console.log("WARN: arize-credentials Secret not found in 'arize' ns; run `./cli o11y arize install` first. Tracing DISABLED (agent still works).");
   }
 
+  // 6b. Kong consumer API key for the /loan-strands route.
+  //     Read the LIVE key from the KongCredentialAPIKey the workshop created
+  //     rather than carrying a default in this repo: a default here is a shared
+  //     credential, and a stale value silently 401s at the gateway.
+  let kongApiKey = process.env.LOAN_STRANDS_KONG_KEY || "";
+  if (!kongApiKey) {
+    try {
+      const r = await $`kubectl get kongcredentialapikeys loan-strands-apikey -n kong -o jsonpath={.spec.key}`;
+      kongApiKey = r.stdout.trim();
+    } catch {
+      /* fall through to the error below */
+    }
+  }
+  if (!kongApiKey) {
+    console.error(
+      "ERROR: no Kong API key for the /loan-strands route.\n" +
+        "     Expected the KongCredentialAPIKey 'loan-strands-apikey' in namespace 'kong'\n" +
+        "     (created in Module B2 'Kong AI Gateway — Bedrock Route & Auth'),\n" +
+        "     or LOAN_STRANDS_KONG_KEY set in the environment."
+    );
+    process.exit(1);
+  }
+
   // 7. Render + apply the deployment.
   const agentTemplatePath = path.join(DIR, "agent.template.yaml");
   const agentRenderedPath = path.join(DIR, "agent.rendered.yaml");
@@ -169,8 +187,8 @@ export async function install() {
     // Pre-built multi-arch public image → runs on any node arch, no nodeSelector needed.
     IMAGE: IMAGE_URL,
     KONG_BASE_URL,
-    KONG_API_KEY: process.env.LOAN_STRANDS_KONG_KEY || "loan-strands-key-123",
-    KONG_MODEL_ID: envCfg.KONG_MODEL_ID || "openai/global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    KONG_API_KEY: kongApiKey,
+    KONG_MODEL_ID: envCfg.KONG_MODEL_ID || "openai/global.anthropic.claude-sonnet-5-5",
     // MCP servers are deployed by the default Loan Buddy (Module 3) in the `workshop`
     // namespace on port 8000. Reference them cross-namespace via their FQDN.
     MCP_IMAGE_PROCESSOR: "http://mcp-image-processor.workshop:8000",
