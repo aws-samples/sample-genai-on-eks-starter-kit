@@ -18,7 +18,7 @@ distro==1.9.0
 faker==37.12.0
 fastapi==0.135.3
 fastuuid==0.14.0
-filelock==3.25.2
+filelock==4.2.1
 fqdn==1.5.1
 frozenlist==1.8.0
 fsspec==2026.6.0
