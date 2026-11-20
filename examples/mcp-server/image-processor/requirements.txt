@@ -1,5 +1,5 @@
 # Track B image-processor MCP — Kong-native vision (no openai/langchain/litellm)
-mcp==1.28.1
+mcp==1.30.0
 fastapi
 uvicorn[standard]
 pydantic
