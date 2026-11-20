@@ -484,13 +484,17 @@ const EXTERNAL_CREDENTIALS = [
   "OPENCLAW_GATEWAY_TOKEN",
   "OPENCLAW_DOC_WRITER_GIT_USERNAME",
   "OPENCLAW_DOC_WRITER_GIT_TOKEN",
-  "LANGFUSE_PUBLIC_KEY",
-  "LANGFUSE_SECRET_KEY",
 ];
 
 const randomPassword = () => crypto.randomBytes(24).toString("base64").replace(/[/+=]/g, "").slice(0, 20);
 
 const generateValueFor = (key) => {
+  // Langfuse project keys. These are the kit's own, created against the Langfuse
+  // instance it installs -- not third-party credentials -- so they have to be
+  // generated or the Langfuse install fails on a plain `./cli demo-setup`.
+  // Same shape the Workshop Studio setup writes: lf_pk_ / lf_sk_ + 32 hex.
+  if (key === "LANGFUSE_PUBLIC_KEY") return `lf_pk_${crypto.randomBytes(16).toString("hex")}`;
+  if (key === "LANGFUSE_SECRET_KEY") return `lf_sk_${crypto.randomBytes(16).toString("hex")}`;
   if (key === "LANGFUSE_ENCRYPTION_KEY") return crypto.randomBytes(32).toString("hex"); // must be 64 hex chars
   if (key === "LANGFUSE_SALT" || key === "LANGFUSE_NEXTAUTH_SECRET") return crypto.randomBytes(32).toString("base64");
   if (/_API_KEY$/.test(key)) return `sk-${crypto.randomBytes(20).toString("hex")}`;
