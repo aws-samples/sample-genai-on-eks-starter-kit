@@ -65,7 +65,8 @@ locals {
   #                             access is authorised with
   #                             aws:RequestedRegion = "unspecified" against a
   #                             REGIONLESS foundation-model ARN.
-  #   us.|eu.|apac.<model>      GEOGRAPHIC CRIS. Routes within a geography.
+  #   us.|eu.|apac.|jp.|au.|ca.|us-gov.<model>
+  #                             GEOGRAPHIC CRIS. Routes within a geography.
   #                             Destination-Region model access is authorised per
   #                             Region, gated on the profile that routed it.
   #   <model>                   No profile. Plain in-Region invoke.
@@ -74,12 +75,12 @@ locals {
   # global" -- the global case requires the "unspecified" Region condition, which
   # a plain aws:RequestedRegion allow-list would deny.
   bedrock_global_model_ids = [for m in var.bedrock_model_ids : m if startswith(m, "global.")]
-  bedrock_geo_model_ids    = [for m in var.bedrock_model_ids : m if length(regexall("^(us|eu|apac)\\.", m)) > 0]
-  bedrock_plain_model_ids  = [for m in var.bedrock_model_ids : m if length(regexall("^(global|us|eu|apac)\\.", m)) == 0]
+  bedrock_geo_model_ids    = [for m in var.bedrock_model_ids : m if length(regexall("^(us-gov|us|eu|apac|jp|au|ca)\\.", m)) > 0]
+  bedrock_plain_model_ids  = [for m in var.bedrock_model_ids : m if length(regexall("^(global|us-gov|us|eu|apac|jp|au|ca)\\.", m)) == 0]
   bedrock_cris_model_ids   = concat(local.bedrock_global_model_ids, local.bedrock_geo_model_ids)
 
   # Base model ID = the profile ID with its routing prefix stripped.
-  bedrock_base_of = { for m in var.bedrock_model_ids : m => replace(m, "/^(global|us|eu|apac)\\./", "") }
+  bedrock_base_of = { for m in var.bedrock_model_ids : m => replace(m, "/^(global|us-gov|us|eu|apac|jp|au|ca)\\./", "") }
 
   # Inference profiles are resolved in the SOURCE Region (where the call lands).
   bedrock_profile_arns = [
@@ -107,7 +108,7 @@ locals {
       resources = [
         for m in local.bedrock_cris_model_ids : "arn:aws:bedrock:*::foundation-model/${local.bedrock_base_of[m]}"
       ]
-      condition = [
+      conditions = [
         {
           test     = "ArnLike"
           variable = "bedrock:InferenceProfileArn"
@@ -128,7 +129,7 @@ locals {
       resources = [
         for m in local.bedrock_global_model_ids : "arn:aws:bedrock:::foundation-model/${local.bedrock_base_of[m]}"
       ]
-      condition = [
+      conditions = [
         {
           test     = "StringEquals"
           variable = "aws:RequestedRegion"
@@ -151,7 +152,7 @@ locals {
       resources = [
         for m in local.bedrock_plain_model_ids : "arn:aws:bedrock:*::foundation-model/${m}"
       ]
-      condition = [
+      conditions = [
         {
           test     = "StringEquals"
           variable = "aws:RequestedRegion"
@@ -161,15 +162,33 @@ locals {
     }
   ] : []
 
-  # Dropped from the previous policy: resources = ["*"] (any model, any Region)
-  # and aws-marketplace:Subscribe / ViewSubscriptions, which let the role accept
-  # Marketplace model agreements and so enable models the deployment never
-  # configured. Nothing in this stack needs to subscribe at runtime.
+  # Marketplace subscription. These two actions were removed in the first pass
+  # because the incident used them to accept agreements for models the
+  # deployment never configured. Removing them breaks a fresh account: the first
+  # Claude call succeeds and every later call returns 403 with
+  # "not authorized to perform the required AWS Marketplace actions", because
+  # get-foundation-model-availability reports agreementAvailability
+  # NOT_AVAILABLE until the subscription completes at runtime.
+  #
+  # They are safe to keep here precisely because the invoke statements above are
+  # scoped to the configured model ARNs: subscribing to a model this role cannot
+  # invoke grants nothing. The model allow-list, not the absence of these
+  # actions, is the control that closes the original issue.
+  bedrock_marketplace_statements = [
+    {
+      sid       = "BedrockMarketplaceSubscription"
+      actions   = ["aws-marketplace:Subscribe", "aws-marketplace:ViewSubscriptions"]
+      resources = ["*"]
+    }
+  ]
+
+  # Dropped from the previous policy: resources = ["*"] (any model, any Region).
   bedrock_invoke_statements = concat(
     local.bedrock_profile_statements,
     local.bedrock_cris_model_statements,
     local.bedrock_global_model_statements,
     local.bedrock_plain_model_statements,
+    local.bedrock_marketplace_statements,
   )
 
   bedrock_guardrail_statements = var.enable_bedrock_guardrail ? [

@@ -99,7 +99,7 @@
     "openclaw": {
       "env": {
         "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
-        "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+        "OPENCLAW_GATEWAY_TOKEN": ""
       }
     }
   },
@@ -135,13 +135,13 @@
       "doc-writer": {
         "env": {
           "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
-          "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+          "OPENCLAW_GATEWAY_TOKEN": ""
         }
       },
       "devops-agent": {
         "env": {
           "LITELLM_MODEL_NAME": "bedrock/claude-4.5-sonnet",
-          "OPENCLAW_GATEWAY_TOKEN": "openclaw-gateway-token"
+          "OPENCLAW_GATEWAY_TOKEN": ""
         }
       }
     }

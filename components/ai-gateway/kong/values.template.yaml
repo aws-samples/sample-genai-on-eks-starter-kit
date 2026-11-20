@@ -64,8 +64,8 @@ admin:
 postgresql:
   enabled: true
   auth:
-    postgresPassword: Pass@123
-    password: Pass@123
+    postgresPassword: {{{KONG_POSTGRES_PASSWORD}}}
+    password: {{{KONG_POSTGRES_PASSWORD}}}
   image:  
     registry: public.ecr.aws
     repository: agentic-ai-platforms-on-k8s/postgresql

@@ -102,6 +102,9 @@ program
       if (hasVectorDatabase) {
         await utils.checkHtpasswd();
       }
+      // Fill in any credential .env ships blank BEFORE Terraform, so a plain
+      // kit install cannot get through apply and then fail in an installer.
+      utils.ensureGeneratedCredentials(DIR);
       await utils.terraform.applyWithRetry(TERRAFORM_DIR, 3);
       const installItems = async (items, ITEMS_DIR, itemKey) => {
         const itemPaths = items.map((item) => {

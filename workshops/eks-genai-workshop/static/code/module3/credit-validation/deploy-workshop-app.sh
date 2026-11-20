@@ -87,16 +87,17 @@ echo -e "${GREEN}✅ S3 Bucket: ${S3_BUCKET_NAME}${NC}"
 # Step 3: Get AWS region
 echo -e "\n${YELLOW}Step 3: Getting AWS region...${NC}"
 
-# Try to get region from environment variable first
-if [ -z "$REGION" ]; then
-    # Try to load from .env file in multiple locations
-    for ENV_FILE in "/workshop/.env.local" "${SCRIPT_DIR}/../../../../../.env.local" "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
-        if [ -f "$ENV_FILE" ]; then
-            source "$ENV_FILE"
-            break
-        fi
-    done
-fi
+# Source the env file unconditionally. It carries more than REGION (the Langfuse
+# keys and the cluster name come from it too), so gating this on an unset REGION
+# meant a shell that already exported REGION silently skipped everything else.
+# Values already in the environment still win: set -a is not used, and each
+# consumer below only fills in what is empty.
+for ENV_FILE in "/workshop/.env.local" "${SCRIPT_DIR}/../../../../../.env.local" "${SCRIPT_DIR}/../../../../../.env" "/workshop/.env" "$(pwd | sed 's|/workshops/.*|/.env|')"; do
+    if [ -f "$ENV_FILE" ]; then
+        source "$ENV_FILE"
+        break
+    fi
+done
 
 # If still not set, try AWS CLI default region
 if [ -z "$REGION" ]; then
@@ -120,13 +121,15 @@ echo -e "${GREEN}✅ AWS Region: ${REGION}${NC}"
 # Step 4: Get LiteLLM API key
 echo -e "\n${YELLOW}Step 4: Getting LiteLLM API key...${NC}"
 
-# .env.local (generated per account) defines LITELLM_API_KEY, not AGENT_KEY.
-AGENT_KEY="${AGENT_KEY:-$LITELLM_API_KEY}"
-
+# Deliberately NOT defaulted to LITELLM_API_KEY. That variable holds the
+# LiteLLM *master* key, and this value is baked into the loan-buddy and
+# image-processor pod specs -- so defaulting to it would hand the master key to
+# the workload instead of the scoped virtual key this step asks for.
 if [ -z "$AGENT_KEY" ]; then
-    echo -e "${YELLOW}⚠️  AGENT_KEY not found in environment.${NC}"
-    echo -e "${YELLOW}   Please enter your LiteLLM API key (Virtual Key from Module 2):${NC}"
-    read -p "   API Key: " AGENT_KEY
+    echo -e "${YELLOW}⚠️  AGENT_KEY not set.${NC}"
+    echo -e "${YELLOW}   Paste the LiteLLM *Virtual Key* you created in Module A1/B2${NC}"
+    echo -e "${YELLOW}   (starts with sk-). Do NOT paste LITELLM_API_KEY, the master key.${NC}"
+    read -p "   Virtual Key: " AGENT_KEY
     
     if [ -z "$AGENT_KEY" ]; then
         echo -e "${RED}❌ API key is required.${NC}"

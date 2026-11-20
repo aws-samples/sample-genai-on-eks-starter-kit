@@ -20,13 +20,17 @@ export async function init(_BASE_DIR, _config, _utils) {
   utils = _utils;
 }
 
-// LiteLLM Helm **chart** version, pinned for reproducibility so two deploys
-// never silently differ and a broken upstream chart cannot reach every event.
+// LiteLLM Helm chart version, pinned for reproducibility so two deploys never
+// silently differ and a broken upstream chart cannot reach every event.
 //
-// Note this does NOT pin the LiteLLM application: the chart's appVersion is
-// "latest". The app version is set by image.tag in values.template.yaml.
-// Override with LITELLM_CHART_VERSION to test a newer chart.
-const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "0.1.100";
+// Must be 1.100.4, not 0.1.100. Chart 0.1.100 hardcodes an init container image
+// docker.io/bitnami/postgresql:16.1.0-debian-11-r20 that no longer exists on
+// Docker Hub, so the pod never leaves Init:ImagePullBackOff. Chart 1.100.4 has
+// no such init container and its appVersion matches image.tag below, so the
+// chart and the application version move together.
+//
+// Override with LITELLM_CHART_VERSION only to test a newer chart.
+const LITELLM_CHART_VERSION = process.env.LITELLM_CHART_VERSION || "1.100.4";
 
 export async function install() {
   const requiredEnvVars = ["LITELLM_API_KEY", "LITELLM_UI_USERNAME", "LITELLM_UI_PASSWORD"];
@@ -55,7 +59,11 @@ export async function install() {
 
   const integration = { "llm-model": {}, "embedding-model": {}, "mcp-servers": [], o11y: {}, guardrail: {} };
   integration["bedrock"] = {
-    region: config["bedrock"]["region"],
+    // Resolved Region, not the raw config value. config.bedrock.region is null
+    // in the shipped config, and the IAM policy above is built from
+    // bedrockRegion -- passing the raw value here let the rendered model list
+    // and the policy disagree about which Region is in play.
+    region: bedrockRegion,
     llm: config["bedrock"]["llm"]["models"],
     embedding: config["bedrock"]["embedding"]["models"],
   };
