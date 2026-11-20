@@ -6,7 +6,7 @@
 # processor requires strands-agents>=1.19.
 
 # Strands Agents SDK + tools
-strands-agents==1.47.0
+strands-agents==1.48.0
 strands-agents-tools==0.8.3
 
 # LLM client (talks to Kong as an OpenAI-compatible endpoint) + MCP (SSE tools)
