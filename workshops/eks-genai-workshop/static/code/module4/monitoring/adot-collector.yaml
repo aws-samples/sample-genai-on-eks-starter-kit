@@ -1,0 +1,150 @@
+# ADOT (AWS Distro for OpenTelemetry) Collector — Module 4 infrastructure monitoring.
+#
+# Scrapes vLLM Prometheus metrics (and Neuron device metrics) and remote-writes them to
+# Amazon Managed Service for Prometheus (AMP). Auth is via EKS Pod Identity on the
+# adot-collector ServiceAccount (role: genai-ws-adot-collector, AmazonPrometheusRemoteWriteAccess).
+#
+# Apply with the AMP endpoint + region substituted:
+#   sed -e "s#__AMP_ENDPOINT__#$AMP_ENDPOINT#" -e "s#__REGION__#$AWS_REGION#" \
+#     adot-collector.yaml | kubectl apply -f -
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: adot
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adot-collector
+  namespace: adot
+  # EKS Pod Identity associates this ServiceAccount with the IAM role
+  # genai-ws-adot-collector (AmazonPrometheusRemoteWriteAccess) — created via
+  # `aws eks create-pod-identity-association`. No IRSA annotation is needed.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adot-collector-config
+  namespace: adot
+data:
+  collector.yaml: |
+    receivers:
+      # Scrape vLLM pods. vLLM does not always declare containerPort, so we
+      # discover pods by namespace and hit the static metrics port 8000 on the
+      # pod IP (per the Module 4 runbook).
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: vllm
+              scrape_interval: 15s
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: [vllm]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_ip]
+                  target_label: __address__
+                  replacement: "$$1:8000"
+                - source_labels: [__meta_kubernetes_pod_label_app]
+                  target_label: app
+                - source_labels: [__meta_kubernetes_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
+              metrics_path: /metrics
+            # Scrape the neuron-monitor DaemonSet (kube-system, app=neuron-monitor)
+            # for hardware-level Neuron core metrics (neuroncore_utilization_ratio,
+            # neuron memory, errors). It exposes Prometheus metrics on port 8000.
+            - job_name: neuron-monitor
+              scrape_interval: 15s
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: [kube-system]
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_label_app]
+                  action: keep
+                  regex: neuron-monitor
+                - source_labels: [__meta_kubernetes_pod_ip]
+                  target_label: __address__
+                  replacement: "$$1:8000"
+                - source_labels: [__meta_kubernetes_pod_label_app]
+                  target_label: app
+                - source_labels: [__meta_kubernetes_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
+              metrics_path: /metrics
+    processors:
+      batch: {}
+    exporters:
+      prometheusremotewrite:
+        endpoint: "__AMP_ENDPOINT__api/v1/remote_write"
+        auth:
+          authenticator: sigv4auth
+    extensions:
+      sigv4auth:
+        region: "__REGION__"
+        service: aps
+    service:
+      extensions: [sigv4auth]
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          processors: [batch]
+          exporters: [prometheusremotewrite]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: adot-collector
+rules:
+  - apiGroups: [""]
+    resources: [pods, nodes, nodes/metrics, services, endpoints]
+    verbs: [get, list, watch]
+  - nonResourceURLs: [/metrics]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: adot-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: adot-collector
+subjects:
+  - kind: ServiceAccount
+    name: adot-collector
+    namespace: adot
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adot-collector
+  namespace: adot
+  labels: { app: adot-collector }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: adot-collector }
+  template:
+    metadata:
+      labels: { app: adot-collector }
+    spec:
+      serviceAccountName: adot-collector
+      containers:
+        - name: otel-collector
+          image: public.ecr.aws/aws-observability/aws-otel-collector:v0.51.0
+          args: ["--config=/etc/otel/collector.yaml"]
+          volumeMounts:
+            - { name: config, mountPath: /etc/otel }
+          resources:
+            requests: { cpu: 200m, memory: 256Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: config
+          configMap:
+            name: adot-collector-config
+            items: [{ key: collector.yaml, path: collector.yaml }]

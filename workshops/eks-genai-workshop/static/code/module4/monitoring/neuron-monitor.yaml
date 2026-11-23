@@ -1,0 +1,75 @@
+# AWS Neuron Monitor — Module 4 hardware-level metrics for Inferentia/Trainium.
+#
+# Deploys the official AWS Neuron Monitor container as a DaemonSet on every
+# Inferentia (inf2) node. It exposes Prometheus-format Neuron core/device
+# metrics (utilization, memory, errors) on port 8000, which the ADOT collector
+# scrapes and remote-writes to Amazon Managed Service for Prometheus (AMP) alongside the
+# vLLM metrics. The Grafana "Neuron Core Utilization" panel reads these from AMP.
+#
+# Image: public.ecr.aws/neuron/neuron-monitor (AWS-published, public).
+# Reference: https://aws.amazon.com/blogs/machine-learning/scale-and-simplify-ml-workload-monitoring-on-amazon-eks-with-aws-neuron-monitor-container/
+#
+# Apply with:
+#   kubectl apply -f neuron-monitor.yaml
+#   kubectl rollout status daemonset/neuron-monitor -n kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: neuron-monitor
+  namespace: kube-system
+  labels:
+    app: neuron-monitor
+spec:
+  selector:
+    matchLabels:
+      app: neuron-monitor
+  template:
+    metadata:
+      labels:
+        app: neuron-monitor
+    spec:
+      # Run only on Inferentia/Trainium nodes. The neuron-monitor binary needs
+      # the Neuron devices present on the host; on non-Neuron nodes it has
+      # nothing to report and would crash-loop.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - inf2.xlarge
+                      - inf2.8xlarge
+                      - inf2.24xlarge
+                      - inf2.48xlarge
+                      - trn1.2xlarge
+                      - trn1.32xlarge
+                      - trn1n.32xlarge
+      # Tolerate any node taints so the DaemonSet can land on dedicated
+      # accelerator nodes that may carry NoSchedule taints.
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: neuron-monitor
+          image: public.ecr.aws/neuron/neuron-monitor:1.0.1
+          ports:
+            - containerPort: 8000
+              name: metrics
+          command: ["/opt/bin/entrypoint.sh"]
+          args: ["--port", "8000"]
+          resources:
+            requests:
+              cpu: 256m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          env:
+            - name: GOMEMLIMIT
+              value: 160MiB
+          # neuron-monitor requires privileged access to read the Neuron
+          # devices (/dev/neuron*) on the host.
+          securityContext:
+            privileged: true
