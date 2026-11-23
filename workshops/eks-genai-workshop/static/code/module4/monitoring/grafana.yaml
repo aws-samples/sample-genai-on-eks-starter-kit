@@ -1,0 +1,115 @@
+# In-cluster Grafana — Module 4 visualization layer.
+#
+# The workshop runs in Workshop Studio accounts that have NO IAM Identity
+# Center (SSO) instance, which Amazon Managed Grafana (AMG) requires for user
+# authentication. Instead of AMG, we run a self-contained Grafana Deployment
+# in the cluster and point it at Amazon Managed Service for Prometheus (AMP) using SigV4
+# auth via EKS Pod Identity (ServiceAccount grafana -> role genai-ws-grafana-reader,
+# AmazonPrometheusQueryAccess). Access is via `kubectl port-forward`.
+#
+# The AMP data source is provisioned automatically from the configmap below;
+# __AMP_ENDPOINT__ and __REGION__ are substituted at apply time:
+#   sed -e "s#__AMP_ENDPOINT__#$AMP_ENDPOINT#" -e "s#__REGION__#$AWS_REGION#" \
+#     grafana.yaml | kubectl apply -f -
+#   kubectl rollout status deployment/grafana -n grafana
+#   kubectl port-forward -n grafana svc/grafana 3000:3000
+# Then open http://localhost:3000 and log in with the admin user and password stored in the
+# grafana-admin Secret (the per-account values in /workshop/.env.local).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: grafana
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana
+  namespace: grafana
+  # EKS Pod Identity binds this SA to the genai-ws-grafana-reader IAM role
+  # (AmazonPrometheusQueryAccess) so the AMP data source can SigV4-sign queries.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Amazon Managed Prometheus
+        type: prometheus
+        access: proxy
+        url: __AMP_ENDPOINT__
+        isDefault: true
+        jsonData:
+          httpMethod: POST
+          sigV4Auth: true
+          sigV4AuthType: default
+          sigV4Region: __REGION__
+        editable: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: grafana
+  labels: { app: grafana }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: grafana }
+  template:
+    metadata:
+      labels: { app: grafana }
+    spec:
+      serviceAccountName: grafana
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.1.0
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            # AWS SigV4 support in Grafana's Prometheus data source must be
+            # explicitly enabled.
+            - name: AWS_SDK_LOAD_CONFIG
+              value: "true"
+            - name: GF_AUTH_SIGV4_AUTH_ENABLED
+              value: "true"
+            # Admin credential comes from the grafana-admin Secret, which the
+            # module creates from the per-account values in /workshop/.env.local.
+            # Never inline it here: this file is committed to a public repo.
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef: { name: grafana-admin, key: admin-user }
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: grafana-admin, key: admin-password }
+            # NOTE: no GF_SERVER_ROOT_URL / SERVE_FROM_SUB_PATH here. Access Grafana via the
+            # Code Editor's built-in port forwarding — open http://localhost:3000 (VS Code
+            # intercepts localhost:3000 and proxies it). Do NOT use the CloudFront /ports/3000/
+            # path for Grafana; that sub-path mode makes Grafana redirect to localhost and fail.
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: grafana
+spec:
+  selector: { app: grafana }
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: http
