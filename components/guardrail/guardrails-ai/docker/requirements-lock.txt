@@ -10,7 +10,7 @@ arrow==1.4.0
 attrs==26.1.0
 boto3==1.44.6
 botocore==1.44.6
-certifi==2026.2.25
+certifi==2026.10.18
 charset-normalizer==3.4.7
 click==8.2.0
 diff-match-patch==20241021
